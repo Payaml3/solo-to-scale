@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__PROJECT_NAME__ AI team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: summary, then the team map beside the selected role's charter, then the task explorer, then the dependency map by slice. */
+:root {
+  --paper: #f4f5f2; --surface: #ffffff; --ink: #18202b; --muted: #5d6673; --line: #d9ddd6;
+  --accent: #b5651d; --core: #1f5f8b; --focus: #1f5f8b;
+  --done: #2f7d4f; --progress: #a86b00; --todo: #8a9099; --waiting: #b23a3a;
+  --r-founder: #b5651d; --r-research: #7b5ea7; --r-product: #1f7a8c; --r-architect: #3d5a99; --r-engineer: #4f7d2f; --r-qa: #a8476b; --r-growth: #c08a1e;
+  --display: "Newsreader", Georgia, serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161c; --surface: #1a2029; --ink: #e7eaee; --muted: #9aa3ae; --line: #2c3440;
+    --accent: #e0954f; --core: #6fa8d6; --focus: #6fa8d6;
+    --done: #5fb882; --progress: #e0a83a; --todo: #7d8590; --waiting: #e07070;
+    --r-founder: #e0954f; --r-research: #a78bd4; --r-product: #4fb3c4; --r-architect: #7f9be0; --r-engineer: #86b860; --r-qa: #d97a9c; --r-growth: #e2b54f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161c; --surface: #1a2029; --ink: #e7eaee; --muted: #9aa3ae; --line: #2c3440;
+  --accent: #e0954f; --core: #6fa8d6; --focus: #6fa8d6;
+  --done: #5fb882; --progress: #e0a83a; --todo: #7d8590; --waiting: #e07070;
+  --r-founder: #e0954f; --r-research: #a78bd4; --r-product: #4fb3c4; --r-architect: #7f9be0; --r-engineer: #86b860; --r-qa: #d97a9c; --r-growth: #e2b54f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; display: flex; flex-direction: column; gap: 28px; }
+h1 { font: 500 2.1rem/1.15 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 1.05rem/1.3 var(--body); margin: 0 0 4px; text-wrap: balance; }
+.lead { color: var(--muted); max-width: 70ch; margin: 8px 0 0; }
+.lead b { color: var(--ink); font-weight: 600; }
+.note { color: var(--muted); font-size: .85rem; margin: 0 0 12px; max-width: 75ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+svg text { font-family: var(--body); }
+.team svg { width: 100%; height: auto; display: block; }
+.node { cursor: pointer; }
+.node:focus { outline: none; }
+.node:focus-visible .ring, .node.sel .ring { stroke: var(--focus); stroke-width: 3; }
+.mono { font-family: var(--mono); font-size: .82em; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.tasksgrid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { .tasksgrid { grid-template-columns: 1fr; } }
+.charter dl { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px 14px; margin: 14px 0 0; font-size: .9rem; }
+.charter dt { color: var(--muted); }
+.charter dd { margin: 0; }
+.charter .title { font: 500 1.5rem/1.2 var(--display); margin: 0; }
+.charter .fn { color: var(--muted); font-size: .85rem; }
+.stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.stat b { font-size: 1.1rem; display: block; }
+.pill { display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; font-size: .78rem; white-space: nowrap; }
+.s-done { color: var(--done); } .s-in_progress { color: var(--progress); } .s-todo { color: var(--todo); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .85rem; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--ink); font-weight: 600; }
+.chip:focus-visible, select:focus-visible, input:focus-visible, button:focus-visible, tr:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+select, input[type="search"] { font: inherit; font-size: .88rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
+.tablewrap { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+th { position: sticky; top: 0; background: var(--surface); text-align: left; color: var(--muted); font-weight: 500; z-index: 1; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { text-align: right; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+tbody tr.sel { background: color-mix(in srgb, var(--focus) 14%, transparent); }
+.count { color: var(--muted); font-size: .85rem; }
+.chain { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: start; }
+@media (max-width: 640px) { .chain { grid-template-columns: 1fr; } }
+.chain h3 { font-size: .8rem; color: var(--muted); font-weight: 500; margin: 0 0 6px; text-transform: none; }
+.chain ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tcard { border: 1px solid var(--line); border-left: 4px solid var(--rc, var(--line)); border-radius: 6px; padding: 6px 9px; font-size: .84rem; background: var(--surface); cursor: pointer; width: 100%; text-align: left; color: var(--ink); font-family: inherit; }
+.tcard.focus { border-width: 2px 2px 2px 6px; }
+.empty { color: var(--muted); font-size: .84rem; }
+.arrow { align-self: center; color: var(--muted); font-size: 1.3rem; }
+.depmap { overflow-x: auto; }
+.depmap svg { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .82rem; color: var(--muted); margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+footer { color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: no-preference) { .fade { transition: opacity .2s ease; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>__PROJECT_NAME__ AI team</h1>
+    <p class="lead" id="summary">Loading the team…</p>
+  </header>
+
+  <section class="grid2" aria-label="Team">
+    <div class="panel team">
+      <h2>Who does what</h2>
+      <p class="note">You lead as CEO and board. Claude sits at the centre as the AI core: it briefs each role, keeps the repo's memory current and brings decisions to you. Select a member to see their charter and tasks.</p>
+      <svg id="teammap" viewBox="0 0 640 570" role="img" aria-label="Team map: the founder at the top, Claude at the centre, six AI roles around it"></svg>
+    </div>
+    <div class="panel charter" id="charter" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" aria-label="Tasks">
+    <h2>Tasks and what they wait on</h2>
+    <p class="note">Every story, founder item, waiting decision and business item, with its owner. Select a task to see what it waits on and what it unblocks.</p>
+    <div class="controls" id="rolechips" role="group" aria-label="Filter by member"></div>
+    <div class="controls">
+      <label for="f-status" class="count">Status</label>
+      <select id="f-status">
+        <option value="open">Open (to do or in progress)</option>
+        <option value="all">All</option>
+        <option value="todo">To do</option>
+        <option value="in_progress">In progress</option>
+        <option value="done">Done</option>
+      </select>
+      <label for="f-slice" class="count">Slice</label>
+      <select id="f-slice"><option value="">All slices</option></select>
+      <label for="f-q" class="count">Search</label>
+      <input type="search" id="f-q" placeholder="ID or words">
+      <span class="count" id="shown"></span>
+    </div>
+    <div class="tasksgrid">
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Task</th><th>Owner</th><th>Slice</th><th>Status</th><th class="num nowrap">Waits on (open)</th><th class="num">Unblocks</th></tr></thead>
+          <tbody id="tasks"></tbody>
+        </table>
+      </div>
+      <div id="chain" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Dependency map">
+    <h2>Dependency map of open work</h2>
+    <p class="note">Open tasks in build order, from founder items through the next slices. A line runs from a task to each open task that waits on it. Selecting a member or a task highlights its part of the map.</p>
+    <div class="depmap"><svg id="depmap" role="img" aria-label="Open tasks by slice with dependency lines"></svg></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var T = D.tasks, byId = {};
+  T.forEach(function (t) { byId[t.id] = t; });
+
+  var ROLES = [
+    { id: 'founder', name: 'Founder', title: 'CEO and board', fn: '00 Founder HQ',
+      mission: 'Sets the company goal and approves strategy, scope, architecture, every merge and go-live. Holds the secrets and the money.',
+      skills: 'Approves through record-decision and pull request merges', rhythm: 'Daily approvals; Monday weekly review; quarterly objectives',
+      model: 'Not an agent', approves: 'Is the approval gate for every other role', never: 'Hands production secrets or approval rights to an agent' },
+    { id: 'core', name: 'Claude', title: 'AI core and chief of staff', fn: '00 Founder HQ',
+      mission: 'Runs the operating system: briefs each role with the goal chain, keeps the repo memory current, runs the weekly review and refreshes the live views.',
+      skills: 'weekly-review, handoff, publish-views, release-check', rhythm: 'Every session start and end; Mondays',
+      model: 'Mid-tier; strongest when a decision is expensive', approves: 'Nothing. It proposes', never: 'Approves its own proposals or stores memory outside the repo' },
+    { id: 'research', name: 'Research and strategy', title: 'Evidence before building', fn: '01 Business',
+      mission: 'Turns the problem into evidence: customer interviews, competitors, pricing, positioning, and the business work outside software.',
+      skills: 'founder: validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy', rhythm: 'Each discovery sprint; monthly evidence review',
+      model: 'Strongest for synthesis; mid-tier for drafts', approves: 'Proposes every B- decision for you', never: 'Invents customer evidence or names real clients' },
+    { id: 'product', name: 'Product manager', title: 'Models into specs', fn: '02 Product',
+      mission: 'Turns the product model, operating model and MVP scope into requirements, stories and screen specs, and prepares decisions for you.',
+      skills: 'Spec Kit: specify, clarify, checklist, analyze; product-design; record-decision', rhythm: 'Each stage, and whenever a decision is waiting',
+      model: 'Mid-tier', approves: 'Proposes scope and requirements', never: 'Marks a requirement Approved' },
+    { id: 'architect', name: 'Architect and security', title: 'Foundations that hold', fn: '03 Architecture',
+      mission: 'Owns the stack, architecture, data model and threat model, plus the foundation, operational-control and audit work.',
+      skills: 'Spec Kit: plan, constitution; Superpowers: brainstorming; threat model (STRIDE)', rhythm: 'Stage 10, then a quarterly Well-Architected review',
+      model: 'Strongest available', approves: 'Proposes stack, architecture and threat model', never: 'Weakens an invariant or a test' },
+    { id: 'engineer', name: 'Engineers', title: 'One story group per session', fn: '04 Engineering',
+      mission: 'Build the product a story group at a time: tests first, the smallest change that passes, a pull request with evidence.',
+      skills: 'Superpowers: writing-plans, test-driven-development, systematic-debugging, requesting-code-review, finishing-a-development-branch', rhythm: 'Each story group',
+      model: 'Strongest for money paths; mid-tier otherwise', approves: 'Opens pull requests for you to merge', never: 'Pushes to main or resends a payment in UNKNOWN' },
+    { id: 'qa', name: 'QA and release', title: 'Proof, not claims', fn: '05 QA',
+      mission: 'Proves the product works: evaluation suites, the release check, design and accessibility review.',
+      skills: 'release-check, verification-before-completion, impeccable', rhythm: 'Nightly evaluation; before every release',
+      model: 'Mid-tier', approves: 'Returns go or no-go for you to decide', never: 'Passes a release with a failing check' },
+    { id: 'growth', name: 'Growth', title: 'Brand, site and developer experience', fn: '06 GTM',
+      mission: 'Brand, website, docs and SDK experience, content and launch.',
+      skills: 'brand-skills, design-taste-frontend, founder: landing-page, go-to-market; marketing: brand-review, content-creation', rhythm: 'Weekly content; each launch',
+      model: 'Mid-tier', approves: 'Proposes anything published or paid for', never: 'Publishes claims about clients, certifications or figures' }
+  ];
+  var R = {}; ROLES.forEach(function (r) { R[r.id] = r; });
+  var color = function (id) { return 'var(--r-' + (id === 'core' ? 'founder' : id) + ')'; };
+  var roleColor = function (id) { return id === 'core' ? 'var(--core)' : 'var(--r-' + id + ')'; };
+  var STATUS = { todo: 'To do', in_progress: 'In progress', done: 'Done' };
+  var KIND = { story: 'Story', founder: 'Founder item', decision: 'Decision', business: 'Business item' };
+
+  var state = { role: 'core', task: null, status: 'open', slice: '', q: '' };
+  var isOpen = function (t) { return t.status !== 'done'; };
+  var mine = function (t, role) { return role === 'core' || t.role === role || (role === 'founder' && t.kind === 'decision'); };
+
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'text') e.textContent = attrs[k]; else if (k === 'style') e.setAttribute('style', attrs[k]); else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function sv(tag, attrs, kids) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); });
+    (kids || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  // ---- Summary
+  (function () {
+    var stories = T.filter(function (t) { return t.kind === 'story'; });
+    var done = stories.filter(function (t) { return t.status === 'done'; }).length;
+    var founder = T.filter(function (t) { return t.kind === 'founder'; });
+    var blocking = founder.filter(function (t) { return (t.blocks || []).length; }).length;
+    var decisions = T.filter(function (t) { return t.kind === 'decision'; }).length;
+    var next = D.slices.find(function (s) { return s.status !== 'done'; });
+    var nextOpen = next ? stories.filter(function (t) { return t.slice === next.id && isOpen(t); }).length : 0;
+    var s = document.getElementById('summary');
+    s.replaceChildren(
+      el('b', { text: done + ' of ' + stories.length }), ' stories are done. You hold ',
+      el('b', { text: String(founder.length) }), ' founder items, ', el('b', { text: String(blocking) }), ' of which block stories, and ',
+      el('b', { text: String(decisions) }), ' decisions wait for your approval. ',
+      next ? el('span', {}, ['Next slice: ', el('b', { text: next.id + ' ' + next.name }), ', with ' + nextOpen + ' open stories.']) : null);
+    document.getElementById('foot').textContent = 'Built from ' + D.repo + ' at commit ' + D.commit + ' (' + D.date + '). Owners follow the role mapping in the operating system; the weekly review rebuilds this page.';
+  })();
+
+  // ---- Team map
+  var tm = document.getElementById('teammap');
+  var CX = 320, CY = 318, RAD = 196;
+  var ringIds = ['research', 'product', 'architect', 'engineer', 'qa', 'growth'];
+  var pos = { founder: { x: CX, y: 62 }, core: { x: CX, y: CY } };
+  ringIds.forEach(function (id, i) {
+    var a = (42 + i * 55.2) * Math.PI / 180;
+    pos[id] = { x: CX + RAD * Math.sin(a), y: CY - RAD * Math.cos(a) };
+  });
+  function counts(role) {
+    var list = T.filter(function (t) { return role === 'core' ? true : t.role === role; });
+    return { open: list.filter(isOpen).length, done: list.filter(function (t) { return t.status === 'done'; }).length };
+  }
+  function drawTeam() {
+    tm.replaceChildren();
+    var g = sv('g');
+    ringIds.forEach(function (id) {
+      g.appendChild(sv('line', { x1: CX, y1: CY, x2: pos[id].x, y2: pos[id].y, stroke: 'var(--line)', 'stroke-width': 1.5 }));
+    });
+    g.appendChild(sv('line', { x1: CX, y1: 96, x2: CX, y2: CY - 84, stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-dasharray': '5 4' }));
+    g.appendChild(sv('text', { x: CX - 8, y: 124, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)', text: 'goals and' }));
+    g.appendChild(sv('text', { x: CX - 8, y: 137, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)', text: 'approvals ↓' }));
+    g.appendChild(sv('text', { x: CX + 8, y: 124, 'font-size': 11, fill: 'var(--muted)', text: 'proposals and' }));
+    g.appendChild(sv('text', { x: CX + 8, y: 137, 'font-size': 11, fill: 'var(--muted)', text: 'evidence ↑' }));
+    tm.appendChild(g);
+
+    function node(id, shape) {
+      var r = R[id], c = counts(id), p = pos[id];
+      var n = sv('g', { class: 'node' + (state.role === id ? ' sel' : ''), tabindex: 0, role: 'button', 'aria-label': r.name + ', ' + r.title + ': ' + c.open + ' open tasks' });
+      if (shape === 'rect') {
+        n.appendChild(sv('rect', { class: 'ring', x: p.x - 120, y: p.y - 34, width: 240, height: 68, rx: 12, fill: 'var(--surface)', stroke: 'var(--accent)', 'stroke-width': 2 }));
+        n.appendChild(sv('text', { x: p.x, y: p.y - 8, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 600, fill: 'var(--ink)', text: 'Founder' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 10, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--muted)', text: 'CEO and board' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 26, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--accent)', text: c.open + ' open items' }));
+      } else if (shape === 'core') {
+        n.appendChild(sv('circle', { class: 'ring', cx: p.x, cy: p.y, r: 84, fill: 'color-mix(in srgb, var(--core) 14%, var(--surface))', stroke: 'var(--core)', 'stroke-width': 2 }));
+        n.appendChild(sv('circle', { cx: p.x, cy: p.y, r: 97, fill: 'none', stroke: 'var(--core)', 'stroke-opacity': .35, 'stroke-dasharray': '2 5' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y - 12, 'text-anchor': 'middle', 'font-size': 18, 'font-weight': 600, fill: 'var(--ink)', text: 'Claude' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 6, 'text-anchor': 'middle', 'font-size': 11.5, fill: 'var(--muted)', text: 'AI core, chief of staff' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 21, 'text-anchor': 'middle', 'font-size': 11.5, fill: 'var(--muted)', text: 'memory in the repo' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 40, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--core)', text: 'show all ' + T.length + ' tasks' }));
+      } else {
+        n.appendChild(sv('circle', { class: 'ring', cx: p.x, cy: p.y, r: 58, fill: 'var(--surface)', stroke: roleColor(id), 'stroke-width': 2 }));
+        var words = r.name.split(' ');
+        var l1 = words.length > 2 ? words.slice(0, 1).join(' ') : words[0];
+        var l2 = words.length > 2 ? words.slice(1).join(' ') : (words[1] || '');
+        n.appendChild(sv('text', { x: p.x, y: p.y - (l2 ? 12 : 4), 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: 'var(--ink)', text: l1 }));
+        if (l2) n.appendChild(sv('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: 'var(--ink)', text: l2 }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 21, 'text-anchor': 'middle', 'font-size': 11.5, fill: 'var(--muted)', text: c.open + ' open' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y + 35, 'text-anchor': 'middle', 'font-size': 11.5, fill: 'var(--muted)', text: c.done + ' done' }));
+        n.appendChild(sv('text', { x: p.x, y: p.y - 30, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600, fill: roleColor(id), text: r.fn.slice(0, 2) }));
+      }
+      n.addEventListener('click', function () { selectRole(id); });
+      n.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRole(id); } });
+      tm.appendChild(n);
+    }
+    ringIds.forEach(function (id) { node(id, 'circle'); });
+    node('core', 'core');
+    node('founder', 'rect');
+  }
+
+  // ---- Charter
+  function drawCharter() {
+    var r = R[state.role], c = counts(state.role);
+    var box = document.getElementById('charter');
+    var rows = [['Mission', r.mission], ['Skills', r.skills], ['Runs', r.rhythm], ['Model', r.model], ['Approval', r.approves], ['Never', r.never]];
+    var dl = el('dl');
+    rows.forEach(function (x) { dl.appendChild(el('dt', { text: x[0] })); dl.appendChild(el('dd', { text: x[1] })); });
+    var waiting = T.filter(function (t) { return isOpen(t) && mine(t, state.role) && t.deps.some(function (d) { return byId[d] && isOpen(byId[d]); }); }).length;
+    box.replaceChildren(
+      el('div', { class: 'fn', text: r.fn }),
+      el('p', { class: 'title', style: 'color:' + roleColor(state.role), text: r.name }),
+      el('div', { class: 'fn', text: r.title }),
+      el('div', { class: 'stats' }, [
+        el('div', { class: 'stat' }, [el('b', { text: String(c.open) }), 'open']),
+        el('div', { class: 'stat' }, [el('b', { text: String(c.done) }), 'done']),
+        el('div', { class: 'stat' }, [el('b', { text: String(waiting) }), 'waiting on others'])
+      ]),
+      dl);
+  }
+
+  // ---- Filters
+  var chips = document.getElementById('rolechips');
+  ['core'].concat(['founder'], ringIds).forEach(function (id) {
+    var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': 'false', 'data-role': id }, [
+      el('span', { class: 'dot', style: 'background:' + roleColor(id) }), id === 'core' ? 'Everyone' : R[id].name]);
+    b.addEventListener('click', function () { selectRole(id); });
+    chips.appendChild(b);
+  });
+  var fSlice = document.getElementById('f-slice');
+  D.slices.forEach(function (s) { fSlice.appendChild(el('option', { value: s.id, text: s.id + ' ' + s.name })); });
+  document.getElementById('f-status').addEventListener('change', function (e) { state.status = e.target.value; drawTasks(); });
+  fSlice.addEventListener('change', function (e) { state.slice = e.target.value; drawTasks(); });
+  document.getElementById('f-q').addEventListener('input', function (e) { state.q = e.target.value.trim().toLowerCase(); drawTasks(); });
+
+  function filtered() {
+    return T.filter(function (t) {
+      if (!mine(t, state.role)) return false;
+      if (state.status === 'open' && !isOpen(t)) return false;
+      if (state.status !== 'open' && state.status !== 'all' && t.status !== state.status) return false;
+      if (state.slice && t.slice !== state.slice) return false;
+      if (state.q && (t.id + ' ' + t.title).toLowerCase().indexOf(state.q) < 0) return false;
+      return true;
+    });
+  }
+  function ownerCell(t) {
+    var id = t.kind === 'decision' ? 'product' : t.role;
+    return el('span', { style: 'display:inline-flex;gap:6px;align-items:center' }, [el('span', { class: 'dot', style: 'background:' + roleColor(id) }), R[id].name]);
+  }
+  function drawTasks() {
+    document.querySelectorAll('#rolechips .chip').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-role') === state.role)); });
+    var list = filtered();
+    var order = { founder: 0, decision: 1, story: 2, business: 3 };
+    var sliceIdx = {}; D.slices.forEach(function (s, i) { sliceIdx[s.id] = i; });
+    list.sort(function (a, b) { return (order[a.kind] - order[b.kind]) || ((sliceIdx[a.slice] || 0) - (sliceIdx[b.slice] || 0)) || a.id.localeCompare(b.id); });
+    document.getElementById('shown').textContent = list.length + ' shown';
+    var tb = document.getElementById('tasks');
+    if (!list.length) { tb.replaceChildren(el('tr', {}, [el('td', { colspan: 7, class: 'empty', text: 'Nothing matches these filters.' })])); return; }
+    tb.replaceChildren.apply(tb, list.map(function (t) {
+      var openDeps = t.deps.filter(function (d) { return byId[d] && isOpen(byId[d]); }).length;
+      var tr = el('tr', { tabindex: 0, class: state.task === t.id ? 'sel' : '' }, [
+        el('td', { class: 'mono', text: t.id }),
+        el('td', {}, [t.title, el('div', { class: 'count', text: KIND[t.kind] + (t.progress ? ' · ' + t.progress : '') })]),
+        el('td', {}, [ownerCell(t)]),
+        el('td', { class: 'mono', text: t.slice || '—' }),
+        el('td', {}, [el('span', { class: 'pill s-' + t.status, text: STATUS[t.status] })]),
+        el('td', { class: 'num nowrap', text: t.deps.length ? openDeps + ' of ' + t.deps.length : '0' }),
+        el('td', { class: 'num', text: String(t.dependents.length) })
+      ]);
+      tr.addEventListener('click', function () { selectTask(t.id); });
+      tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') selectTask(t.id); });
+      return tr;
+    }));
+  }
+
+  // ---- Chain panel
+  function card(id, focus) {
+    var t = byId[id]; if (!t) return null;
+    var b = el('button', { class: 'tcard' + (focus ? ' focus' : ''), type: 'button', style: '--rc:' + roleColor(t.kind === 'decision' ? 'product' : t.role) }, [
+      el('span', { class: 'mono', text: t.id + ' ' }), el('span', { class: 'pill s-' + t.status, text: STATUS[t.status] }),
+      el('div', { text: t.title })]);
+    if (!focus) b.addEventListener('click', function () { selectTask(id); });
+    return el('li', {}, [b]);
+  }
+  function drawChain() {
+    var box = document.getElementById('chain');
+    if (!state.task) {
+      box.replaceChildren(el('p', { class: 'empty', text: 'Select a task to see what it waits on and what it unblocks. Founder items that block stories show up here as dependencies.' }));
+      return;
+    }
+    var t = byId[state.task];
+    var up = t.deps.slice().sort(function (a, b) { return (isOpen(byId[b] || {}) ? 1 : 0) - (isOpen(byId[a] || {}) ? 1 : 0); });
+    var col = function (title, ids, emptyText) {
+      var ul = el('ul'); ids.forEach(function (i) { var c = card(i); if (c) ul.appendChild(c); });
+      return el('div', {}, [el('h3', { text: title + ' (' + ids.length + ')' }), ids.length ? ul : el('p', { class: 'empty', text: emptyText })]);
+    };
+    box.replaceChildren(el('div', { class: 'chain' }, [
+      col('Waits on', up, 'Nothing: it can start now.'),
+      el('div', {}, [el('h3', { text: 'Selected' }), el('ul', {}, [card(t.id, true)]),
+        el('p', { class: 'count', text: 'Owner: ' + R[t.kind === 'decision' ? 'product' : t.role].name + (t.kind === 'decision' ? ', for your approval' : '') + (t.initiative ? ' · ' + t.initiative : '') })]),
+      col('Unblocks', t.dependents, 'No other task waits on it.')
+    ]));
+  }
+
+  // ---- Dependency map
+  var dm = document.getElementById('depmap');
+  function drawMap() {
+    var openT = T.filter(function (t) { return isOpen(t) && (t.kind === 'story' || (t.kind === 'founder' && (t.blocks || []).length)); });
+    var nextIdx = D.slices.findIndex(function (s) { return s.status !== 'done'; });
+    var carried = D.slices.slice(0, nextIdx).map(function (s) { return s.id; });
+    var cols = [{ key: 'CEO', label: 'Founder items' }, { key: 'CARRY', label: 'Carried over (' + carried[0] + '–' + carried[carried.length - 1] + ')' }]
+      .concat(D.slices.slice(nextIdx).map(function (s) { return { key: s.id, label: s.id + ' ' + s.name }; }));
+    var colOf = function (t) { return t.kind === 'founder' ? 'CEO' : (carried.indexOf(t.slice) >= 0 ? 'CARRY' : t.slice); };
+    var W = 128, NW = 96, NH = 22, GAP = 30, TOP = 56, LEFT = 16;
+    var lanes = {}; cols.forEach(function (c) { lanes[c.key] = []; });
+    openT.forEach(function (t) { var k = colOf(t); if (lanes[k]) lanes[k].push(t); });
+    var P = {};
+    cols.forEach(function (c, ci) {
+      lanes[c.key].sort(function (a, b) { return a.role.localeCompare(b.role) || a.id.localeCompare(b.id); });
+      lanes[c.key].forEach(function (t, ri) { P[t.id] = { x: LEFT + ci * W, y: TOP + ri * GAP }; });
+    });
+    var maxRows = Math.max.apply(null, cols.map(function (c) { return lanes[c.key].length; }));
+    var width = LEFT * 2 + cols.length * W, height = TOP + maxRows * GAP + 16;
+    dm.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    dm.setAttribute('width', width); dm.setAttribute('height', height);
+    dm.replaceChildren();
+    var focus = null;
+    if (state.task && P[state.task]) {
+      focus = {}; focus[state.task] = 1;
+      (byId[state.task].deps || []).forEach(function (d) { focus[d] = 1; });
+      (byId[state.task].dependents || []).forEach(function (d) { focus[d] = 1; });
+    }
+    var lit = function (t) { return focus ? !!focus[t.id] : mine(t, state.role); };
+    cols.forEach(function (c, ci) {
+      var x = LEFT + ci * W;
+      var words = c.label.length > 18 ? c.label.slice(0, 17) + '…' : c.label;
+      dm.appendChild(sv('text', { x: x, y: 22, 'font-size': 12, 'font-weight': 600, fill: 'var(--ink)', text: words }, [sv('title', { text: c.label })]));
+      dm.appendChild(sv('text', { x: x, y: 38, 'font-size': 11, fill: 'var(--muted)', text: lanes[c.key].length + ' open' }));
+    });
+    var edges = sv('g', { fill: 'none' });
+    openT.forEach(function (t) {
+      t.deps.forEach(function (d) {
+        if (!P[d] || !P[t.id]) return;
+        var a = P[d], b = P[t.id];
+        var on = focus ? (focus[t.id] && focus[d] && (d === state.task || t.id === state.task)) : (lit(t) || lit(byId[d]));
+        var x1 = a.x + NW, y1 = a.y + NH / 2, x2 = b.x, y2 = b.y + NH / 2;
+        var path = x2 > x1 ? 'M' + x1 + ' ' + y1 + ' C' + (x1 + 24) + ' ' + y1 + ' ' + (x2 - 24) + ' ' + y2 + ' ' + x2 + ' ' + y2
+          : 'M' + (a.x + NW / 2) + ' ' + (a.y + NH) + ' C' + (a.x + NW / 2 + 40) + ' ' + (a.y + NH + 20) + ' ' + (b.x + NW / 2 + 40) + ' ' + (b.y - 20) + ' ' + (b.x + NW / 2) + ' ' + b.y;
+        edges.appendChild(sv('path', { d: path, stroke: on ? 'var(--ink)' : 'var(--line)', 'stroke-opacity': on ? .55 : .8, 'stroke-width': on ? 1.4 : 1 }));
+      });
+    });
+    dm.appendChild(edges);
+    openT.forEach(function (t) {
+      var p = P[t.id]; if (!p) return;
+      var on = lit(t);
+      var g = sv('g', { class: 'node fade', tabindex: 0, role: 'button', 'aria-label': t.id + ': ' + t.title, opacity: on ? 1 : .28 });
+      g.appendChild(sv('rect', { x: p.x, y: p.y, width: NW, height: NH, rx: 5, fill: t.id === state.task ? 'color-mix(in srgb, ' + roleColor(t.role) + ' 22%, var(--surface))' : 'var(--surface)', stroke: roleColor(t.role), 'stroke-width': t.id === state.task ? 2.5 : 1.3 }));
+      g.appendChild(sv('circle', { cx: p.x + 9, cy: p.y + NH / 2, r: 3.5, fill: t.status === 'in_progress' ? 'var(--progress)' : 'var(--todo)' }));
+      g.appendChild(sv('text', { x: p.x + 18, y: p.y + 15, 'font-size': 11.5, fill: 'var(--ink)', 'font-family': 'IBM Plex Mono, monospace', text: t.id }));
+      g.appendChild(sv('title', { text: t.id + ' · ' + t.title + ' (' + STATUS[t.status] + ')' }));
+      g.addEventListener('click', function () { selectTask(t.id); });
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter') selectTask(t.id); });
+      dm.appendChild(g);
+    });
+    var lg = document.getElementById('legend');
+    lg.replaceChildren.apply(lg, ['founder'].concat(ringIds).map(function (id) {
+      return el('span', {}, [el('span', { class: 'dot', style: 'background:' + roleColor(id) }), R[id].name]);
+    }).concat([el('span', {}, [el('span', { class: 'dot', style: 'background:var(--progress)' }), 'In progress']), el('span', {}, [el('span', { class: 'dot', style: 'background:var(--todo)' }), 'To do'])]));
+  }
+
+  function selectRole(id) { state.role = id; state.task = null; drawAll(); }
+  function selectTask(id) {
+    state.task = state.task === id ? null : id;
+    var t = byId[id];
+    if (state.task && t && !mine(t, state.role)) state.role = 'core';
+    drawAll();
+  }
+  function drawAll() { drawTeam(); drawCharter(); drawTasks(); drawChain(); drawMap(); }
+  drawAll();
+})();
+</script>
+</body>
+</html>

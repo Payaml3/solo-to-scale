@@ -15,6 +15,7 @@ You're building **solo-to-scale**: one plugin that installs the Startup Operatin
 - `sources/os-engineering-standards-upgrade-prompt.md`: the engineering standards, the `CLAUDE.md` limit, the PR size warning, DORA metrics and `test-area`.
 - `sources/ai-team-setup-prompt.md`: the seven roles, `founder/team.md`, tickets with a claim step, the goal chain and role budgets.
 - `sources/build_traceability.py` and `sources/build_team.py`: generators for the live views.
+- `plugins/solo-to-scale/templates/views/team-view.html`: the team-view page (team map, task explorer, dependency map). `publish-views` fills `__PROJECT_NAME__` from `founder/project.json` and `__DATA__` with the JSON from `build_team.py`, then publishes it.
 - **Working implementation:** the founder names a reference repo when starting this session (**ASK** if they don't). It has v1 of the skills, hooks, governance check and tests in `.claude/` and `tools/`. Reuse that code and generalise it. Strip everything specific to that project: its name, repo, epics, slices, invariants, view links and domain terms. None of them may appear in this repo.
 
 ## Ground rules
