@@ -164,7 +164,7 @@ def section(text: str) -> str | None:
 @dataclass
 class Action:
     rel: str
-    kind: str  # create | same | update | section | propose | keep
+    kind: str  # create | same | update | section | enable | propose | keep
     owner: str
     content: str = ""
     note: str = ""
@@ -181,6 +181,7 @@ class Plan:
     def summary(self) -> str:
         lines = []
         for kind, label in (("create", "Create"), ("update", "Update (plugin-owned)"), ("section", "Update the plugin block"),
+                            ("enable", "Enable the plugin (only its two entries added; everything else kept)"),
                             ("propose", "Exists and differs: merge proposed in the PR"), ("keep", "Founder-owned: left alone"),
                             ("same", "Already current")):
             items = self.by(kind)
@@ -221,3 +222,42 @@ def merged_json(old: str, new: str) -> str | None:
             return a + [x for x in b if x not in a]
         return a
     return json.dumps(merge(o, n), indent=2) + "\n"
+
+
+SETTINGS = ".claude/settings.json"
+
+
+def plugin_entries() -> dict[str, dict[str, Any]]:
+    """The settings entries that make every session load this plugin: its marketplace and its enabledPlugins flag."""
+    tpl = json.loads((TEMPLATES / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    name = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["name"]
+    return {
+        "extraKnownMarketplaces": {k: v for k, v in tpl["extraKnownMarketplaces"].items() if k == name},
+        "enabledPlugins": {k: v for k, v in tpl["enabledPlugins"].items() if k.startswith(f"{name}@")},
+    }
+
+
+def enable_plugin(old: str) -> str | None:
+    """The existing settings plus this plugin's marketplace and enabled flag; None if already there or not JSON.
+
+    Without these entries a repo whose own skill copies were replaced has no operating-system skills in
+    cloud sessions or scheduled tasks. Only these keys are added; every existing key and value is kept.
+    """
+    try:
+        data = json.loads(old)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    changed = False
+    for key, entries in plugin_entries().items():
+        current = data.get(key)
+        if current is None:
+            data = {key: dict(entries), **data}
+            changed = True
+        elif isinstance(current, dict):
+            for k, v in entries.items():
+                if k not in current:
+                    current[k] = v
+                    changed = True
+    return json.dumps(data, indent=2) + "\n" if changed else None

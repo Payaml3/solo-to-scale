@@ -42,6 +42,25 @@ def governance(repo: Path) -> subprocess.CompletedProcess[str]:
                           capture_output=True, text=True)
 
 
+def assert_only_plugin_enabled(before: bytes, after: bytes) -> None:
+    """The settings file gains exactly the plugin's marketplace and enabled flag; every existing key is kept."""
+    old, new = json.loads(before), json.loads(after)
+    assert new["enabledPlugins"] == {**old.get("enabledPlugins", {}), "solo-to-scale@solo-to-scale": True}
+    assert new["extraKnownMarketplaces"]["solo-to-scale"]["source"]["source"] == "github"
+    assert {k: v for k, v in new.items() if k not in ("enabledPlugins", "extraKnownMarketplaces")} == \
+        {k: v for k, v in old.items() if k not in ("enabledPlugins", "extraKnownMarketplaces")}
+
+
+def test_enable_plugin_keeps_other_plugins_and_is_idempotent():
+    from s2s_render import enable_plugin
+    old = json.dumps({"enabledPlugins": {"superpowers@claude-plugins-official": False}, "model": "x"})
+    new = json.loads(enable_plugin(old))
+    assert new["enabledPlugins"] == {"superpowers@claude-plugins-official": False, "solo-to-scale@solo-to-scale": True}
+    assert new["model"] == "x"
+    assert enable_plugin(json.dumps(new)) is None, "already enabled: nothing to do"
+    assert enable_plugin("not json") is None and enable_plugin("[]") is None
+
+
 def test_init_empty_repo(tmp_path):
     repo = make_repo(tmp_path, "empty")
     plan = init_repo.plan_init(repo, ANSWERS, TODAY)
@@ -75,7 +94,9 @@ def test_init_never_overwrites_existing_files(tmp_path):
     init_repo.apply(repo, plan, "ops/solo-to-scale", "t")
     after = snapshot(repo)
     for rel, text in before.items():
-        assert after[rel] == text, f"{rel} was changed"
+        if rel != ".claude/settings.json":
+            assert after[rel] == text, f"{rel} was changed"
+    assert_only_plugin_enabled(before[".claude/settings.json"], after[".claude/settings.json"])
     proposals = (repo / ".git/solo-to-scale-proposals.md").read_text()
     assert "Move its shared content into AGENTS.md" in proposals
     assert '"Bash(make test)"' in proposals and "solo-to-scale@solo-to-scale" in proposals, "settings merged, the repo's values kept"
@@ -108,10 +129,15 @@ def test_upgrade_legacy_maps_and_proposes_moves(tmp_path):
     assert kinds["founder/status.md"] == "keep" and kinds["founder/decisions.md"] == "keep"
     assert kinds["tools/build_traceability.py"] == "propose", "the repo's own script is never replaced in legacy mode"
     assert kinds["founder/project.json"] == "create"
+    assert kinds[".claude/settings.json"] == "enable", "the repo's own skills go, so the plugin must be enabled"
     init_repo.apply(repo, plan, "ops/solo-to-scale-1.0.0", "t")
     after = snapshot(repo)
     for rel, text in before.items():
-        assert after[rel] == text, f"{rel} was changed"
+        if rel != ".claude/settings.json":
+            assert after[rel] == text, f"{rel} was changed"
+    assert_only_plugin_enabled(before[".claude/settings.json"], after[".claude/settings.json"])
+    again, _ = upgrade_repo.plan_upgrade(repo, {"project": ANSWERS["project"]}, TODAY)
+    assert {a.rel: a.kind for a in again.actions}[".claude/settings.json"] == "keep", "enabling is done once"
 
 
 def test_upgrade_rerenders_plugin_files_and_reports_rename(tmp_path):
