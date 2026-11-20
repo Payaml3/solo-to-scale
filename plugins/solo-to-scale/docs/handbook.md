@@ -27,7 +27,7 @@ Setup takes about an hour and one Claude Code session, once per startup.
 
 - [ ] **Account plugins:** founder, Superpowers, marketing, and brand-skills (added as a marketplace from `cofoundy/brand-skills`)
 - [ ] **GitHub repository** created, private, default branch `main`
-- [ ] **Install the solo-to-scale plugin and run its init command (until the plugin is built, run the bootstrap prompt instead)** in a Claude Code session named `<Project> · OPS Operating system`, using a mid-tier model
+- [ ] **Install the solo-to-scale plugin and run its `init` skill** in a Claude Code session named `<Project> · OPS Operating system`, using a mid-tier model
 - [ ] **Install repo skills** during init:
   - Spec Kit (`.claude/skills/speckit-*`)
   - brand-skills (`npx skills add cofoundy/brand-skills`)
@@ -73,7 +73,16 @@ The journey runs through 7 phases and 30 stages, each ending in a gate. Inside t
 
 **Where:** P = a Claude Project chat with that prefix; Code = a Claude Code session; Task = a scheduled task.
 
-&#91;embedded content: journey · 7 phases, 7 gates\]
+```mermaid
+flowchart LR
+  A["A. Discover<br/>stages 1-2"] -->|"gate: pain confirmed"| B["B. Define<br/>stages 3-7"]
+  B -->|"gate: MVP scope approved"| C["C. Specify and design<br/>stages 8-12"]
+  C -->|"gate: no contradictions"| D["D. Build and prove<br/>stages 13-17, in slices"]
+  D -->|"gate: release check says go"| E["E. Launch<br/>stages 18-22"]
+  E -->|"gate: go-live decision"| F["F. Grow to product-market fit<br/>stages 23-25"]
+  F -->|"gate: retention and conversion targets"| G["G. Scale<br/>stages 26-30"]
+  G -->|"gate: governance cadence running"| H(("Scale"))
+```
 
 Each phase's gate must pass before the next phase starts. The stage table below gives the detail for every stage.
 
@@ -239,7 +248,16 @@ Nothing ships on a claim. Every acceptance criterion has a passing test or a wri
 
 Every change goes through the same pipeline: checks on every push, automatic deploys to non-production on every merge, and a manual, gated step to production. The pipeline is chosen with the stack at stage 10 and proven by the first slice, before any feature.
 
-&#91;embedded content: CI/CD pipeline · 2 gates to production\]
+```mermaid
+flowchart LR
+  P["Push"] --> CI["CI checks<br/>levels 1 to 4"]
+  CI --> PR["Pull request<br/>preview deploy"]
+  PR -->|"founder merges"| M["main"]
+  M --> S["Staging, demo or sandbox<br/>automatic"]
+  S --> G1{"Gate 1:<br/>release check says go"}
+  G1 --> G2{"Gate 2:<br/>founder approves"}
+  G2 --> PROD["Production<br/>tagged release"]
+```
 
 Everything up to staging is automatic. Production needs both a go from the release check and your approval.
 
@@ -356,7 +374,7 @@ Artifacts are views of the repo, regenerated from it, and each one shows the com
 
 ## Skills and plugins
 
-Seven sources of skills cover the whole journey. The operating-system skills live in the repo, so every session has them.
+Seven sources of skills cover the whole journey. The operating-system skills come from the solo-to-scale plugin, which the repo's settings enable, so every session has them.
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
@@ -407,7 +425,7 @@ A solo founder runs the company as CEO and board. Claude sits at the centre as t
 
 **How the team works**
 
-- **One role per session.** Each role is a definition file in `.claude/agents/<role>.md`, holding its charter, skills, tools and model. A session runs as one role.
+- **One role per session.** Each role has one source in the plugin, `roles/<role>.yaml`, holding its charter, skills, tools and model tier; it is generated into a Claude Code agent and a Codex agent. A session runs as one role.
 - **Roles talk through the repo, not through chat.** Their channels are GitHub Issues, pull requests, the registers and `HANDOFF.md`.
 - **Tickets with a claim step.** Each story group is one GitHub Issue. A session claims it, by assigning it and adding a label, before starting, so two sessions never work on the same thing.
 - **The goal chain comes first.** Every issue and every session's first message starts with the chain: company goal → initiative → story → acceptance criteria. Each role knows why it's doing the work.
@@ -435,6 +453,7 @@ Four AI advisors sit with the founder on the board. They advise and have no vote
   | Fundraising, large spend | Owner, growth |
   | Go-live, data, partners | Risk, customer |
   | Hiring | Owner |
+  | Anything else hard to reverse | Owner, risk |
 - **What each one writes:** a memo of at most 8 lines, giving its verdict (support, concerns or oppose), the biggest risk, what would change its mind, and one metric to watch. Claude summarises where they agree and disagree. The memos are kept in `founder/board/<decision ID>.md`.
 - **Rules:**
   - Advisors are named by their lens, never as the real people.
@@ -481,7 +500,7 @@ The system saves tokens mainly by keeping sessions short and by never redoing wo
 
 ## The prompts
 
-The solo-to-scale plugin builds and updates the system: init sets up a repo, and upgrade brings an older one up to date. The prompts below are its source material, and the fallback until the plugin is built. Where they disagree with the plugin build prompt, the build prompt wins.
+The solo-to-scale plugin builds and updates the system: init sets up a repo, and upgrade brings an older one up to date. The prompts below are its source material. Where they disagree with the plugin build prompt, the build prompt wins.
 
 | Prompt | Run when | Builds |
 | --- | --- | --- |

@@ -5,6 +5,8 @@
     {
       "name": "solo-to-scale",
       "source": { "source": "local", "path": "./plugins/solo-to-scale" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity",
       "description": "Founder HQ, AI team and board, decision governance, context guard, live views and release checks, from idea to scale"
     }
   ]

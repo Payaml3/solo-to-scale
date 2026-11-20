@@ -1,0 +1,68 @@
+{
+  "description": "solo-to-scale: context guard, session start, compaction handoff and stop check for Codex.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"$PLUGIN_ROOT/scripts/hooks/session_start.py\" --agent codex",
+            "timeout": 10,
+            "commandWindows": "python \"%PLUGIN_ROOT%\\scripts\\hooks\\session_start.py\" --agent codex"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"$PLUGIN_ROOT/scripts/hooks/context_guard.py\" --agent codex",
+            "timeout": 10,
+            "commandWindows": "python \"%PLUGIN_ROOT%\\scripts\\hooks\\context_guard.py\" --agent codex"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"$PLUGIN_ROOT/scripts/hooks/pre_compact.py\" --agent codex",
+            "timeout": 10,
+            "commandWindows": "python \"%PLUGIN_ROOT%\\scripts\\hooks\\pre_compact.py\" --agent codex"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"$PLUGIN_ROOT/scripts/hooks/post_compact.py\" --agent codex",
+            "timeout": 10,
+            "commandWindows": "python \"%PLUGIN_ROOT%\\scripts\\hooks\\post_compact.py\" --agent codex"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"$PLUGIN_ROOT/scripts/hooks/stop_check.py\" --agent codex",
+            "timeout": 20,
+            "commandWindows": "python \"%PLUGIN_ROOT%\\scripts\\hooks\\stop_check.py\" --agent codex"
+          }
+        ]
+      }
+    ]
+  }
+}

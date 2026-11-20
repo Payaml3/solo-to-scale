@@ -1,8 +1,31 @@
 {
   "name": "solo-to-scale",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The startup operating system for solo founders and their AI team",
-  "author": { "name": "Payam" },
+  "author": {
+    "name": "Payam"
+  },
   "homepage": "https://github.com/Payaml3/solo-to-scale",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "keywords": [
+    "startup",
+    "operating-system",
+    "founder",
+    "governance",
+    "handoff"
+  ],
+  "agents": [
+    "./agents/claude/architect.md",
+    "./agents/claude/chief-of-staff.md",
+    "./agents/claude/customer-advisor.md",
+    "./agents/claude/engineer.md",
+    "./agents/claude/growth-advisor.md",
+    "./agents/claude/growth.md",
+    "./agents/claude/owner-advisor.md",
+    "./agents/claude/product.md",
+    "./agents/claude/qa.md",
+    "./agents/claude/research.md",
+    "./agents/claude/risk-advisor.md"
+  ],
+  "hooks": "./hooks/claude-hooks.json"
 }

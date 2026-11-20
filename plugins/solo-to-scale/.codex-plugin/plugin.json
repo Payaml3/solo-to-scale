@@ -1,8 +1,16 @@
 {
   "name": "solo-to-scale",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The startup operating system for solo founders and their AI team",
   "author": { "name": "Payam" },
   "homepage": "https://github.com/Payaml3/solo-to-scale",
-  "skills": "./skills/"
+  "keywords": ["startup", "operating-system", "founder", "governance", "handoff"],
+  "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "Solo to Scale",
+    "shortDescription": "Founder HQ, AI team and board, decision governance, context guard and release checks",
+    "developerName": "Payam",
+    "category": "Productivity"
+  }
 }
