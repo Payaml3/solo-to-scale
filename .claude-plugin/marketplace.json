@@ -1,0 +1,13 @@
+{
+  "name": "solo-to-scale",
+  "description": "The startup operating system for solo founders and their AI team",
+  "owner": { "name": "Payam" },
+  "plugins": [
+    {
+      "name": "solo-to-scale",
+      "source": "./plugins/solo-to-scale",
+      "description": "Founder HQ, AI team and board, decision governance, context guard, live views and release checks, from idea to scale",
+      "version": "0.1.0"
+    }
+  ]
+}

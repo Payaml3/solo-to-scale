@@ -1,0 +1,18 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -I tests/check_manifests.py
+      - name: no project names in the plugin
+        env:
+          PROJECT_NAME_DENYLIST: ${{ secrets.PROJECT_NAME_DENYLIST }}
+        run: python -I tests/check_no_project_names.py

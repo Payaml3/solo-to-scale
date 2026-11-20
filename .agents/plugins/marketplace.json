@@ -1,0 +1,11 @@
+{
+  "name": "solo-to-scale",
+  "owner": { "name": "Payam" },
+  "plugins": [
+    {
+      "name": "solo-to-scale",
+      "source": { "source": "local", "path": "./plugins/solo-to-scale" },
+      "description": "Founder HQ, AI team and board, decision governance, context guard, live views and release checks, from idea to scale"
+    }
+  ]
+}
