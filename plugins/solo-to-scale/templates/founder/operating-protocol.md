@@ -1,4 +1,5 @@
-Approved by the founder on 2026-11-20.
+<!-- Plugin-owned: the only copy of the protocol. Change it in the solo-to-scale plugin, then run upgrade. -->
+Approved by the founder by merging the solo-to-scale `init` pull request (the merge date is the approval date).
 
 # Startup Operating Protocol
 

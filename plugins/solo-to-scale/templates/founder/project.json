@@ -1,0 +1,7 @@
+{
+  "name": "{{project.name}}",
+  "working_name": {{project.working_name}},
+  "repo": "{{project.repo}}",
+  "one_line": "{{project.one_line}}",
+  "stage": {{project.stage}}
+}
