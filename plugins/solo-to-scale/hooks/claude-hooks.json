@@ -1,0 +1,39 @@
+{
+  "description": "solo-to-scale: context guard, session start and stop check for Claude Code. The status line is set by init in .claude/settings.json.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session_start.py\" --agent claude",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/context_guard.py\" --agent claude",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(command -v python3 || command -v python)\" \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/stop_check.py\" --agent claude",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

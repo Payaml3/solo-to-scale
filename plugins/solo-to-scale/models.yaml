@@ -1,0 +1,15 @@
+# Tier -> model per tool. The only place model names live; roles name a tier.
+# Claude Code takes aliases. Codex names come from the Codex model list.
+claude:
+  strongest: opus
+  mid: sonnet
+  small: haiku
+codex:
+  strongest: gpt-6.2-astra
+  mid: gpt-6.2-sol
+  small: gpt-6-luna
+# What each tier is for. docs/handbook.md "Model choice" and templates/AGENTS.md repeat these rows; CI checks they agree.
+use:
+  strongest: Architecture, security, money, data integrity, system foundations
+  mid: Routine features, docs, copy, screens, reviews, handoffs, the weekly review
+  small: Formatting, renames, simple lookups
