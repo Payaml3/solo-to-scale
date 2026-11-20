@@ -86,7 +86,7 @@ HANDOFF = """# HANDOFF
 | Now | Slice S1, story group 2 |
 
 ## Next story groups
-- Group 3: FND-04, FND-05 · Model: mid-tier
+- Group 3: CORE-04, CORE-05 · Model: mid-tier
 
 ## Known gaps
 - none
@@ -108,13 +108,13 @@ def test_session_start_summary(project):
     write(project / "HANDOFF.md", HANDOFF)
     write(project / "founder/status.md", STATUS)
     write(project / ".claude/state/claimed.json", json.dumps(
-        {"issue": 12, "title": "FND story group 2", "goal_chain": ["Goal: first paying customer", "Initiative: FND"]}))
+        {"issue": 12, "title": "CORE story group 2", "goal_chain": ["Goal: first paying customer", "Initiative: CORE"]}))
     text = context_of(run_hook("session_start", {"source": "startup", "session_id": "s1"}, project))
     lines = text.splitlines()
     assert lines[0].startswith("Example Startup session context")
     assert "| Now | Slice S1, story group 2 |" in lines
     assert any(ln.startswith("Next: Group 3") for ln in lines)
-    assert "Claimed issue #12: FND story group 2" in lines and "  Goal: first paying customer" in lines
+    assert "Claimed issue #12: CORE story group 2" in lines and "  Goal: first paying customer" in lines
     assert "- Add the API key secret" in lines and "- Fourth item" not in lines
     assert "warn at 60% or 100,000 tokens" in text and len(lines) <= 25
     assert json.loads((project / ".claude/state/plugin.json").read_text())["root"]

@@ -37,18 +37,18 @@ TEAM = """# Team
 
 ## Epic ownership
 
-- architect: FND
-- qa: EVL
-- growth: WEB
+- architect: CORE
+- qa: TEST
+- growth: SITE
 - engineer: all other epics
 
 ## Rules
 """
-SLICES = {"epics": {"FND": {"name": "Foundation"}, "PAY": {"name": "Payments"}, "WEB": {"name": "Website"}},
+SLICES = {"epics": {"CORE": {"name": "Foundation"}, "PAY": {"name": "Payments"}, "SITE": {"name": "Website"}},
           "slices": [{"id": "S1", "name": "Walking skeleton", "status": "todo"}],
-          "stories": [{"id": "FND-01", "title": "CI", "epic": "FND", "slice": "S1", "criteria": 4, "done": 4, "tested": 3},
-                      {"id": "PAY-01", "title": "Pay", "epic": "PAY", "slice": "S1", "criteria": 2, "done": 1, "deps": ["FND-01"]},
-                      {"id": "WEB-01", "title": "Site", "epic": "WEB", "slice": "S1", "criteria": [1, 2], "done": []}]}
+          "stories": [{"id": "CORE-01", "title": "CI", "epic": "CORE", "slice": "S1", "criteria": 4, "done": 4, "tested": 3},
+                      {"id": "PAY-01", "title": "Pay", "epic": "PAY", "slice": "S1", "criteria": 2, "done": 1, "deps": ["CORE-01"]},
+                      {"id": "SITE-01", "title": "Site", "epic": "SITE", "slice": "S1", "criteria": [1, 2], "done": []}]}
 STATUS = f"""# Status
 Last updated: {dt.date.today().isoformat()}
 
@@ -196,7 +196,7 @@ def test_team_data(repo):
     import build_team
     data = build_team.build(repo)
     by = {t["id"]: t for t in data["tasks"]}
-    assert by["FND-01"]["role"] == "architect" and by["PAY-01"]["role"] == "engineer"
+    assert by["CORE-01"]["role"] == "architect" and by["PAY-01"]["role"] == "engineer"
     assert by["CEO-01"]["blocks"] == ["PAY-01"] and "CEO-01" in by["PAY-01"]["deps"]
     assert by["B-02"]["kind"] == "decision" and "B-01" not in by
     assert len(data["board"]) == 4
@@ -211,7 +211,7 @@ def test_roadmap_check_mode(repo):
 
 def test_claim_dry_run_and_refusal(repo, tmp_path, capsys):
     import claim
-    issue = {"title": "S1 group 1", "labels": [], "body": "## Goal chain\n\n- Company goal: first customer\n- Initiative: FND\n\n## Owner\n\n- Role: `role:engineer`\n"}
+    issue = {"title": "S1 group 1", "labels": [], "body": "## Goal chain\n\n- Company goal: first customer\n- Initiative: CORE\n\n## Owner\n\n- Role: `role:engineer`\n"}
     p = tmp_path / "issue.json"
     p.write_text(json.dumps(issue))
     assert claim.main(["7", "--from-json", str(p), "--dry-run", "--root", str(repo)]) == 0

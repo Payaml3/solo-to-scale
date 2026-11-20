@@ -1,7 +1,10 @@
 {
   "extraKnownMarketplaces": {
     "solo-to-scale": {
-      "source": { "source": "github", "repo": "Payaml3/solo-to-scale" }
+      "source": {
+        "source": "github",
+        "repo": "Payaml3/solo-to-scale"
+      }
     }
   },
   "enabledPlugins": {
@@ -9,18 +12,36 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "\"$(command -v python3 || command -v python)\" \"$CLAUDE_PROJECT_DIR/.claude/statusline.py\""
+    "command": "\"$(command -v python3 || command -v python)\" \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.claude/statusline.py\""
   },
   "permissions": {
     "allow": [
-      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)",
-      "Bash(git checkout *)", "Bash(git switch *)", "Bash(git push -u origin *)", "Bash(git fetch *)",
-      "Bash(python tools/*)", "Bash(python3 tools/*)", "Bash(python -m pytest *)", "Bash(python3 -m pytest *)",
-      "Bash(make test-area *)", "Bash(make governance)", "Bash(gh issue view *)", "Bash(gh pr view *)"
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git push -u origin *)",
+      "Bash(git fetch *)",
+      "Bash(python tools/*)",
+      "Bash(python3 tools/*)",
+      "Bash(python -m pytest *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(make test-area *)",
+      "Bash(make governance)",
+      "Bash(gh issue view *)",
+      "Bash(gh pr view *)"
     ],
     "deny": [
-      "Read(./.env)", "Read(./.env.*)", "Read(./**/*.pem)", "Read(./**/secrets/**)",
-      "Bash(git push --force *)", "Bash(git push origin main)", "Bash(git push origin HEAD:main)"
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/secrets/**)",
+      "Bash(git push --force *)",
+      "Bash(git push origin main)",
+      "Bash(git push origin HEAD:main)"
     ]
   }
 }
