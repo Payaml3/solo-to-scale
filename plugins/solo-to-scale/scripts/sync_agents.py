@@ -1,6 +1,6 @@
 """Generate the agent files for both tools from roles/*.yaml, the only source.
 
-  python scripts/sync_agents.py          # write agents/claude/*.md and agents/codex/*.toml
+  python scripts/sync_agents.py          # write agents/claude/*.md, agents/codex/*.toml and the manifest's agent list
   python scripts/sync_agents.py --check  # exit 1 if any generated file differs from its source
 
 Roles with `enabled: false` (the sales advisor) go to templates/agents-optional/ instead, so the
@@ -10,6 +10,7 @@ Model names come from models.yaml by tier. Standard library only.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -112,6 +113,15 @@ def expected(plugin: Path = PLUGIN) -> dict[Path, str]:
     return files
 
 
+def manifest_text(plugin: Path, files: dict[Path, str]) -> str:
+    """The Claude manifest with `agents` listing every enabled agent file (the validator wants .md paths)."""
+    path = plugin / ".claude-plugin" / "plugin.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    claude_dir = plugin / "agents" / "claude"
+    data["agents"] = sorted("./" + p.relative_to(plugin).as_posix() for p in files if p.parent == claude_dir)
+    return json.dumps(data, indent=2) + "\n"
+
+
 def generated_dirs(plugin: Path = PLUGIN) -> list[Path]:
     return [plugin / "agents" / "claude", plugin / "agents" / "codex",
             plugin / "templates" / "agents-optional" / "claude", plugin / "templates" / "agents-optional" / "codex"]
@@ -123,20 +133,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--plugin", type=Path, default=PLUGIN)
     args = ap.parse_args(argv)
     want = expected(args.plugin)
+    want[args.plugin / ".claude-plugin" / "plugin.json"] = manifest_text(args.plugin, want)
     stale = [p for d in generated_dirs(args.plugin) if d.is_dir() for p in d.iterdir()
              if p.is_file() and p not in want]
     if args.check:
         bad = [p for p, text in want.items() if not p.is_file() or p.read_text(encoding="utf-8") != text]
         for p in bad + stale:
             print(f"drift: {p.relative_to(args.plugin).as_posix()} does not match roles/; run scripts/sync_agents.py")
-        print("agents: FAILED" if bad or stale else f"agents: OK ({len(want)} files)")
+        print("agents: FAILED" if bad or stale else f"agents: OK ({len(want) - 1} files and the manifest list)")
         return 1 if bad or stale else 0
     for p in stale:
         p.unlink()
     for p, text in want.items():
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8", newline="\n")
-    print(f"wrote {len(want)} agent files")
+    print(f"wrote {len(want) - 1} agent files and the manifest's agent list")
     return 0
 
 

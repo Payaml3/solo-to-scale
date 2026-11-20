@@ -8,7 +8,28 @@
   "pr_warn_lines": 400,
   "status_stale_days": 14,
   "slices_file": "founder/slices.json",
-  "registers": ["founder/decisions.md", "specs/*/decisions.md"],
-  "approved_words": ["Approved", "Confirmed"],
-  "generated_paths": ["founder/roadmap.json", "founder/team.json", "founder/traceability.json", "*.lock", "*-lock.json", "uv.lock"]
+  "registers": [
+    "founder/decisions.md",
+    "specs/*/decisions.md"
+  ],
+  "approved_words": [
+    "Approved",
+    "Confirmed"
+  ],
+  "generated_paths": [
+    "founder/roadmap.json",
+    "founder/team.json",
+    "founder/traceability.json",
+    "*.lock",
+    "*-lock.json",
+    "uv.lock",
+    "tools/*",
+    ".codex/agents/*",
+    ".claude/statusline.py",
+    "founder/operating-protocol.md",
+    "founder/claude-project/*",
+    "docs/engineering-standards.md",
+    ".github/workflows/governance.yml",
+    ".github/ISSUE_TEMPLATE/story-group.md"
+  ]
 }

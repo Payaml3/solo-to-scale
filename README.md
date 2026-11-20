@@ -138,6 +138,7 @@ Enable only what a repo needs: every enabled plugin's skill descriptions load in
 python -m pytest -q tests plugins/solo-to-scale/templates/tools/tests
 python tests/check_manifests.py && python tests/check_drift.py && python tests/check_sizes.py
 python plugins/solo-to-scale/scripts/sync_agents.py   # after editing roles/ or models.yaml
+claude plugin validate ./plugins/solo-to-scale && claude plugin validate .   # where the Claude Code CLI is installed
 ```
 
 ## Licence
