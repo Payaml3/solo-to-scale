@@ -116,6 +116,13 @@ def plan_init(repo: Path, answers: dict[str, Any], today: str) -> r.Plan:
         if old == text:
             plan.actions.append(r.Action(rel, "same", own))
             continue
+        if rel == r.SETTINGS and (enabled := r.enable_plugin(old)):
+            plan.actions.append(r.Action(rel, "enable", own, enabled))
+            old = enabled
+            if (merged := r.merged_json(old, text)) and merged != old:
+                plan.actions.append(r.Action(rel, "propose", own, r.diff(rel, old, merged),
+                                             "Plugin enabled; the other keys solo-to-scale suggests (your values win)."))
+            continue
         if own == "section":
             note, block = sectioned_proposal(rel, old, text)
             plan.actions.append(r.Action(rel, "propose", own, block, note))
@@ -157,7 +164,7 @@ def apply(repo: Path, plan: r.Plan, branch: str | None, title: str) -> list[str]
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(a.content, encoding="utf-8", newline="\n")
             written.append(a.rel)
-        elif a.kind in ("update", "section"):
+        elif a.kind in ("update", "section", "enable"):
             dest = repo / a.rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(a.content, encoding="utf-8", newline="\n")

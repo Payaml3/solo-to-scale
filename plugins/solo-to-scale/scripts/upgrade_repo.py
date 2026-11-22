@@ -114,7 +114,10 @@ def plan_upgrade(repo: Path, extra: dict[str, Any], today: str) -> tuple[r.Plan,
                 plan.actions.append(r.Action(rel, "create", own, text))
             continue
         old = ini.read(dest)
-        if old == text:
+        if rel == r.SETTINGS and (enabled := r.enable_plugin(old)):
+            # Founder-owned, but the plugin must be enabled or the repo loses its skills (see enable_plugin).
+            plan.actions.append(r.Action(rel, "enable", own, enabled))
+        elif old == text:
             plan.actions.append(r.Action(rel, "same", own))
         elif own == "founder":
             plan.actions.append(r.Action(rel, "keep", own))
