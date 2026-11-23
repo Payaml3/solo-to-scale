@@ -585,6 +585,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
     });
     return [tiles, G.ok ? null : ghMissing(),
+      setupPanel(),
       stagePanel(),
       goalStrip(),
       crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
@@ -592,6 +593,19 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         panel("Needs you", "Approvals, founder items and decisions waiting.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." })),
         panel("Latest agent activity", null, recent.length ? el("ul", { cls: "list" }, recent) : el("p", { cls: "empty", text: G.ok ? "No activity yet." : "GitHub data missing." })),
         panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: G.ok ? "Nothing merged recently." : "GitHub data missing." })))];
+  }
+
+  // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------
+  function setupPanel() {
+    var todo = (D.setup || []).filter(function (x) { return x.status === "broken" || x.status === "todo"; });
+    if (!todo.length) return null;
+    var broken = todo.filter(function (x) { return x.status === "broken"; }).length;
+    return panel("Setup", (broken ? broken + " broken, " : "") + todo.length + " to finish. From tools/doctor.py; run the doctor skill to fix what it can.",
+      el("ul", { cls: "list" }, todo.map(function (x) {
+        return el("li", null, pill(x.status === "broken" ? "broken" : "to do", x.status === "broken" ? "blocked" : "todo"), " ", x.title,
+          x.detail ? el("div", { cls: "why", text: x.detail }) : null,
+          x.fix ? el("div", { cls: "why", text: "Fix: " + x.fix + (x.section ? " (handbook: " + x.section + ")" : "") }) : null);
+      })));
   }
 
   // --- goals: founder/goals.json, through tools/goals.py --------------------------------------------------

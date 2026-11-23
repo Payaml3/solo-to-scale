@@ -41,6 +41,7 @@ import approval  # noqa: E402
 import build_roadmap  # noqa: E402
 import build_team  # noqa: E402
 import build_traceability  # noqa: E402
+import doctor  # noqa: E402
 import goals  # noqa: E402
 import heartbeat  # noqa: E402
 import tickets  # noqa: E402
@@ -239,6 +240,14 @@ def https_url(url: Any) -> str:
     return url if re.fullmatch(r"https://[^\s\"'<>]+", url) else ""
 
 
+def setup(root: Path, offline: bool, now: dt.datetime) -> list[dict[str, str]]:
+    """The doctor's findings for the Setup card; never stops the build."""
+    try:
+        return doctor.run(root, offline=offline, now=now)
+    except Exception as exc:  # noqa: BLE001 - the page still builds
+        return [doctor.item("doctor", "Setup check", "unknown", f"the check itself failed ({type(exc).__name__})")]
+
+
 def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> dict[str, Any]:
     now = now or dt.datetime.now(dt.timezone.utc)
     cfg_dash = settings(root)
@@ -253,6 +262,7 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
         "links": {"portfolio": https_url(cfg_dash.get("portfolio_url")),
                   "portfolio_name": " ".join(str(cfg_dash.get("portfolio_name") or "").split())[:80]},
         "repo": repo_data(root, cfg_dash),
+        "setup": setup(root, offline, now),
         "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month),
     }
 

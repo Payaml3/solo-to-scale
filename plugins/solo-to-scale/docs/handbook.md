@@ -39,6 +39,17 @@ Setup takes about an hour and one Claude Code session, once per startup.
 - [ ] **Create the Monday scheduled task** from `founder/claude-project/weekly-review-task.md`: weekly review, then refresh the views
 - [ ] **Check the hooks** in the first Claude Code session: the HANDOFF summary appears and the status line shows context %
 - [ ] **Add secrets** to GitHub (API keys, denylists) as `status.md` lists them. Never commit them.
+- [ ] **Run the `doctor` skill** until nothing is broken. It lists what's left to do and fixes what it can.
+
+**Quick start.** In a hurry, `init` asks only for the name and the company goal, and takes defaults for the rest (every role's heartbeat off, no budgets, cross-review off, no hosting). It writes the goal into `founder/goals.json`, then offers three starter tickets (first customers, the first slice, the setup steps) and opens them only if you say yes. You set objectives and change any default later, in a pull request.
+
+**The doctor (`tools/doctor.py`).** One command checks the setup in the repo and on GitHub and says, for each item, whether it's **broken**, **to do**, **unknown** (it couldn't check), **info** or **ok**, with the fix and where the handbook explains it:
+
+- **In the repo:** `founder/project.json`, the workflows, the founder files each behind its gate (team, heartbeats, dashboard, portfolio, goals), the company goal and objectives, and a budget for every role whose heartbeat is on.
+- **Hosting:** whether the Cloudflare secrets and `PORTFOLIO_TOKEN` are set when the dashboard or the portfolio needs them. It checks only that they are set, never their values: the workflow passes it true or false.
+- **On GitHub:** the labels the team uses, a run in the last 72 hours from each role whose heartbeat is on, and whether the last dashboard build passed.
+
+`python tools/doctor.py --offline` checks the repo only, and `--json` prints the list for tools. `--repair` fixes what's safe on a branch: it writes an empty `goals.json`, adds the founder files to their gates and creates missing labels; the `doctor` skill opens the PR for you to merge. The goal itself, budgets and secrets stay yours. The same list is the **Setup** card at the top of the dashboard's Overview, and each session starts with a one-line reminder while anything is left.
 
 ## Repository map
 
@@ -397,7 +408,7 @@ Artifacts are views of the repo, regenerated from it, and each one shows the com
 
 ### The startup dashboard
 
-One page shows the whole company, with eleven tabs: **Overview** (this stage, the goals, your AI team, what needs you, the latest activity, recent merges), **Goals** (the company goal, each objective with its key results, progress, trend, owner and linked slices and tickets), **Documents** (business, product and technical), **Progress trace** (stories to criteria to tested code), **Roadmap** (slices, blockers, decisions waiting), **Scope and journey** (phases A to G and the epics), **Team and board** (heartbeats, budgets, tickets, advisors, memos), **Agent activity** (what the roles did and said to each other, from the activity log), **Decisions**, **Approvals inbox** and **Costs**.
+One page shows the whole company, with eleven tabs: **Overview** (what's left to set up, this stage, the goals, your AI team, what needs you, the latest activity, recent merges), **Goals** (the company goal, each objective with its key results, progress, trend, owner and linked slices and tickets), **Documents** (business, product and technical), **Progress trace** (stories to criteria to tested code), **Roadmap** (slices, blockers, decisions waiting), **Scope and journey** (phases A to G and the epics), **Team and board** (heartbeats, budgets, tickets, advisors, memos), **Agent activity** (what the roles did and said to each other, from the activity log), **Decisions**, **Approvals inbox** and **Costs**.
 
 - **Built by `tools/build_dashboard.py`** from the repo (the same generators as the other views) and from GitHub (activity log, tickets, approval requests, cost log, merged pull requests). It is never a source: change things in the repo or on GitHub. If GitHub can't be reached, the repo tabs are still built and the page says what's missing.
 - **Rebuilt on every merge to main and every hour** by the `dashboard` workflow. It needs no server: GitHub Actions builds it, and Cloudflare Pages serves it.
@@ -441,7 +452,7 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
-| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, coordinate, heartbeat, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
+| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, doctor, handoff, claim, coordinate, heartbeat, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
 | founder | Account plugin | validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy, product-brief, mvp-scope, go-to-market, landing-page, email-sequence, metrics-dashboard, pitch-deck, fundraise-prep | A, B, E, F |
 | brand-skills | Account marketplace, plus repo via `npx skills add` | naming, brand-architecture, brand-identity, brand-guidelines, brand-audit | B, C |
 | marketing | Account plugin | brand-review, competitive-brief, content-creation, campaign-plan, email-sequence, seo-audit, performance-report | B, E, F |

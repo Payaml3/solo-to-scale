@@ -20,10 +20,12 @@ Run `python3 <plugin>/scripts/init_repo.py assess --repo .` and report in at mos
 
 If the report suggests `upgrade` (a version file or existing Founder HQ), stop and propose the `upgrade` skill instead.
 
-## 2. Ask everything in one round
+## 2. Ask: quick start, or everything in one round
+
+Offer **quick start** first: ask only question 1 and the company goal, take every default in `references/questions.md`, and list those defaults in the plan and the PR so the founder can change any before merging (or later, by editing the founder-owned files). Otherwise ask all of them in one round.
 
 Ask with your question tool (AskUserQuestion in Claude Code; a plain numbered list in Codex). Details and defaults: `references/questions.md`.
-1. Project name, and whether it's a working name; repo (`owner/name`); one line; stage (1 to 30)
+1. Project name, and whether it's a working name; repo (`owner/name`); one line; stage (1 to 30); and the company goal in one measurable sentence ("100 paying studios by June 2027"), or blank for later
 2. The four context-guard limits (default 60%, 75%, 100k, 140k tokens)
 3. The monthly budget for each role
 4. Which recommended plugins to enable in `.claude/settings.json` (only those the project needs)
@@ -49,7 +51,10 @@ Run `python3 <plugin>/scripts/init_repo.py plan --repo . --answers <answers.json
 
 Never push to the default branch. Never mark anything Approved beyond the founder's answers.
 
-## 5. End with the manual steps
+## 5. First work, then the manual steps
+
+Propose three starter tickets for after the merge, matched to the stage (for example: write the business context; validate the idea with `founder:validate-idea`; plan five customer interviews). Open them with `python3 tools/tickets.py new ...` only when the founder says yes. Then suggest setting this quarter's objectives in `founder/goals.json`, and running the `doctor` skill once the PR is merged: it lists what is still to set up.
+
 
 1. Create the Claude Project from `founder/claude-project/` (paste `instructions.md`; add the 8 files in `knowledge.md`).
 2. Create the Monday scheduled task from `founder/claude-project/weekly-review-task.md`, in a session with artifact tools.

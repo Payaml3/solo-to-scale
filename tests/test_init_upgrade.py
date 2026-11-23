@@ -94,6 +94,14 @@ def test_init_empty_repo(tmp_path):
     assert tests.returncode == 0, tests.stdout[-2000:]
 
 
+def test_quick_start_writes_the_founders_goal(tmp_path):
+    repo = make_repo(tmp_path, "empty")
+    goal = 'First 10 paying studios, "no discounts"\n by June'
+    init_repo.apply(repo, init_repo.plan_init(repo, {**ANSWERS, "goal": goal}, TODAY), "ops/solo-to-scale", "t")
+    data = json.loads((repo / "founder/goals.json").read_text())
+    assert data["goal"] == 'First 10 paying studios, "no discounts" by June' and data["objectives"] == []
+
+
 def test_init_never_overwrites_existing_files(tmp_path):
     repo = make_repo(tmp_path, "existing")
     before = snapshot(repo)

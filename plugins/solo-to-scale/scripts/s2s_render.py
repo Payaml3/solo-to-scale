@@ -103,7 +103,8 @@ def context(answers: dict[str, Any], today: str) -> dict[str, Any]:
              "qa": "Open (evaluation and test epics)", "growth": "Open (website, docs and SDK epics)",
              "engineer": "all other epics"}
     epics.update(answers.get("epics") or {})
-    return {"project": p, "today": today, "plugin": {"version": plugin_version()}, "gov": gov,
+    goal = " ".join(str(answers.get("goal") or "").split())[:300]
+    return {"project": p, "goal": goal, "today": today, "plugin": {"version": plugin_version()}, "gov": gov,
             "budget": budgets, "epics": epics,
             "sales_advisor": "enabled" if answers.get("sales_advisor") else "off; init asks whether to enable it at stage 20"}
 
