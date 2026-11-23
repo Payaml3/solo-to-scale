@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.2 (2026-11-23)
+
+- Fix: the governance check no longer fails on register tables that have no status column, such as an approvals log of D- rows. Their IDs are still read, so citing them stays valid. A row in a table that has a status column still fails when its status is empty. Before, `upgrade` to 1.0.1 replaced a repo's own check and then reported every log row as "has no status".
+- Tests: an empty status still fails, and a log table without a status column passes.
+
 ## v1.0.1 (2026-11-20)
 
 - Fix: `init` and `upgrade` now enable the plugin in an existing `.claude/settings.json`. Before, `upgrade` left that file alone as founder-owned, and `init` only proposed the change. A repo whose own copies of `handoff`, `record-decision` and `weekly-review` were replaced then had none of those skills in cloud sessions or scheduled tasks. Only the plugin's marketplace and enabled flag are added; every other key is kept, and the rest stays a proposal.
