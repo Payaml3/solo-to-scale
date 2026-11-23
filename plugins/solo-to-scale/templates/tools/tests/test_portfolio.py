@@ -164,3 +164,21 @@ def test_hosting_is_behind_a_login_like_the_dashboard(root, monkeypatch, tmp_pat
     assert bp.main(["verify", "--root", str(root)]) == 1
     replies["https://portfolio.example.com/"] = (302, {"Location": "https://acme.cloudflareaccess.com/"}, "")
     assert bp.main(["verify", "--root", str(root)]) == 0
+
+
+# --- sorting, filters and approve actions (in the browser, no server) ------------------------------------
+
+@pytest.mark.parametrize("module", [bd, bp])
+def test_tables_sort_and_filter_and_approvals_open_github_only(module):
+    page = module.PAGE.read_text(encoding="utf-8")
+    assert "aria-sort" in page and "opts.filters" in page and 'type: "search"' in page, "tables sort and filter"
+    assert 'function actions(a)' in page and '"/approve"' in page and '"/reject "' in page
+    assert r'/^https:\/\/github\.com\/[^\s#]+$/i' in page, "approve buttons only for github.com links"
+    assert "#new_comment_field" in page
+
+
+@pytest.mark.parametrize("module", [bd, bp])
+def test_the_pages_never_build_html_from_strings(module):
+    page = module.PAGE.read_text(encoding="utf-8")
+    for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
+        assert sink not in page, sink

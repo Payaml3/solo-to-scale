@@ -79,6 +79,18 @@ ul.list li:last-child { border-bottom: 0; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .toolbar input, .toolbar select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); min-width: 0; }
 .toolbar input { flex: 1 1 200px; }
+th button.sort { all: unset; cursor: pointer; }
+th button.sort:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
+th[aria-sort="ascending"] button.sort::after { content: " ▲"; font-size: .7em; }
+th[aria-sort="descending"] button.sort::after { content: " ▼"; font-size: .7em; }
+.toolbar .shown { margin: 0; }
+.acts { display: inline-flex; gap: 6px; white-space: nowrap; }
+a.act { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: .8rem; font-weight: 600; text-decoration: none; border: 1px solid currentColor; }
+a.act.yes { background: var(--done); border-color: var(--done); color: #fff; }
+a.act.no { color: var(--waiting); }
+a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: .88rem; z-index: 5; }
+.toast[hidden] { display: none; }
 .empty { color: var(--muted); font-style: italic; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .venture h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
@@ -146,13 +158,84 @@ ul.list li:last-child { border-bottom: 0; }
     for (var i = 2; i < arguments.length; i++) add(p, arguments[i]);
     return p;
   }
-  function table(cols, rows, empty) {
+  // A table whose columns sort on click, with an optional search box and a select per filter, all in the browser.
+  // opts.search: the search placeholder; opts.filters: [{ label, f: row -> value }]. A column's k(row) is its sort key.
+  function table(cols, rows, empty, opts) {
     if (!rows.length) return el("p", { cls: "empty", text: empty || "Nothing yet." });
-    var head = el("tr", null, cols.map(function (c) { return el("th", { cls: c.num ? "num" : null, text: c.h }); }));
-    var body = rows.map(function (r) {
-      return el("tr", null, cols.map(function (c) { var v = c.f(r); return el("td", { cls: c.num ? "num" : null }, v === undefined || v === null ? "" : v); }));
+    opts = opts || {};
+    var items = rows.map(function (r) {
+      var cells = cols.map(function (c) { var v = c.f(r); return el("td", { cls: c.num ? "num" : null }, v === undefined || v === null ? "" : v); });
+      var tr = el("tr", null, cells);
+      return { r: r, tr: tr, cells: cells, text: tr.textContent.toLowerCase() };
     });
-    return el("div", { cls: "table-wrap" }, el("table", null, el("thead", null, head), el("tbody", null, body)));
+    var by = -1, dir = 1, tbody = el("tbody"), ths = [], selects = [], q = null, count = el("span", { cls: "note shown" });
+    function key(it, j) {
+      var v = cols[j].k ? cols[j].k(it.r) : it.cells[j].textContent.trim();
+      return v === undefined || v === null || v === "" ? null : v;
+    }
+    function cmp(a, b) {
+      if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+      if (typeof a === "number" && typeof b === "number") return (a - b) * dir;
+      return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" }) * dir;
+    }
+    function draw() {
+      var term = q ? q.value.trim().toLowerCase() : "";
+      var shown = items.filter(function (it) {
+        return (!term || it.text.indexOf(term) >= 0) &&
+          selects.every(function (s) { return !s.el.value || String(s.f(it.r)) === s.el.value; });
+      });
+      if (by >= 0) shown = shown.map(function (it, i) { return { it: it, i: i, k: key(it, by) }; })
+        .sort(function (a, b) { return cmp(a.k, b.k) || a.i - b.i; })
+        .map(function (x) { return x.it; });
+      tbody.textContent = "";
+      shown.forEach(function (it) { tbody.appendChild(it.tr); });
+      if (!shown.length) tbody.appendChild(el("tr", null, el("td", { cls: "empty", colspan: cols.length, text: "Nothing matches." })));
+      count.textContent = shown.length === items.length ? "" : shown.length + " of " + items.length;
+      ths.forEach(function (th, j) { if (th) th.setAttribute("aria-sort", j === by ? (dir > 0 ? "ascending" : "descending") : "none"); });
+    }
+    var head = el("tr", null, cols.map(function (c, j) {
+      if (!c.h || c.sort === false) { ths.push(null); return el("th", { cls: c.num ? "num" : null, text: c.h }); }
+      var th = el("th", { cls: c.num ? "num" : null }, el("button", { type: "button", cls: "sort", title: "Sort by " + c.h, on: { click: function () {
+        if (by === j) dir = -dir; else { by = j; dir = c.num ? -1 : 1; }
+        draw();
+      } } }, c.h));
+      ths.push(th); return th;
+    }));
+    var bar = null;
+    if (opts.search || opts.filters) {
+      selects = (opts.filters || []).map(function (f) {
+        var vals = {}; rows.forEach(function (r) { var v = f.f(r); if (v !== undefined && v !== null && v !== "") vals[String(v)] = 1; });
+        var s = el("select", { "aria-label": f.label }, el("option", { value: "", text: "All " + f.label.toLowerCase() }),
+          Object.keys(vals).sort().map(function (v) { return el("option", { value: v, text: v }); }));
+        s.addEventListener("change", draw);
+        return { el: s, f: f.f, n: Object.keys(vals).length };
+      }).filter(function (s) { return s.n > 1; });
+      if (opts.search) { q = el("input", { type: "search", placeholder: opts.search, "aria-label": "Search" }); q.addEventListener("input", draw); }
+      if (q || selects.length) bar = el("div", { cls: "toolbar" }, selects.map(function (s) { return s.el; }), q, count);
+    }
+    draw();
+    return el("div", null, bar, el("div", { cls: "table-wrap" }, el("table", null, el("thead", null, head), tbody)));
+  }
+  // Approve or reject from the page: opens the request's comment box on GitHub and copies the reply to paste.
+  // The founder still posts the reply from their own account, so the gate is unchanged; only github.com links.
+  function toast(text) {
+    var t = document.getElementById("toast");
+    if (!t) { t = el("div", { id: "toast", cls: "toast", role: "status", "aria-live": "polite" }); document.body.appendChild(t); }
+    t.textContent = text; t.hidden = false;
+    clearTimeout(toast.timer); toast.timer = setTimeout(function () { t.hidden = true; }, 6000);
+  }
+  function reply(label, words, url, cls) {
+    var h = /^https:\/\/github\.com\/[^\s#]+$/i.test(String(url || "")) ? String(url) + "#new_comment_field" : null;
+    if (!h) return null;
+    return el("a", { href: h, target: "_blank", rel: "noopener noreferrer", cls: "act " + cls, title: "Opens the request on GitHub and copies " + words.trim(), on: { click: function () {
+      var done = function () { toast("Copied “" + words.trim() + "”. Paste it as a comment on the request" + (/reject/.test(words) ? ", with your reason." : ".")); };
+      var fail = function () { toast("Reply “" + words.trim() + "” as a comment on the request."); };
+      try { navigator.clipboard.writeText(words).then(done, fail); } catch (e) { fail(); }
+    } } }, label);
+  }
+  function actions(a) {
+    var ok = reply("Approve", "/approve", a.url, "yes"), no = reply("Reject", "/reject ", a.url, "no");
+    return ok ? el("span", { cls: "acts" }, ok, no) : null;
   }
   function tile(k, v, sub) { return el("div", { cls: "tile" }, el("div", { cls: "k", text: k }), el("div", { cls: "v", text: v }), sub ? el("div", { cls: "s", text: sub }) : null); }
   function usd(x) { return "$" + (Number(x) || 0).toFixed(2); }
@@ -160,6 +243,7 @@ ul.list li:last-child { border-bottom: 0; }
     var t = Date.parse(iso || ""); if (isNaN(t)) return "";
     var d = Math.floor((Date.now() - t) / 86400000); return d <= 0 ? "today" : d + "d";
   }
+  function age(iso) { var t = Date.parse(iso || ""); return isNaN(t) ? null : Math.floor((Date.now() - t) / 86400000); }
   function when(iso) { return iso ? String(iso).replace("T", " ").slice(0, 16) : ""; }
   function who(x) { return el("span", { cls: "who", text: x }); }
   function sum(f) { return V.reduce(function (a, x) { return a + (Number(f(x)) || 0); }, 0); }
@@ -220,13 +304,16 @@ ul.list li:last-child { border-bottom: 0; }
     approvals.sort(function (p, q) { return String(p.a.created).localeCompare(String(q.a.created)); });
     var missing = V.filter(function (x) { return !x.gok; });
     return [
-      panel("Approvals waiting for you", "Oldest first. Open the request in its repo and reply /approve, /approve always or /reject <reason>.", table([
+      panel("Approvals waiting for you", "Oldest first. Approve or Reject opens the request in its repo and copies the reply for you to paste; /approve always works too.", table([
         { h: "Venture", f: function (r) { return name(r.x); } }, { h: "Gate", f: function (r) { return who(r.a.gate || "gate"); } },
         { h: "Request", f: function (r) { return link("#" + r.a.number + " " + String(r.a.title || "").replace(/^\[approval\]\s*/, ""), r.a.url); } },
-        { h: "Requested by", f: function (r) { return r.a.by; } }, { h: "Age", num: true, f: function (r) { return days(r.a.created); } }], approvals, "No approvals waiting.")),
+        { h: "Requested by", f: function (r) { return r.a.by; } }, { h: "Age", num: true, k: function (r) { return age(r.a.created); }, f: function (r) { return days(r.a.created); } },
+        { h: "", f: function (r) { return actions(r.a); } }], approvals, "No approvals waiting.",
+        { filters: [{ label: "Ventures", f: function (r) { return r.x.name; } }, { label: "Gates", f: function (r) { return r.a.gate; } }] })),
       panel("Decisions and founder items", null, table([
         { h: "Venture", f: function (r) { return name(r.x); } }, { h: "Kind", f: function (r) { return pill(r.kind, /founder/.test(r.kind) ? "todo" : r.kind); } },
-        { h: "What", f: function (r) { return [r.text, r.sub ? el("div", { cls: "why", text: r.sub }) : null]; } }], items, "Nothing waiting.")),
+        { h: "What", f: function (r) { return [r.text, r.sub ? el("div", { cls: "why", text: r.sub }) : null]; } }], items, "Nothing waiting.",
+        { search: "Search", filters: [{ label: "Ventures", f: function (r) { return r.x.name; } }, { label: "Kinds", f: function (r) { return r.kind; } }] })),
       missing.length ? panel("Not counted here", "These ventures' approvals couldn't be read on this build.", el("ul", { cls: "list" }, missing.map(function (x) {
         return el("li", null, name(x), el("div", { cls: "why", text: x.v.ok ? (x.G.why || "GitHub data missing") : (x.v.why || "no data") }));
       }))) : null];
@@ -258,7 +345,8 @@ ul.list li:last-child { border-bottom: 0; }
       panel("What the teams did", "The latest entries from each venture's activity log, newest first.", el("div", { cls: "toolbar" }, sel), list),
       panel("Recently merged", null, table([
         { h: "Venture", f: function (r) { return name(r.x); } }, { h: "Pull request", f: function (r) { return link("#" + r.p.number + " " + r.p.title, r.p.url); } },
-        { h: "Merged", f: function (r) { return when(r.p.merged); } }], merged.slice(0, 30), "Nothing merged recently."))];
+        { h: "Merged", f: function (r) { return when(r.p.merged); } }], merged.slice(0, 30), "Nothing merged recently.",
+        { search: "Search pull requests", filters: [{ label: "Ventures", f: function (r) { return r.x.name; } }] }))];
   }
 
   function costsTab() {
@@ -275,7 +363,8 @@ ul.list li:last-child { border-bottom: 0; }
       panel("Per role", "Warning at 80%, stop at 100%, per role in each venture.", table([
         { h: "Venture", f: function (r) { return name(r.x); } }, { h: "Role", f: function (r) { return who(r.r.role); } },
         { h: "Spent", num: true, f: function (r) { return usd(r.r.used); } }, { h: "Budget", num: true, f: function (r) { return r.r.cap ? usd(r.r.cap) : "not set"; } },
-        { h: "State", f: function (r) { return state(r.r.used, r.r.cap); } }], roles, "No costs or budgets yet."))];
+        { h: "State", f: function (r) { return state(r.r.used, r.r.cap); } }], roles, "No costs or budgets yet.",
+        { filters: [{ label: "Ventures", f: function (r) { return r.x.name; } }, { label: "Roles", f: function (r) { return r.r.role; } }] }))];
   }
 
   // --- shell ----------------------------------------------------------------------------------------------

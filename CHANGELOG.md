@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.6.0 (2026-11-23)
+
+The dashboard and the portfolio: sort, filter and act from the page, still with no server.
+
+- **Sort any table:** click a column heading; click again to reverse. Money and ages sort as numbers, and empty values go last.
+- **Filter the long tables:** a search box and filters where they help: stories (epic, slice, status), slices (status), epics, open tickets (role, state), decisions (status, register), approvals (gate), the cost log (role, measured or estimated); in the portfolio, approvals (venture, gate), decisions and founder items, merges and per-role costs. A filter only appears when it has two or more values.
+- **Approve or Reject in one click:** next to each approval waiting, on the dashboard's Overview and Approvals inbox and the portfolio's Needs you. The button opens the request's comment box on GitHub and copies `/approve` or `/reject ` for you to paste; you still send it from your own account, so the gate is unchanged. Buttons appear only for `github.com` links.
+- **Fix:** an approval with no date no longer reads "requested by …,  ago".
+- **Docs:** the handbook describes sorting, filters and the approve buttons.
+- **Tests:** 2 new: both pages carry the sortable, filterable table and the approve actions, limited to GitHub links, and never use HTML strings.
+
 ## v1.5.0 (2026-11-23)
 
 Slice 5 of `ROADMAP.md`: the portfolio. The roadmap is complete.

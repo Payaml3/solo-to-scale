@@ -95,6 +95,18 @@ ul.list li:last-child { border-bottom: 0; }
 .phase ol { margin: 0; padding-left: 22px; font-size: .9rem; }
 .phase li.cur { font-weight: 600; color: var(--accent); }
 .phase li.done { color: var(--muted); }
+th button.sort { all: unset; cursor: pointer; }
+th button.sort:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
+th[aria-sort="ascending"] button.sort::after { content: " ▲"; font-size: .7em; }
+th[aria-sort="descending"] button.sort::after { content: " ▼"; font-size: .7em; }
+.toolbar .shown { margin: 0; }
+.acts { display: inline-flex; gap: 6px; white-space: nowrap; }
+a.act { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: .8rem; font-weight: 600; text-decoration: none; border: 1px solid currentColor; }
+a.act.yes { background: var(--done); border-color: var(--done); color: #fff; }
+a.act.no { color: var(--waiting); }
+a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: .88rem; z-index: 5; }
+.toast[hidden] { display: none; }
 .empty { color: var(--muted); font-style: italic; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 </style>
@@ -151,13 +163,84 @@ ul.list li:last-child { border-bottom: 0; }
     for (var i = 2; i < arguments.length; i++) add(p, arguments[i]);
     return p;
   }
-  function table(cols, rows, empty) {
+  // A table whose columns sort on click, with an optional search box and a select per filter, all in the browser.
+  // opts.search: the search placeholder; opts.filters: [{ label, f: row -> value }]. A column's k(row) is its sort key.
+  function table(cols, rows, empty, opts) {
     if (!rows.length) return el("p", { cls: "empty", text: empty || "Nothing yet." });
-    var head = el("tr", null, cols.map(function (c) { return el("th", { cls: c.num ? "num" : null, text: c.h }); }));
-    var body = rows.map(function (r) {
-      return el("tr", null, cols.map(function (c) { var v = c.f(r); return el("td", { cls: c.num ? "num" : null }, v === undefined || v === null ? "" : v); }));
+    opts = opts || {};
+    var items = rows.map(function (r) {
+      var cells = cols.map(function (c) { var v = c.f(r); return el("td", { cls: c.num ? "num" : null }, v === undefined || v === null ? "" : v); });
+      var tr = el("tr", null, cells);
+      return { r: r, tr: tr, cells: cells, text: tr.textContent.toLowerCase() };
     });
-    return el("div", { cls: "table-wrap" }, el("table", null, el("thead", null, head), el("tbody", null, body)));
+    var by = -1, dir = 1, tbody = el("tbody"), ths = [], selects = [], q = null, count = el("span", { cls: "note shown" });
+    function key(it, j) {
+      var v = cols[j].k ? cols[j].k(it.r) : it.cells[j].textContent.trim();
+      return v === undefined || v === null || v === "" ? null : v;
+    }
+    function cmp(a, b) {
+      if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+      if (typeof a === "number" && typeof b === "number") return (a - b) * dir;
+      return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" }) * dir;
+    }
+    function draw() {
+      var term = q ? q.value.trim().toLowerCase() : "";
+      var shown = items.filter(function (it) {
+        return (!term || it.text.indexOf(term) >= 0) &&
+          selects.every(function (s) { return !s.el.value || String(s.f(it.r)) === s.el.value; });
+      });
+      if (by >= 0) shown = shown.map(function (it, i) { return { it: it, i: i, k: key(it, by) }; })
+        .sort(function (a, b) { return cmp(a.k, b.k) || a.i - b.i; })
+        .map(function (x) { return x.it; });
+      tbody.textContent = "";
+      shown.forEach(function (it) { tbody.appendChild(it.tr); });
+      if (!shown.length) tbody.appendChild(el("tr", null, el("td", { cls: "empty", colspan: cols.length, text: "Nothing matches." })));
+      count.textContent = shown.length === items.length ? "" : shown.length + " of " + items.length;
+      ths.forEach(function (th, j) { if (th) th.setAttribute("aria-sort", j === by ? (dir > 0 ? "ascending" : "descending") : "none"); });
+    }
+    var head = el("tr", null, cols.map(function (c, j) {
+      if (!c.h || c.sort === false) { ths.push(null); return el("th", { cls: c.num ? "num" : null, text: c.h }); }
+      var th = el("th", { cls: c.num ? "num" : null }, el("button", { type: "button", cls: "sort", title: "Sort by " + c.h, on: { click: function () {
+        if (by === j) dir = -dir; else { by = j; dir = c.num ? -1 : 1; }
+        draw();
+      } } }, c.h));
+      ths.push(th); return th;
+    }));
+    var bar = null;
+    if (opts.search || opts.filters) {
+      selects = (opts.filters || []).map(function (f) {
+        var vals = {}; rows.forEach(function (r) { var v = f.f(r); if (v !== undefined && v !== null && v !== "") vals[String(v)] = 1; });
+        var s = el("select", { "aria-label": f.label }, el("option", { value: "", text: "All " + f.label.toLowerCase() }),
+          Object.keys(vals).sort().map(function (v) { return el("option", { value: v, text: v }); }));
+        s.addEventListener("change", draw);
+        return { el: s, f: f.f, n: Object.keys(vals).length };
+      }).filter(function (s) { return s.n > 1; });
+      if (opts.search) { q = el("input", { type: "search", placeholder: opts.search, "aria-label": "Search" }); q.addEventListener("input", draw); }
+      if (q || selects.length) bar = el("div", { cls: "toolbar" }, selects.map(function (s) { return s.el; }), q, count);
+    }
+    draw();
+    return el("div", null, bar, el("div", { cls: "table-wrap" }, el("table", null, el("thead", null, head), tbody)));
+  }
+  // Approve or reject from the page: opens the request's comment box on GitHub and copies the reply to paste.
+  // The founder still posts the reply from their own account, so the gate is unchanged; only github.com links.
+  function toast(text) {
+    var t = document.getElementById("toast");
+    if (!t) { t = el("div", { id: "toast", cls: "toast", role: "status", "aria-live": "polite" }); document.body.appendChild(t); }
+    t.textContent = text; t.hidden = false;
+    clearTimeout(toast.timer); toast.timer = setTimeout(function () { t.hidden = true; }, 6000);
+  }
+  function reply(label, words, url, cls) {
+    var h = /^https:\/\/github\.com\/[^\s#]+$/i.test(String(url || "")) ? String(url) + "#new_comment_field" : null;
+    if (!h) return null;
+    return el("a", { href: h, target: "_blank", rel: "noopener noreferrer", cls: "act " + cls, title: "Opens the request on GitHub and copies " + words.trim(), on: { click: function () {
+      var done = function () { toast("Copied “" + words.trim() + "”. Paste it as a comment on the request" + (/reject/.test(words) ? ", with your reason." : ".")); };
+      var fail = function () { toast("Reply “" + words.trim() + "” as a comment on the request."); };
+      try { navigator.clipboard.writeText(words).then(done, fail); } catch (e) { fail(); }
+    } } }, label);
+  }
+  function actions(a) {
+    var ok = reply("Approve", "/approve", a.url, "yes"), no = reply("Reject", "/reject ", a.url, "no");
+    return ok ? el("span", { cls: "acts" }, ok, no) : null;
   }
   function tile(k, v, sub) { return el("div", { cls: "tile" }, el("div", { cls: "k", text: k }), el("div", { cls: "v", text: v }), sub ? el("div", { cls: "s", text: sub }) : null); }
   function usd(x) { return "$" + (Number(x) || 0).toFixed(2); }
@@ -165,6 +248,7 @@ ul.list li:last-child { border-bottom: 0; }
     var t = Date.parse(iso || ""); if (isNaN(t)) return "";
     var d = Math.floor((Date.now() - t) / 86400000); return d <= 0 ? "today" : d + "d";
   }
+  function age(iso) { var t = Date.parse(iso || ""); return isNaN(t) ? null : Math.floor((Date.now() - t) / 86400000); }
   function when(iso) { return iso ? String(iso).replace("T", " ").slice(0, 16) : ""; }
   function ghMissing() {
     return panel("GitHub data missing", (G.why || "unknown") + ". The repo tabs are current as of this build; tickets, activity, approvals and costs need the next build that reaches GitHub.");
@@ -280,7 +364,12 @@ ul.list li:last-child { border-bottom: 0; }
       tile("AI spend " + (costs.month || D.month), G.ok ? usd(costs.total) : "?", G.ok && cap ? "of " + usd(cap) + " budgeted" : "budgets in founder/heartbeats.json"),
       tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"));
     var needs = [];
-    waiting.forEach(function (a) { needs.push(el("li", null, pill(a.gate || "gate", "waiting"), " ", link("#" + a.number + " " + a.title, a.url), el("div", { cls: "why", text: "Approval requested by " + (a.by || "an agent") + ", " + days(a.created) + " ago" }))); });
+    waiting.forEach(function (a) {
+      var d = days(a.created);
+      needs.push(el("li", null, pill(a.gate || "gate", "waiting"), " ", link("#" + a.number + " " + a.title, a.url),
+        el("div", { cls: "why", text: "Approval requested by " + (a.by || "an agent") + (d ? (d === "today" ? ", today" : ", " + d + " ago") : "") }),
+        actions(a) ? el("div", { style: "margin-top:6px" }, actions(a)) : null));
+    });
     (road.blockers || []).forEach(function (b) { needs.push(el("li", null, pill("founder item", "todo"), " ", b.item, b.needed_by ? el("div", { cls: "why", text: "Needed by " + b.needed_by }) : null)); });
     (road.decisions_waiting || []).slice(0, 6).forEach(function (d) { needs.push(el("li", null, pill(d.status, d.status), " ", d.id + ": " + d.decision, el("div", { cls: "why", text: d.register + (d.date ? ", since " + d.date : "") }))); });
     var recent = activity.slice(0, 8).map(activityItem);
@@ -311,7 +400,8 @@ ul.list li:last-child { border-bottom: 0; }
       panel("Stories", null, table([
         { h: "Story", f: function (r) { return r.story; } }, { h: "Epic", f: function (r) { return r.epic; } }, { h: "Slice", f: function (r) { return r.slice; } },
         { h: "Criteria", num: true, f: function (r) { return r.criteria; } }, { h: "Done", num: true, f: function (r) { return r.criteria_done; } },
-        { h: "Tested", num: true, f: function (r) { return r.criteria_tested; } }, { h: "Status", f: function (r) { return pill(r.status, /done/i.test(r.status) ? "done" : /progress/i.test(r.status) ? "progress" : "todo"); } }], trace.stories || [], "No stories yet."))];
+        { h: "Tested", num: true, f: function (r) { return r.criteria_tested; } }, { h: "Status", f: function (r) { return pill(r.status, /done/i.test(r.status) ? "done" : /progress/i.test(r.status) ? "progress" : "todo"); } }], trace.stories || [], "No stories yet.",
+        { search: "Search stories", filters: [{ label: "Epics", f: function (r) { return r.epic; } }, { label: "Slices", f: function (r) { return r.slice; } }, { label: "Statuses", f: function (r) { return r.status; } }] }))];
   }
 
   function roadmapTab() {
@@ -320,10 +410,10 @@ ul.list li:last-child { border-bottom: 0; }
         { h: "Slice", f: function (r) { return r.id; } }, { h: "Name", f: function (r) { return r.name; } },
         { h: "Status", f: function (r) { return pill(r.status, /done/i.test(r.status) ? "done" : /todo|planned/i.test(r.status) ? "todo" : "progress"); } },
         { h: "Criteria", num: true, f: function (r) { return r.criteria_done + " / " + r.criteria; } }, { h: "", f: function (r) { return bar(r.criteria_done, r.criteria); } },
-        { h: "Exit check", f: function (r) { return r.exit; } }], slices, "No slices in founder/slices.json yet.")),
+        { h: "Exit check", f: function (r) { return r.exit; } }], slices, "No slices in founder/slices.json yet.", { filters: [{ label: "Statuses", f: function (r) { return r.status; } }] })),
       el("div", { cls: "cols" },
         panel("Founder items blocking work", null, table([{ h: "Item", f: function (r) { return r.item; } }, { h: "Owner", f: function (r) { return r.owner; } }, { h: "Needed by", f: function (r) { return r.needed_by; } }], road.blockers || [], "No open founder items.")),
-        panel("Decisions waiting", null, table([{ h: "ID", f: function (r) { return r.id; } }, { h: "Decision", f: function (r) { return r.decision; } }, { h: "Status", f: function (r) { return pill(r.status, r.status); } }, { h: "Age", num: true, f: function (r) { return days(r.date); } }], road.decisions_waiting || [], "None waiting.")))];
+        panel("Decisions waiting", null, table([{ h: "ID", f: function (r) { return r.id; } }, { h: "Decision", f: function (r) { return r.decision; } }, { h: "Status", f: function (r) { return pill(r.status, r.status); } }, { h: "Age", num: true, k: function (r) { return age(r.date); }, f: function (r) { return days(r.date); } }], road.decisions_waiting || [], "None waiting.")))];
   }
 
   function scopeTab() {
@@ -339,7 +429,7 @@ ul.list li:last-child { border-bottom: 0; }
       panel("The journey", "Phases A to G, stages 1 to 30. Hover a stage for its gate.", phases.length ? el("div", { cls: "phases" }, phases) : el("p", { cls: "empty", text: "founder/playbook.md has no stages." })),
       panel("Scope: epics", "What is being built, who owns it, and which slices it lands in.", table([
         { h: "Epic", f: function (r) { return r.code; } }, { h: "Name", f: function (r) { return r.name; } }, { h: "Goal", f: function (r) { return r.goal; } },
-        { h: "Owner", f: function (r) { return r.role; } }, { h: "Stories", num: true, f: function (r) { return r.stories; } }, { h: "Slices", f: function (r) { return r.slices.join(", "); } }], R.epics || [], "No epics in founder/slices.json yet."))];
+        { h: "Owner", f: function (r) { return r.role; } }, { h: "Stories", num: true, f: function (r) { return r.stories; } }, { h: "Slices", f: function (r) { return r.slices.join(", "); } }], R.epics || [], "No epics in founder/slices.json yet.", { search: "Search epics" }))];
   }
 
   function teamTab() {
@@ -389,27 +479,18 @@ ul.list li:last-child { border-bottom: 0; }
       panel("Open tickets", null, table([
         { h: "#", num: true, f: function (r) { return link(String(r.number), r.url); } }, { h: "Ticket", f: function (r) { return r.title; } },
         { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role || "-" }); } },
-        { h: "State", f: function (r) { return r.blocked ? pill("blocked", "blocked") : r.claimed ? pill("claimed", "progress") : pill("ready", "todo"); } }], openTickets, "No open tickets."))];
+        { h: "State", f: function (r) { return r.blocked ? pill("blocked", "blocked") : r.claimed ? pill("claimed", "progress") : pill("ready", "todo"); } }], openTickets, "No open tickets.",
+        { search: "Search tickets", filters: [{ label: "Roles", f: function (r) { return r.role; } }, { label: "States", f: function (r) { return r.blocked ? "blocked" : r.claimed ? "claimed" : "ready"; } }] }))];
   }
 
   function decisionsTab() {
-    var rows = R.decisions || [], statuses = {};
-    rows.forEach(function (d) { if (d.status) statuses[d.status] = 1; });
-    var sel = el("select", { "aria-label": "Status" }, el("option", { value: "", text: "All statuses" }), Object.keys(statuses).sort().map(function (s) { return el("option", { value: s, text: s }); }));
-    var q = el("input", { type: "search", placeholder: "Search decisions", "aria-label": "Search" });
-    var box = el("div");
-    function draw() {
-      box.textContent = "";
-      var term = q.value.toLowerCase();
-      box.appendChild(table([
-        { h: "ID", f: function (r) { return r.id; } }, { h: "Decision", f: function (r) { return r.decision; } },
-        { h: "Status", f: function (r) { return r.status ? pill(r.status, resolvedWords.indexOf(r.status) >= 0 ? "approved" : r.status) : ""; } },
-        { h: "Date", f: function (r) { return r.date; } }, { h: "Age", num: true, f: function (r) { return resolvedWords.indexOf(r.status) >= 0 ? "" : days(r.date); } },
-        { h: "Register", f: function (r) { return el("span", { cls: "who", text: r.register }); } }],
-        rows.filter(function (d) { return (!sel.value || d.status === sel.value) && (!term || (d.id + " " + d.decision).toLowerCase().indexOf(term) >= 0); }), "No decisions match."));
-    }
-    sel.addEventListener("change", draw); q.addEventListener("input", draw); draw();
-    return panel("Decision registers", "Every decision in founder/decisions.md and specs/*/decisions.md. Only you mark one Approved.", el("div", { cls: "toolbar" }, sel, q), box);
+    var open = function (r) { return resolvedWords.indexOf(r.status) < 0; };
+    return panel("Decision registers", "Every decision in founder/decisions.md and specs/*/decisions.md. Only you mark one Approved.", table([
+      { h: "ID", f: function (r) { return r.id; } }, { h: "Decision", f: function (r) { return r.decision; } },
+      { h: "Status", f: function (r) { return r.status ? pill(r.status, open(r) ? r.status : "approved") : ""; } },
+      { h: "Date", f: function (r) { return r.date; } }, { h: "Age", num: true, k: function (r) { return open(r) ? age(r.date) : null; }, f: function (r) { return open(r) ? days(r.date) : ""; } },
+      { h: "Register", f: function (r) { return el("span", { cls: "who", text: r.register }); } }], R.decisions || [], "No decisions yet.",
+      { search: "Search decisions", filters: [{ label: "Statuses", f: function (r) { return r.status; } }, { label: "Registers", f: function (r) { return r.register; } }] }));
   }
 
   function approvalsTab() {
@@ -419,10 +500,12 @@ ul.list li:last-child { border-bottom: 0; }
       { h: "Request", f: function (r) { return [r.title.replace(/^\[approval\]\s*/, ""), r.scope ? el("div", { cls: "why", text: "Scope: " + r.scope }) : null]; } },
       { h: "Requested by", f: function (r) { return r.by; } },
       { h: "State", f: function (r) { return pill(r.state + (r.kind === "always" ? " (always)" : ""), r.state); } },
-      { h: "Age", num: true, f: function (r) { return days(r.created); } }];
+      { h: "Age", num: true, k: function (r) { return age(r.created); }, f: function (r) { return days(r.created); } }];
+    var gates = { filters: [{ label: "Gates", f: function (r) { return r.gate; } }] };
     return [
-      panel("Waiting for you", "Open the request and reply /approve, /approve always or /reject <reason>, from anywhere, including the GitHub app. Nobody else's words count.", table(cols, waiting, "No approvals waiting.")),
-      panel("Recently decided", null, table(cols, approvals.filter(function (a) { return !(a.open && a.state === "waiting"); }), "None yet."))];
+      panel("Waiting for you", "Approve or Reject opens the request on GitHub and copies the reply for you to paste; you can also reply /approve always, from anywhere, including the GitHub app. Nobody else's words count.",
+        table(cols.concat([{ h: "", f: actions }]), waiting, "No approvals waiting.", gates)),
+      panel("Recently decided", null, table(cols, approvals.filter(function (a) { return !(a.open && a.state === "waiting"); }), "None yet.", gates))];
   }
 
   function costsTab() {
@@ -431,14 +514,15 @@ ul.list li:last-child { border-bottom: 0; }
     return [
       el("div", { cls: "grid" }, tile("Spent in " + costs.month, usd(costs.total)), tile("Entries", String((costs.entries || []).length), (costs.entries || []).filter(function (e) { return e.how === "estimated"; }).length + " estimated")),
       panel("Budget per role", "Warning at 80%, stop at 100%. Approving a budget request adds one more month's budget for that month.", table([
-        { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } }, { h: "Spent", num: true, f: function (r) { return usd(r.used); } },
-        { h: "Budget", num: true, f: function (r) { return r.cap ? usd(r.cap) : "not set"; } },
+        { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } }, { h: "Spent", num: true, k: function (r) { return Number(r.used) || 0; }, f: function (r) { return usd(r.used); } },
+        { h: "Budget", num: true, k: function (r) { return r.cap ? Number(r.cap) : null; }, f: function (r) { return r.cap ? usd(r.cap) : "not set"; } },
         { h: "", f: function (r) { if (!r.cap) return ""; var p = r.used / r.cap; return bar(r.used, r.cap, p >= 1 ? "x" : p >= 0.8 ? "w" : ""); } },
         { h: "State", f: function (r) { if (!r.cap) return ""; var p = r.used / r.cap; return p >= 1 ? pill("stopped", "stopped") : p >= 0.8 ? pill("over 80%", "waiting") : pill("ok", "done"); } }], roles, "No costs or budgets yet.")),
       panel("Cost log", "Each heartbeat run and each session handoff. Measured from the transcript where possible.", table([
         { h: "When", f: function (r) { return when(r.at); } }, { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } },
         { h: "Cost", num: true, f: function (r) { return usd(r.usd); } }, { h: "How", f: function (r) { return r.how; } },
-        { h: "Ticket", num: true, f: function (r) { return r.ticket ? "#" + r.ticket : ""; } }], (costs.entries || []).slice().reverse(), "No costs recorded this month."))];
+        { h: "Ticket", num: true, k: function (r) { return r.ticket || null; }, f: function (r) { return r.ticket ? "#" + r.ticket : ""; } }], (costs.entries || []).slice().reverse(), "No costs recorded this month.",
+        { filters: [{ label: "Roles", f: function (r) { return r.role; } }, { label: "Kinds", f: function (r) { return r.how; } }] }))];
   }
 
   // --- shell ----------------------------------------------------------------------------------------------
