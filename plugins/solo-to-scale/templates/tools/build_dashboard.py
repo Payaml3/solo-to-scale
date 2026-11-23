@@ -219,7 +219,8 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
                     "stage": proj.get("stage")},
         "commit": head[0] if head and head[0] else "", "commit_date": head[1] if len(head) > 1 else "",
         "built": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "month": month,
-        "links": {"portfolio": https_url(cfg_dash.get("portfolio_url"))},
+        "links": {"portfolio": https_url(cfg_dash.get("portfolio_url")),
+                  "portfolio_name": " ".join(str(cfg_dash.get("portfolio_name") or "").split())[:80]},
         "repo": repo_data(root, cfg_dash),
         "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month),
     }

@@ -137,13 +137,20 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
         if r.get("ok"):
             r["age_hours"] = age_hours(r["summary"].get("built", ""), now)
             r["stale"] = r["age_hours"] is None or r["age_hours"] > stale
-    return {"built": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "month": now.strftime("%Y-%m"), "stale_hours": stale,
+    return {"name": title(cfg.get("name")), "built": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "month": now.strftime("%Y-%m"),
+            "stale_hours": stale,
             "ventures": rows}
+
+
+def title(name: Any) -> str:
+    """The portfolio's name from founder/portfolio.json: one line, at most 80 characters, or 'Portfolio'."""
+    name = " ".join(str(name or "").split())[:80]
+    return name or "Portfolio"
 
 
 def page(data: dict[str, Any]) -> str:
     before, _, after = s.read(PAGE).partition("__S2S_DATA__")
-    return before.replace("__S2S_TITLE__", html.escape("Portfolio")) + bd.embed(data) + after
+    return before.replace("__S2S_TITLE__", html.escape(data.get("name") or "Portfolio")) + bd.embed(data) + after
 
 
 # --- commands ----------------------------------------------------------------------------------------------
