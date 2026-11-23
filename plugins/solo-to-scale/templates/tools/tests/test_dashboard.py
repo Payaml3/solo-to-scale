@@ -268,3 +268,45 @@ def test_the_run_log_feeds_costs_by_group_the_forecast_and_agent_pages(root, fak
     html = bd.PAGE.read_text(encoding="utf-8")
     assert "function agentPage" in html and '"#agent/" + encodeURIComponent' in html and "function dailyBars" in html
     assert "safeHref(r.session)" in html, "a session link is only ever an https link"
+
+
+def test_needs_you_is_one_list_oldest_and_most_blocking_first(root, fake):
+    old, older = (NOW - dt.timedelta(days=9)).isoformat(), (NOW - dt.timedelta(days=40)).isoformat()
+    req = fake.make("[approval] Deploy payments", "**Requested by:** role:engineer\n**Scope:** this action only",
+                    [approval.LABEL, "gate:deploy"])
+    fake.issues[req]["created_at"] = older
+    stale = fake.make("Card payments", "", ["ticket", "role:engineer", "claimed"])
+    fake.issues[stale]["updated_at"] = (NOW - dt.timedelta(hours=50)).isoformat()
+    fresh = fake.make("Pricing page", "", ["ticket", "role:growth", "claimed"])
+    fake.issues[fresh]["updated_at"] = (NOW - dt.timedelta(hours=2)).isoformat()
+    log = fake.make("Cost log 2026-11", "", [heartbeat.COST_LOG])
+    fake.comments[log] += [
+        {"body": heartbeat.cost_entry("qa", 1.0, "2026-11", "measured", None, "run", {"outcome": "worked"}), "created_at": old},
+        {"body": heartbeat.cost_entry("qa", 1.0, "2026-11", "measured", None, "run", {"outcome": "failed"}),
+         "created_at": (NOW - dt.timedelta(days=1)).isoformat()},
+        {"body": heartbeat.cost_entry("product", 12.0, "2026-11", "measured", None, "run", {"outcome": "worked"}),
+         "created_at": (NOW - dt.timedelta(days=1)).isoformat()}]
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    items = d["needs"]["items"]
+    assert items[0]["kind"] == "approval" and items[0]["level"] == "escalated", "40 days: escalated, first"
+    kinds = [x["kind"] for x in items]
+    assert "budget" in kinds and "decision" in kinds and kinds.count("stuck") == 2, kinds
+    stuck = {x.get("number") or x["role"]: x for x in d["needs"]["stuck"]}
+    assert stale in stuck and fresh not in stuck and stuck["qa"]["kind"] == "agent"
+    assert d["needs"]["counts"]["approval"] == 1 and d["rebuild_url"].endswith("/actions/workflows/dashboard.yml")
+    days = d["github"]["trends"]["days"]
+    assert len(days) == 14 and days[-1]["date"] == "2026-11-23"
+    assert next(x for x in days if x["date"] == "2026-11-22")["other"] == 1 and sum(x["worked"] for x in days) == 2
+    assert bd.summary(d)["needs"]["stuck"] == 2
+    (root / "founder" / "dashboard.json").write_text(json.dumps({"stale_hours": 100}), encoding="utf-8")
+    assert stale not in {x.get("number") for x in bd.build(root, now=NOW)["needs"]["stuck"]}
+
+
+def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert '["needs", "Needs you", needsTab]' in html and "function dayChart" in html and "trendPanel()," in html
+    assert "Rebuild now" in html and "safeHref(D.rebuild_url)" in html
+    wf = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "dashboard.yml"
+    if wf.exists():
+        text = wf.read_text(encoding="utf-8")
+        assert "issue_comment:" in text and "sleep 60" in text and "cancel-in-progress: true" in text
