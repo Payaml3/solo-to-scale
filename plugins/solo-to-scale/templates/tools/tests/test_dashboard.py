@@ -129,6 +129,15 @@ def test_github_down_still_builds_the_repo_tabs(root, fake, monkeypatch, tmp_pat
     assert (out / "robots.txt").read_text(encoding="utf-8").endswith("Disallow: /\n")
 
 
+def test_a_link_back_to_the_portfolio_only_when_it_is_https(root):
+    assert bd.build(root, offline=True, now=NOW)["links"] == {"portfolio": ""}
+    for url, want in [("https://portfolio.example.com/", "https://portfolio.example.com/"),
+                      ("javascript:alert(1)", ""), ("http://portfolio.example.com", ""), ('https://x.com/"><b>', "")]:
+        (root / "founder/dashboard.json").write_text(json.dumps({"portfolio_url": url}), encoding="utf-8")
+        page = bd.page(bd.build(root, offline=True, now=NOW))
+        assert data_of(page)["links"]["portfolio"] == want
+
+
 def test_documents_never_leave_the_repo(root):
     assert bd.documents(root, ["../*", "/etc/*", "founder/*.md"]) == [
         {"path": "founder/business-context.md", "title": "Business context",

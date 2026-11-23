@@ -420,6 +420,7 @@ When you run several ventures, each keeps its own repo, its own team, its own ga
 2. Create a fine-grained GitHub token with read-only **Actions** access to the venture repos, and add it to the portfolio repo as the secret `PORTFOLIO_TOKEN`.
 3. In the portfolio repo, list the ventures in `founder/portfolio.json` (`{"repo": "owner/name", "dashboard": "https://pm.<their domain>"}`), in a pull request (the `deploy` gate), and merge it. The overview is now built every hour.
 4. To serve it, for example at `portfolio.<domain>`, follow the dashboard's steps 1 to 3 with a second Pages project and an Access application covering both addresses, then set `host` and `cloudflare_pages_project` in `founder/portfolio.json`. Until then, `publish-views` shows it as a Claude page.
+5. To switch both ways: each venture's name on the portfolio links to the `dashboard` address you gave it, and setting `portfolio_url` in a venture's `founder/dashboard.json` puts a "← Portfolio" link at the top of its dashboard. If one Cloudflare Access team covers both, you sign in once for all of them.
 
 ## Skills and plugins
 

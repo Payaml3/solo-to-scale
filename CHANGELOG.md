@@ -11,6 +11,11 @@ The dashboard and the portfolio: sort, filter and act from the page, still with 
 - **Docs:** the handbook describes sorting, filters and the approve buttons.
 - **Tests:** 2 new: both pages carry the sortable, filterable table and the approve actions, limited to GitHub links, and never use HTML strings.
 
+## v1.5.1 (2026-11-23)
+
+- **Back to the portfolio from each dashboard:** set `portfolio_url` in a venture's `founder/dashboard.json` and its dashboard shows a "← Portfolio" link at the top. Only an `https://` address is used. New repos get the empty field; in existing repos, add it yourself (the file is founder-owned and behind the `deploy` gate). The portfolio already links each venture to its dashboard.
+- **Tests:** 1 new: the link appears only for an `https://` address.
+
 ## v1.5.0 (2026-11-23)
 
 Slice 5 of `ROADMAP.md`: the portfolio. The roadmap is complete.
