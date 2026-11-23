@@ -15,7 +15,7 @@ One session, one claimed issue. Either tool can build, but only one tool per cla
 2. Dry run first: `python3 tools/claim.py <issue> --dry-run`. It shows the labels to add (`claimed`, and the `role:` label from the issue's Owner section) and the goal chain.
 3. Claim: `python3 tools/claim.py <issue>`. It uses `gh api`.
    - If `gh` isn't available, claim with the GitHub tools this session has: add the `claimed` label and assign yourself, then read the issue's "Goal chain" section.
-   - If the issue is already labelled `claimed`, **stop**: tell the founder, and suggest the next unclaimed story group.
+   - The claim is atomic: it creates a `refs/claims/<issue>` ref, which fails if another session holds it. If it's refused, or the issue is already labelled `claimed`, **stop**: tell the founder, and suggest the next unclaimed story group.
 4. Start the session from the goal chain:
 
 ```
@@ -25,4 +25,4 @@ Owner: role:<role> · Suggested model: <…> · Waits on: <…>
 
 5. If the issue waits on something still open, say so before starting, and ask whether to proceed.
 
-The claim is recorded in `.claude/state/claimed.json` (local, not committed), so the session-start hook shows it after a resume or a compaction. The handoff comments on, closes or hands on the issue at the end.
+The claim is recorded in `.claude/state/claimed.json` (local, not committed), so the session-start hook shows it after a resume or a compaction. The handoff comments on, closes or hands on the issue at the end, through `tools/tickets.py done`, `handoff` or `release` (`coordinate` skill), which also free the claim.

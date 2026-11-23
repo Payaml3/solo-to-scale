@@ -6,7 +6,8 @@ Claim a story-group issue before starting work, so two sessions never work on th
   python tools/claim.py <issue> --dry-run   # show what would happen; change nothing
   python tools/claim.py <issue> --from-json issue.json --dry-run   # offline (tests, no gh)
 
-Refuses an issue already labelled `claimed`. Prints the goal chain to start the session with and
+Refuses an issue already labelled `claimed`, and takes the same atomic lock as `tickets.py claim` (a
+`refs/claims/<issue>` ref), so two sessions racing for one issue can't both win. Prints the goal chain to start the session with and
 records it in .claude/state/claimed.json, which the session-start hook shows.
 """
 from __future__ import annotations
@@ -19,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
+import tickets  # noqa: E402
 
 
 def gh(*args: str, payload: dict | None = None) -> dict:
@@ -72,6 +74,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         print("  dry run: nothing changed")
     else:
+        holder = tickets.Hub(repo).lock(args.issue, role or "a-session")
+        if holder is not None:
+            print(f"refused: #{args.issue} was just claimed by {holder}; pick another issue or ask the founder")
+            return 1
         gh(f"repos/{repo}/issues/{args.issue}/labels", "-X", "POST", payload={"labels": add})
         me = gh("user").get("login")
         if me:

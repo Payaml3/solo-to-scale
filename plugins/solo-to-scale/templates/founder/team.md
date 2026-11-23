@@ -73,6 +73,6 @@ The sales advisor (enterprise lens) is {{sales_advisor}}.
 ## Rules
 
 - One role per session.
-- Roles talk only through issues, PRs, the registers and `HANDOFF.md`.
+- Roles talk only through issues, PRs, the registers and `HANDOFF.md`. They delegate with tickets (`coordinate` skill and `tools/tickets.py`): one claim per ticket, hand-offs to `role:<name>`, and every action in the activity log.
 - A role proposes; the founder approves. Critical actions go through the `gate` skill and `founder/gates.json`; only the founder's own `/approve` counts, and `founder/gates.json` changes only by the founder.
 - Advisors are named by their lens, never as real people. No invented quotes, no claimed endorsement, no advisor names in anything public. The risk advisor is never legal advice.

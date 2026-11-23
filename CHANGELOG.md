@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.2.0 (2026-11-23)
+
+Slice 2 of `ROADMAP.md`: agent coordination.
+
+- **`tools/tickets.py`:** roles delegate through GitHub issues labelled `ticket` and `role:<role>`.
+  - `new` opens a sub-ticket with its parent (also linked as a GitHub sub-issue) and its blockers; `queue` lists a role's ready tickets; `tree` shows a parent and its sub-tickets.
+  - `claim` is atomic: it creates a `refs/claims/<n>` ref, and creating a ref that exists fails, so only one claimant wins. It refuses another role's ticket, a closed one or a blocked one, and anything unclear claims nothing.
+  - `handoff` moves a ticket to another role and frees the claim; `block` and `unblock` edit the ticket's "Blocked by" line; `release` lets go.
+  - `done` closes a ticket, frees the claim, unblocks every ticket that waited only on it, and tells the parent when its last sub-ticket closes.
+  - Only the claim holder, or the ticket's role when nobody holds it, can release, hand off or finish it.
+- **Activity log:** every action is a comment on the ticket and an entry in one issue labelled `activity-log`; `log` reads it, by role or ticket. Agents' text is quoted, so it never reads as a founder's `/approve`.
+- **`coordinate` skill** (the 13th): how roles claim, delegate, hand off, block and finish. Hand-offs name `role:<name>`, never `@<name>`, which would notify a real GitHub user.
+- **`tickets` workflow:** when an issue closes any other way (a merged pull request, the founder), it frees the claim and unblocks what waited on it.
+- **`claim`:** story-group claims take the same atomic lock.
+- **Review and handoff:** the weekly review summarises team activity; the handoff closes out the claimed ticket.
+- **Tests:** 10 new, against a fake GitHub: a second claimant always loses, even before the label is added; GitHub errors claim nothing; hand-offs, blockers, `done` and the workflow path wake the right tickets.
+
 ## v1.1.0 (2026-11-23)
 
 Slice 1 of `ROADMAP.md`: founder approval gates.
