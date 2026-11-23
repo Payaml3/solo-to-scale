@@ -163,6 +163,14 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .spark { display: block; width: 96px; height: 24px; }
 .spark polyline { fill: none; stroke: var(--link); stroke-width: 1.5; }
 .spark circle { fill: var(--link); }
+.bars { display: block; width: 100%; max-width: 560px; height: 72px; }
+.bars rect { fill: var(--progress); } .bars line { stroke: var(--waiting); stroke-dasharray: 4 3; stroke-width: 1; }
+.agent a.open { align-self: flex-start; font-size: .85rem; font-weight: 600; }
+.agentpage { scroll-margin-top: 56px; border: 2px solid var(--accent); border-radius: 12px; padding: 14px; margin-bottom: 18px; background: var(--surface); }
+.agentpage .head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.agentpage .head h2 { margin: 0; font-size: 1.2rem; }
+.agentpage .head .close { margin-left: auto; font-size: .85rem; }
+.strip a.who2 { color: inherit; text-decoration: none; } .strip a.who2:hover b, .strip a.who2:focus-visible { text-decoration: underline; }
 .goalrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 160px) 3.5em; gap: 10px; align-items: center; padding: 4px 0; }
 .goalrow b { font-variant-numeric: tabular-nums; text-align: right; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
@@ -501,7 +509,75 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         el("dt", { text: "Heartbeat" }), el("dd", { text: a.b.enabled ? cronText(a.b.cron) + (nextRun(a.b.cron) ? ", next " + nextRun(a.b.cron) : "") : "off" }),
         el("dt", { text: "Last active" }), el("dd", { text: !G.ok ? "?" : a.last ? a.last.action + " #" + a.last.ticket + (ago(a.last.at) ? ", " + ago(a.last.at) : "") : "no activity yet" }),
         a.stories.length ? [el("dt", { text: "Stories" }), el("dd", null, a.storiesDone + " of " + a.stories.length + " done", bar(a.storiesDone, a.stories.length))] : null,
-        el("dt", { text: "Spend" }), el("dd", null, G.ok ? usd(used) + (cap ? " of " + usd(cap) : ", no budget") : "?", G.ok && cap ? bar(used, cap, p >= 1 ? "x" : p >= 0.8 ? "w" : "") : null)));
+        el("dt", { text: "Spend" }), el("dd", null, G.ok ? usd(used) + (cap ? " of " + usd(cap) : ", no budget") : "?", G.ok && cap ? bar(used, cap, p >= 1 ? "x" : p >= 0.8 ? "w" : "") : null),
+        G.ok && a.c.stats && a.c.stats.runs ? [el("dt", { text: "Runs" }), el("dd", { text: a.c.stats.runs + " this month, " + pctText2(a.c.stats.success) + " worked" })] : null),
+      el("a", { cls: "open", href: "#agent/" + encodeURIComponent(a.role), text: "Open " + roleName(a.role) + "'s record" }));
+  }
+
+  // --- one agent's record: its runs, outcomes, time and spend this month ------------------------------------
+  var OUTCOME_STATE = { worked: "done", "no-work": "todo", blocked: "blocked", approval: "waiting", failed: "stopped" };
+  function outcomePill(o) { return o ? pill(o, OUTCOME_STATE[o] || "todo") : el("span", { cls: "empty", text: "not recorded" }); }
+  function dur(sec) { return sec === null || sec === undefined ? "" : sec >= 60 ? Math.round(sec / 60) + " min" : Math.round(sec) + " s"; }
+  function pctText2(x) { return x === null || x === undefined ? "n/a" : Math.round(100 * x) + "%"; }
+  // Spend per day of the month as bars, with the budget's even daily pace as a dashed line.
+  function dailyBars(daily, cap, month) {
+    var m = /^(\d{4})-(\d{2})$/.exec(month || ""); if (!m) return null;
+    var days = new Date(Date.UTC(+m[1], +m[2], 0)).getUTCDate(), per = {}, hi = cap ? cap / days : 0;
+    (daily || []).forEach(function (d) { var k = +String(d.date).slice(8, 10); if (k >= 1 && k <= days) { per[k] = Number(d.usd) || 0; hi = Math.max(hi, per[k]); } });
+    if (!hi) return el("p", { cls: "empty", text: "No spend recorded this month." });
+    var NS = "http://www.w3.org/2000/svg", W = 560, H = 72, bw = W / days, svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("class", "bars"); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Spend per day in " + month + ": " + (Object.keys(per).map(function (k) { return k + ": " + usd(per[k]); }).join(", ") || "none") + (cap ? ". Budget pace " + usd(cap / days) + " a day" : ""));
+    Object.keys(per).forEach(function (k) {
+      var r = document.createElementNS(NS, "rect"), h = Math.max(1, per[k] / hi * (H - 4));
+      r.setAttribute("x", ((k - 1) * bw + 1).toFixed(1)); r.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
+      r.setAttribute("y", (H - h).toFixed(1)); r.setAttribute("height", h.toFixed(1)); svg.appendChild(r);
+    });
+    if (cap) {
+      var y = (H - (cap / days) / hi * (H - 4)).toFixed(1), ln = document.createElementNS(NS, "line");
+      ln.setAttribute("x1", "0"); ln.setAttribute("x2", String(W)); ln.setAttribute("y1", y); ln.setAttribute("y2", y); svg.appendChild(ln);
+    }
+    return svg;
+  }
+  function runTable(runs, withRole) {
+    return table([
+      { h: "When", k: function (r) { return r.at; }, f: function (r) { return when(r.at); } },
+      withRole ? { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } } : null,
+      { h: "Outcome", k: function (r) { return r.outcome; }, f: function (r) { return outcomePill(r.outcome); } },
+      { h: "Ticket", num: true, k: function (r) { return r.ticket || null; }, f: function (r) { return r.ticket ? "#" + r.ticket : ""; } },
+      { h: "Objective", f: function (r) { return r.objective || ""; } },
+      { h: "Time", num: true, k: function (r) { return r.seconds; }, f: function (r) { return dur(r.seconds); } },
+      { h: "Cost", num: true, k: function (r) { return Number(r.usd) || 0; }, f: function (r) { return usd(r.usd); } },
+      { h: "How", f: function (r) { return r.how; } },
+      { h: "Model", f: function (r) { return r.model || ""; } },
+      { h: "Session", f: function (r) { return safeHref(r.session) ? link("open", r.session) : ""; } }].filter(Boolean),
+      runs, "No runs recorded this month.",
+      { filters: [withRole ? { label: "Roles", f: function (r) { return r.role; } } : null, { label: "Outcomes", f: function (r) { return r.outcome || "not recorded"; } }].filter(Boolean) });
+  }
+  function agentPage(role) {
+    var a = agents().filter(function (x) { return x.role === role; })[0];
+    if (!a) return el("div", { cls: "agentpage" }, el("p", { cls: "empty", text: "No agent called " + role + "." }), el("a", { href: "#team", text: "Back to the team" }));
+    var st = a.c.stats || {}, oc = st.outcomes || {}, cap = a.c.cap || a.b.monthly_budget_usd || 0, used = a.c.used || 0;
+    var runs = (costs.entries || []).filter(function (e) { return e.role === role; }).slice().reverse();
+    var mine = activity.filter(function (x) { return x.role === role; }).slice(0, 12);
+    var info = ROLE_INFO[role];
+    return el("div", { cls: "agentpage", id: "agent-record", tabindex: "-1" },
+      el("div", { cls: "head" }, avatar(role, a.state),
+        el("div", null, el("h2", { text: roleName(role) + "'s record" }), el("span", { cls: "badge", text: "AI agent" }), " ", statePill(a.state),
+          el("div", { cls: "note", text: (info ? info[2] + ". " : "") + "Heartbeat " + (a.b.enabled ? cronText(a.b.cron) : "off") + "." })),
+        el("a", { cls: "close", href: "#team", text: "Close" })),
+      !G.ok ? ghMissing() : [
+        el("div", { cls: "grid" },
+          tile("Runs in " + (costs.month || "this month"), String(st.runs || 0), (oc.worked || 0) + " worked, " + (oc.failed || 0) + " failed, " + (oc["no-work"] || 0) + " with nothing to do"),
+          tile("Worked", pctText2(st.success), "of the runs that had work"),
+          tile("Typical run", st.median_seconds === null || st.median_seconds === undefined ? "n/a" : dur(st.median_seconds), "median time"),
+          tile("Spend", usd(used), cap ? "of " + usd(cap) + " (" + Math.round(100 * used / cap) + "%)" : "no budget set"),
+          tile("Cost per worked run", st.usd_per_worked === null || st.usd_per_worked === undefined ? "n/a" : usd(st.usd_per_worked))),
+        panel("Spend per day", "Bars are each day's spend; the dashed line is the budget spread evenly over the month.", dailyBars(a.c.daily, cap, costs.month)),
+        panel("Runs", "Every heartbeat run and session this month, newest first, from the cost log.", runTable(runs, false)),
+        panel("Tickets", null, a.mine.length ? el("ul", { cls: "list" }, a.mine.map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : pill("ready", "todo"), t.goal ? " " + t.goal : ""); })) : el("p", { cls: "empty", text: "No open tickets." })),
+        panel("Recent activity", null, mine.length ? el("ul", { cls: "list" }, mine.map(activityItem)) : el("p", { cls: "empty", text: "No activity yet." }))],
+      a.stories.length ? panel("Stories", null, el("p", null, a.storiesDone + " of " + a.stories.length + " done"), bar(a.storiesDone, a.stories.length)) : null);
   }
   function node(av, name, sub, cls) { return el("div", { cls: "node" + (cls ? " " + cls : "") }, av, el("div", null, name, sub ? el("small", { text: sub }) : null)); }
   function orgChart(list) {
@@ -581,7 +657,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     var recent = activity.slice(0, 8).map(activityItem);
     var merged = (G.merged || []).slice(0, 8).map(function (p) { return el("li", null, link("#" + p.number + " " + p.title, p.url), el("div", { cls: "why", text: "merged " + when(p.merged) + (p.by ? " · " + p.by : "") })); });
     var crew = agents().map(function (a) {
-      return el("div", { cls: "who2" }, avatar(a.role, a.state), el("div", null, roleName(a.role),
+      return el("a", { cls: "who2", href: "#agent/" + encodeURIComponent(a.role) }, avatar(a.role, a.state), el("div", null, el("b", { text: roleName(a.role) }),
         el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
     });
     return [tiles, G.ok ? null : ghMissing(),
@@ -782,13 +858,21 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         { h: "Owner", f: function (r) { return r.role; } }, { h: "Stories", num: true, f: function (r) { return r.stories; } }, { h: "Slices", f: function (r) { return r.slices.join(", "); } }], R.epics || [], "No epics in founder/slices.json yet.", { search: "Search epics" }))];
   }
 
+  var agentSlot = el("div", null);
+  function showAgent(role) {
+    agentSlot.textContent = "";
+    if (!role) return;
+    var page = agentPage(role); agentSlot.appendChild(page);
+    if (page.scrollIntoView) page.scrollIntoView({ block: "start" });
+    if (page.focus) page.focus({ preventScroll: true });
+  }
   function teamTab() {
     var beats = R.heartbeats || {}, byRole = {};
     openTickets.forEach(function (t) { var r = byRole[t.role] = byRole[t.role] || { open: 0, claimed: 0, blocked: 0 }; r.open++; if (t.claimed) r.claimed++; if (t.blocked) r.blocked++; });
     var spend = {}; (costs.roles || []).forEach(function (r) { spend[r.role] = r; });
     var roles = Object.keys(beats).map(function (k) { return { role: k, b: beats[k] || {}, t: byRole[k] || { open: 0, claimed: 0, blocked: 0 }, c: spend[k] || {} }; });
     var list = agents();
-    return [
+    return [agentSlot,
       panel("Org chart", "You chair the company. Claude runs the operating system as chief of staff; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
       panel("AI agents", "One card per agent: what it's working on, when it next wakes, what it last did, and its spend this month.", list.length ? el("div", { cls: "agents" }, list.map(agentCard)) : el("p", { cls: "empty", text: "No roles in founder/heartbeats.json yet." })),
       panel("The team in a table", "Heartbeats and budgets come from founder/heartbeats.json; tickets from GitHub.", table([
@@ -865,19 +949,29 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
   function costsTab() {
     if (!G.ok) return ghMissing();
-    var roles = (costs.roles || []).filter(function (r) { return r.cap || r.used; });
+    var roles = (costs.roles || []).filter(function (r) { return r.cap || r.used; }), by = costs.by || {}, entries = costs.entries || [];
+    var worked = entries.filter(function (e) { return e.outcome === "worked"; }).length, tried = entries.filter(function (e) { return e.outcome && e.outcome !== "no-work"; }).length;
+    function groupTable(title, rows) {
+      return el("div", null, el("h3", { cls: "k", text: title }), table([
+        { h: "", f: function (r) { return r.key; } }, { h: "Runs", num: true, k: function (r) { return r.runs; }, f: function (r) { return String(r.runs); } },
+        { h: "Spent", num: true, k: function (r) { return r.usd; }, f: function (r) { return usd(r.usd); } },
+        { h: "", f: function (r) { return bar(r.usd, costs.total || 1); } }], rows || [], "Nothing yet."));
+    }
     return [
-      el("div", { cls: "grid" }, tile("Spent in " + costs.month, usd(costs.total)), tile("Entries", String((costs.entries || []).length), (costs.entries || []).filter(function (e) { return e.how === "estimated"; }).length + " estimated")),
+      el("div", { cls: "grid" }, tile("Spent in " + costs.month, usd(costs.total), costs.cap_total ? "of " + usd(costs.cap_total) + " in budgets" : null),
+        costs.forecast !== null && costs.forecast !== undefined ? tile("Month-end at this pace", usd(costs.forecast), costs.cap_total ? (costs.forecast > costs.cap_total ? "over" : "within") + " the budgets" : "from the daily burn so far") : null,
+        tile("Runs", String(entries.length), tried ? Math.round(100 * worked / tried) + "% worked of the runs that had work" : "no outcomes recorded yet"),
+        tile("Estimated", String(entries.filter(function (e) { return e.how === "estimated"; }).length), "entries with a flat estimate, not measured")),
       panel("Budget per role", "Warning at 80%, stop at 100%. Approving a budget request adds one more month's budget for that month.", table([
-        { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } }, { h: "Spent", num: true, k: function (r) { return Number(r.used) || 0; }, f: function (r) { return usd(r.used); } },
+        { h: "Role", f: function (r) { return el("a", { href: "#agent/" + encodeURIComponent(r.role), text: roleName(r.role) }); } }, { h: "Spent", num: true, k: function (r) { return Number(r.used) || 0; }, f: function (r) { return usd(r.used); } },
         { h: "Budget", num: true, k: function (r) { return r.cap ? Number(r.cap) : null; }, f: function (r) { return r.cap ? usd(r.cap) : "not set"; } },
         { h: "", f: function (r) { if (!r.cap) return ""; var p = r.used / r.cap; return bar(r.used, r.cap, p >= 1 ? "x" : p >= 0.8 ? "w" : ""); } },
+        { h: "Runs", num: true, k: function (r) { return (r.stats || {}).runs || 0; }, f: function (r) { return String((r.stats || {}).runs || 0); } },
+        { h: "Worked", num: true, k: function (r) { return (r.stats || {}).success; }, f: function (r) { return pctText2((r.stats || {}).success); } },
         { h: "State", f: function (r) { if (!r.cap) return ""; var p = r.used / r.cap; return p >= 1 ? pill("stopped", "stopped") : p >= 0.8 ? pill("over 80%", "waiting") : pill("ok", "done"); } }], roles, "No costs or budgets yet.")),
-      panel("Cost log", "Each heartbeat run and each session handoff. Measured from the transcript where possible.", table([
-        { h: "When", f: function (r) { return when(r.at); } }, { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } },
-        { h: "Cost", num: true, f: function (r) { return usd(r.usd); } }, { h: "How", f: function (r) { return r.how; } },
-        { h: "Ticket", num: true, k: function (r) { return r.ticket || null; }, f: function (r) { return r.ticket ? "#" + r.ticket : ""; } }], (costs.entries || []).slice().reverse(), "No costs recorded this month.",
-        { filters: [{ label: "Roles", f: function (r) { return r.role; } }, { label: "Kinds", f: function (r) { return r.how; } }] }))];
+      panel("Where the money went", "This month's spend by objective (the ticket's goal label), by model and by outcome.", el("div", { cls: "cols" },
+        groupTable("By objective", by.objective), groupTable("By model", by.model), groupTable("By outcome", by.outcome))),
+      panel("Run log", "Each heartbeat run and each session handoff, with its outcome, time and a link to the session. Costs are measured from the transcript where possible.", runTable(entries.slice().reverse(), true))];
   }
 
   // --- shell ----------------------------------------------------------------------------------------------
@@ -894,7 +988,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     buttons[t[0]] = b; tabs.appendChild(b);
   });
   function select(id, push) {
-    if (!buttons[id]) id = "overview";
+    var hash = id, who = null;
+    if (/^agent\//.test(id)) { try { who = decodeURIComponent(id.slice(6)); } catch (e) { who = null; } id = "team"; }
+    if (!buttons[id]) id = hash = "overview";
     TABS.forEach(function (t) {
       var on = t[0] === id;
       buttons[t[0]].setAttribute("aria-selected", on ? "true" : "false");
@@ -902,8 +998,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       if (on && !sections[id]) { sections[id] = el("section", { id: "panel-" + id, role: "tabpanel", "aria-labelledby": "tab-" + id }, t[2]()); main.appendChild(sections[id]); }
       if (sections[t[0]]) sections[t[0]].hidden = !on;
     });
+    if (id === "team") showAgent(who);
     if (buttons[id].scrollIntoView && push) buttons[id].scrollIntoView({ block: "nearest", inline: "nearest" });
-    if (push) { try { history.replaceState(null, "", "#" + id); } catch (e) { /* sandboxed */ } }
+    if (push) { try { history.replaceState(null, "", "#" + hash); } catch (e) { /* sandboxed */ } }
   }
   tabs.addEventListener("keydown", function (e) {
     var ids = TABS.map(function (t) { return t[0]; }), i = ids.indexOf((document.activeElement.id || "").slice(4));

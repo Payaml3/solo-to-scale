@@ -29,11 +29,11 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
    - `tickets.py handoff <n> --to <role> --note "<state, what's left, where>"`;
    - `tickets.py block` or `release` with the state, when it can't go on.
    A ticket you keep claimed is resumed next run; say so in its comment.
-5. `python tools/heartbeat.py end <role> --ticket <n> --note "<one line>"`: it records the run's cost (measured from this session's transcript, or `--usd`; else a flat estimate) and frees the run lock. Always run it, even after exit 2 or an error.
+5. `python tools/heartbeat.py end <role> --ticket <n> --outcome <worked|no-work|blocked|approval|failed> --session <https link> --model <tier> --note "<one line>"`: it records the run (cost measured from this session's transcript, or `--usd`, else a flat estimate; its time, ticket and objective) and frees the run lock. `worked` means a PR, handoff or done; `approval` means you asked for one. Always run it, even after exit 2 (`no-work`) or an error (`failed`).
 
 ## Budgets
 
-- Costs are AI usage only (API-equivalent prices in the policy), one issue per month labelled `cost-log`. `python tools/heartbeat.py costs` shows spend per role against budget.
+- Costs are AI usage only (API-equivalent prices in the policy), one issue per month labelled `cost-log`. `python tools/heartbeat.py costs` shows spend per role against budget and the month-end forecast; `runs` lists the run log with the success rate.
 - 80%: a warning in the cost log (and on the ticket). 100%: `start` refuses until next month, or until the founder `/approve`s the budget request, which adds one more month's budget for this month.
 - Interactive sessions count too: the `handoff` skill runs `heartbeat.py end <role>` with the session's cost.
 - Never edit `founder/heartbeats.json`, a cost entry or a budget request yourself. A budget raise is the founder's.

@@ -105,7 +105,8 @@ def test_the_page_holds_repo_and_github_data_and_hostile_text_stays_text(root, f
     states = {a["number"]: (a["state"], a["open"]) for a in d["github"]["approvals"]}
     assert states == {wait: ("waiting", True), done: ("approved", False)}, "only the founder's /approve counts"
     eng = next(r for r in d["github"]["costs"]["roles"] if r["role"] == "engineer")
-    assert eng == {"role": "engineer", "used": 8.5, "cap": 10.0, "base": 10.0}
+    assert {k: eng[k] for k in ("role", "used", "cap", "base")} == {"role": "engineer", "used": 8.5, "cap": 10.0, "base": 10.0}
+    assert eng["daily"] == [{"date": "2026-11-22", "usd": 8.5}] and eng["stats"]["runs"] == 1
     assert [p["number"] for p in d["github"]["merged"]] == [7]
     assert d["github"]["tickets"][0]["claimed"]
     paths = [doc["path"] for doc in d["repo"]["documents"]]
@@ -247,3 +248,23 @@ def test_documents_are_grouped_business_product_technical(root):
     assert docs["specs/001-pay/plan.md"]["feature"] == "001-pay" and docs["docs/product/vision.md"]["feature"] == ""
     page = bd.PAGE.read_text(encoding="utf-8")
     assert "function stagePanel" in page and '"This stage"' in page and '["documents", "Documents", documentsTab]' in page
+
+
+def test_the_run_log_feeds_costs_by_group_the_forecast_and_agent_pages(root, fake):
+    n = fake.make("Card payments", "", ["ticket", "role:engineer", "goal:O1"])
+    log = fake.make("Cost log 2026-11", "", [heartbeat.COST_LOG])
+    for o, usd, obj in (("worked", 3.0, "O1"), ("failed", 1.0, "O1"), ("no-work", 0.5, "")):
+        fake.comments[log].append({"body": heartbeat.cost_entry("engineer", usd, "2026-11", "measured", n, "run", {
+            "outcome": o, "objective": obj, "model": "mid-tier", "seconds": 300,
+            "session": "javascript:alert(1)" if o == "failed" else "https://claude.ai/code/session_x"}),
+            "created_at": "2026-11-20T10:00:00Z"})
+    c = data_of(bd.page(bd.build(root, now=NOW)))["github"]["costs"]
+    assert c["forecast"] == pytest.approx(4.5 / NOW.day * 30, abs=0.01)
+    assert c["by"]["objective"] == [{"key": "O1", "usd": 4.0, "runs": 2}, {"key": "no objective", "usd": 0.5, "runs": 1}]
+    assert [g["key"] for g in c["by"]["outcome"]] == ["worked", "failed", "no-work"]
+    eng = next(r for r in c["roles"] if r["role"] == "engineer")
+    assert eng["stats"]["success"] == 0.5 and eng["stats"]["usd_per_worked"] == 4.5, "all spend over the runs that worked"
+    assert [e["session"] for e in c["entries"]] == ["https://claude.ai/code/session_x", "", "https://claude.ai/code/session_x"]
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert "function agentPage" in html and '"#agent/" + encodeURIComponent' in html and "function dailyBars" in html
+    assert "safeHref(r.session)" in html, "a session link is only ever an https link"

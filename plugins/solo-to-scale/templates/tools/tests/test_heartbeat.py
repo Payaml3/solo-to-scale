@@ -178,3 +178,42 @@ def test_transcript_cost_counts_each_message_once(tmp_path):
     assert heartbeat.transcript_usd(path, pol) == round(2 + 1 + 0.1 + 0.05, 4), "unknown models use the top price"
     (tmp_path / "empty.jsonl").write_text("{}\n", encoding="utf-8")
     assert heartbeat.transcript_usd(tmp_path / "empty.jsonl", pol) is None
+
+
+def test_each_run_records_its_outcome_time_objective_and_session(root, fake, capsys, monkeypatch):
+    n = ticket(fake, "engineer", "Build it")
+    fake.issues[n]["labels"].append({"name": "goal:O1"})
+    assert run(root, "start", "engineer") == heartbeat.OK
+    assert heartbeat.main(["end", "engineer", "--ticket", str(n), "--usd", "1.25", "--model", "mid-tier",
+                           "--session", "https://claude.ai/code/session_x", "--now", str(NOW + 600),
+                           "--root", str(root), "--month", MONTH]) == heartbeat.OK
+    monkeypatch.setenv("S2S_SESSION_URL", "file:///etc/passwd")
+    assert run(root, "end", "engineer", "--usd", "0.25", "--outcome", "no-work") == heartbeat.OK
+    with pytest.raises(SystemExit, match="--outcome"):
+        run(root, "end", "engineer", "--usd", "1", "--outcome", "great")
+    log = next(i for i in fake.issues.values() if "cost-log" in fake.names(i["number"]))
+    first, second = heartbeat.entries(fake.comments[log["number"]], MONTH)
+    assert first["outcome"] == "worked" and first["seconds"] == 600 and first["objective"] == "O1"
+    assert first["session"] == "https://claude.ai/code/session_x" and first["model"] == "mid-tier"
+    assert second["outcome"] == "no-work" and second["session"] == "" and second["seconds"] is None, "only https links"
+    assert ", worked, 10 min" in fake.comments[log["number"]][0]["body"]
+    capsys.readouterr()
+    assert run(root, "runs", "--role", "engineer") == heartbeat.OK
+    out = capsys.readouterr().out
+    assert "| engineer | worked | #" in out and "success 100%" in out and "no-work 1" in out
+
+
+def test_run_stats_and_the_forecast():
+    import datetime as dt
+    runs = [{"outcome": o, "usd": u, "seconds": s} for o, u, s in
+            [("worked", 2.0, 60), ("failed", 1.0, 300), ("no-work", 0.5, None), ("worked", 1.5, 120)]]
+    st = heartbeat.run_stats(runs)
+    assert st["success"] == pytest.approx(2 / 3, abs=1e-4), "no-work runs don't count against an agent"
+    assert st["median_seconds"] == 120 and st["usd_per_worked"] == 2.5 and st["outcomes"]["failed"] == 1
+    assert heartbeat.run_stats([])["success"] is None
+    assert heartbeat.forecast(10.0, "2026-11", dt.date(2026, 11, 10)) == 30.0
+    assert heartbeat.forecast(10.0, "2026-10", dt.date(2026, 11, 10)) is None
+    bad = [{"body": '<!-- s2s:cost {"role": "qa", "usd": true, "month": "2026-11"} -->'},
+           {"body": '<!-- s2s:cost {"role": "qa", "usd": 1, "month": "2026-11", "outcome": "<b>", "session": "javascript:x", "seconds": -5} -->'}]
+    (only,) = heartbeat.entries(bad, MONTH)
+    assert only["outcome"] == "" and only["session"] == "" and only["seconds"] is None

@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.11.0 (2026-11-23)
+
+Slice 8 of `ROADMAP-V2.md`: the run log and a page per agent.
+
+- **Every run leaves a record.** `heartbeat.py end` takes `--outcome` (worked, no-work, blocked, approval, failed; it defaults to worked with a ticket and no-work without), `--session` (an https link to the session or its transcript; `S2S_SESSION_URL` works too) and `--model`. It also records how long the run took, from the run lock, and the ticket's objective. All of it goes into the cost entry the run already writes, so old entries still count.
+- **`heartbeat.py runs [--role R]`** lists the month's run log with the success rate: worked, out of the runs that had work. `costs` adds the month-end spend at this month's daily burn.
+- **A record per agent on the dashboard.** Open it from the Overview's team strip, from a card in Team and board, or at `#agent/<role>`. It shows runs and outcomes, success rate, median run time, spend against budget, spend per day against the budget's even pace (drawn in the page, with no library), cost per worked run, and every run with a link to its session. Its tickets, activity and stories are there too.
+- **Costs, four ways.** The Costs tab has spend by objective, by model and by outcome. It also shows the month-end forecast against the budgets, runs and success rate per role, and the run log with outcome, time, objective, model and session. Spend by epic waits until tickets carry their epic.
+- **Untrusted by default.** Malformed entries, unknown outcomes and negative times are dropped. A session link is kept only if it is https.
+- **Docs:** handbook, and the `heartbeat` and `handoff` skills.
+- **Tests:** 3 new: the run record and `runs`, the stats and forecast, and the dashboard's groups, forecast and agent page.
+
 ## v1.10.0 (2026-11-23)
 
 Slice 7 of `ROADMAP-V2.md`: quick start and the doctor.
