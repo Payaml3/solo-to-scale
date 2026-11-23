@@ -39,6 +39,7 @@ GATED = {"founder/team.md": "hire", "founder/heartbeats.json": "budget", "founde
 WORKFLOWS = ["governance.yml", "founder-gates.yml", "tickets.yml", "dashboard.yml", "portfolio.yml"]
 LABELS = {tickets.TICKET: "0e8a16", tickets.CLAIMED: "fbca04", tickets.BLOCKED: "b60205", tickets.LOG: "c5def5",
           approval.LABEL: "d93f0b", approval.PR_LABEL: "0e8a16", heartbeat.COST_LOG: "c5def5",
+          "agent-controls": "5319e7",
           **{f"role:{r}": "1d76db" for r in tickets.ROLES}}
 NO_RUN_HOURS = 72
 GOALS_TEMPLATE = {

@@ -4,14 +4,18 @@ Founder approval gates. Policy: founder/gates.json. Requests are GitHub issues l
 `gate:<name>`; only a founder's own comment decides one:
   /approve            this one action
   /approve always     a standing rule for this gate and scope, until /revoke
+  /revise <what to change>   not like this: the requesting role changes it and resubmits
   /reject <reason>    no; the agent stops and reports
   /revoke             withdraws an earlier approval
 The latest founder command wins. Anything else, including bots, other people and labels, never counts.
+A resubmission (`resubmit`) only moves a request back from "revision" to "waiting", never further.
 
   python tools/approval.py request <gate> --title "..." --why "..." [--impact "..."] [--scope "..."]
   python tools/approval.py check <gate> [--issue N | --scope "..."]   # exit 0 approved, 3 waiting, 4 no
   python tools/approval.py status <issue>
   python tools/approval.py inbox
+  python tools/approval.py resubmit <issue> --note "what changed" [--role R]   # after a /revise
+  python tools/approval.py expire [--days 14] [--dry-run]   # withdraw requests nobody answered; their roles re-plan
   python tools/approval.py pr <number>     # CI: gated files need the founder-approved label, added by a founder
 
 Fails closed: if GitHub can't be reached or anything is unclear, the answer is "not approved".
@@ -20,6 +24,7 @@ Python 3 standard library plus the gh CLI.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import fnmatch
 import json
 import os
@@ -32,8 +37,10 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
 
-APPROVED, WAITING, NO, ERROR = 0, 3, 4, 5
-COMMAND = re.compile(r"^\s*/(approve|reject|revoke)\b[ \t]*(.*)$", re.IGNORECASE | re.MULTILINE)
+APPROVED, WAITING, NO, ERROR, REVISE = 0, 3, 4, 5, 7
+COMMAND = re.compile(r"^\s*/(approve|reject|revoke|revise)\b[ \t]*(.*)$", re.IGNORECASE | re.MULTILINE)
+RESUBMITTED = "<!-- s2s:resubmitted -->"
+EXPIRE_DAYS = 14
 LABEL, PR_LABEL = "needs-founder", "founder-approved"
 
 
@@ -53,6 +60,9 @@ def decide(comments: list[dict[str, Any]], founder_logins: set[str]) -> dict[str
     """The latest founder command among the comments, in order. Non-founders never count."""
     result = {"state": "waiting", "kind": "", "note": ""}
     for c in comments:
+        if result["state"] == "revision" and RESUBMITTED in (c.get("body") or ""):
+            result = {"state": "waiting", "kind": "resubmitted", "note": ""}  # never further than waiting
+            continue
         if (c.get("user") or {}).get("login", "").lower() not in founder_logins:
             continue
         for verb, rest in COMMAND.findall(c.get("body") or ""):
@@ -61,6 +71,8 @@ def decide(comments: list[dict[str, Any]], founder_logins: set[str]) -> dict[str
                 result = {"state": "approved", "kind": "always" if rest.lower().startswith("always") else "once", "note": rest}
             elif verb == "reject":
                 result = {"state": "rejected", "kind": "", "note": rest}
+            elif verb == "revise":
+                result = {"state": "revision", "kind": "", "note": rest}
             else:
                 result = {"state": "revoked", "kind": "", "note": rest}
     return result
@@ -81,7 +93,7 @@ def request_body(gate: str, what: str, why: str, impact: str, scope: str, role: 
         "", "## Why", why or "(not given)", "", "## Impact, cost and reversibility", impact or "(not given)", "",
         "## Founder: reply with one line",
         "- `/approve`: this action only", "- `/approve always`: a standing rule for this gate and scope, until `/revoke`",
-        "- `/reject <reason>`", "", "The agent waits and does nothing gated until you answer. Comments from anyone else don't count.",
+        "- `/revise <what to change>`: the agent changes it and resubmits here", "- `/reject <reason>`", "", "The agent waits and does nothing gated until you answer. Comments from anyone else don't count.",
     ])
 
 
@@ -171,8 +183,8 @@ def cmd_check(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
         if st["gate"] != a.gate:
             print(f"#{a.issue} is not a {a.gate} request: not approved")
             return NO
-        print(f"#{a.issue}: {st['state']} {st['kind']}".rstrip())
-        return {"approved": APPROVED, "waiting": WAITING}.get(st["state"], NO)
+        print(f"#{a.issue}: {st['state']} {st['kind']}".rstrip() + (f": {st['note']}" if st["state"] == "revision" else ""))
+        return {"approved": APPROVED, "waiting": WAITING, "revision": REVISE}.get(st["state"], NO)
     ok = standing_rule(repo, a.gate, a.scope, pol)
     print("approved by a standing rule" if ok else "no standing rule: request approval")
     return APPROVED if ok else WAITING
@@ -181,7 +193,47 @@ def cmd_check(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
 def cmd_status(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
     st = issue_state(repo, a.issue, pol)
     print(f"#{a.issue} gate:{st['gate'] or '?'} {st['state']} {st['kind']} {st['note']}".rstrip())
-    return {"approved": APPROVED, "waiting": WAITING}.get(st["state"], NO)
+    return {"approved": APPROVED, "waiting": WAITING, "revision": REVISE}.get(st["state"], NO)
+
+
+def cmd_resubmit(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
+    st = issue_state(repo, a.issue, pol)
+    if st["state"] != "revision":
+        print(f"#{a.issue} is {st['state']}, not waiting on a revision: nothing to resubmit")
+        return NO
+    note = "\n".join("> " + ln for ln in (a.note or "(no note)").splitlines())
+    gh(f"repos/{repo}/issues/{a.issue}/comments", "-X", "POST", payload={
+        "body": f"{RESUBMITTED}\n**Resubmitted** by {a.role or 'the requesting role'} after the founder's /revise.\n\n{note}"})
+    print(f"#{a.issue} resubmitted: waiting for the founder again")
+    return WAITING
+
+
+def waiting_too_long(created: str, now: dt.datetime, days: int) -> bool:
+    try:
+        when = dt.datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return (now - when).total_seconds() >= days * 86400
+
+
+def cmd_expire(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
+    """Withdraw requests that waited `days` with no founder answer: unanswered isn't approved, and the role re-plans."""
+    now = dt.datetime.now(dt.timezone.utc)
+    gone = 0
+    for i in gh(f"repos/{repo}/issues?labels={LABEL}&state=open&per_page=100") or []:
+        if i.get("pull_request") or not waiting_too_long(i.get("created_at", ""), now, a.days):
+            continue
+        if decide(comments(repo, i["number"]), founders(pol, repo))["state"] != "waiting":
+            continue
+        gone += 1
+        print(f"#{i['number']} expired after {a.days} days: {i.get('title', '')}")
+        if not a.dry_run:
+            gh(f"repos/{repo}/issues/{i['number']}/comments", "-X", "POST", payload={
+                "body": f"Expired: no answer in {a.days} days, so this is **not approved**. The requesting role "
+                        "re-plans without it, or asks again with what has changed."})
+            gh(f"repos/{repo}/issues/{i['number']}", "-X", "PATCH", payload={"state": "closed", "state_reason": "not_planned"})
+    print(f"{gone} request(s) expired" + (" (dry run)" if a.dry_run else ""))
+    return APPROVED
 
 
 def cmd_inbox(a: argparse.Namespace, pol: dict[str, Any], repo: str) -> int:
@@ -236,6 +288,13 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status", parents=[common]).add_argument("issue", type=int)
     sub.add_parser("inbox", parents=[common])
     sub.add_parser("pr", parents=[common]).add_argument("number", type=int)
+    rs = sub.add_parser("resubmit", parents=[common])
+    rs.add_argument("issue", type=int)
+    rs.add_argument("--note", required=True)
+    rs.add_argument("--role", default="")
+    ex = sub.add_parser("expire", parents=[common])
+    ex.add_argument("--days", type=int, default=EXPIRE_DAYS)
+    ex.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
     pol, repo = policy(a.root), repo_name(a.root)
     if not pol["gates"]:
@@ -246,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
         return ERROR
     try:
         return {"request": cmd_request, "check": cmd_check, "status": cmd_status,
-                "inbox": cmd_inbox, "pr": cmd_pr}[a.cmd](a, pol, repo)
+                "inbox": cmd_inbox, "pr": cmd_pr, "resubmit": cmd_resubmit, "expire": cmd_expire}[a.cmd](a, pol, repo)
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError) as exc:
         print(f"GitHub unavailable or unexpected reply ({type(exc).__name__}): not approved")
         return ERROR

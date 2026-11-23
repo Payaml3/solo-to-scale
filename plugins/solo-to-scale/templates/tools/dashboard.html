@@ -65,7 +65,7 @@ th { font-weight: 600; color: var(--muted); font-size: .8rem; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pill { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: .78rem; border: 1px solid currentColor; white-space: nowrap; }
 .s-done, .s-approved, .s-achieved, .s-ontrack { color: var(--done); }
-.s-progress, .s-current, .s-proposed, .s-waiting, .s-active { color: var(--progress); }
+.s-progress, .s-current, .s-proposed, .s-waiting, .s-active, .s-revision { color: var(--progress); }
 .s-todo, .s-open, .s-assumption, .s-planned, .s-cancelled, .s-notmeasured { color: var(--todo); }
 .s-rejected, .s-revoked, .s-blocked, .s-stopped, .s-behind { color: var(--waiting); }
 .bar { height: 8px; background: var(--sunk); border-radius: 4px; overflow: hidden; min-width: 80px; }
@@ -112,7 +112,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .avatar.sm { width: 22px; height: 22px; font-size: .6rem; vertical-align: middle; margin-right: 6px; }
 .avatar .dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); background: var(--todo); }
 .avatar.sm .dot { display: none; }
-.dot.working { background: var(--done); } .dot.blocked { background: var(--waiting); } .dot.off { background: var(--line); }
+.dot.working { background: var(--done); } .dot.blocked, .dot.paused { background: var(--waiting); } .dot.off { background: var(--line); }
 .badge { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
 .agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
 .agent { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -311,8 +311,8 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     } } }, label);
   }
   function actions(a) {
-    var ok = reply("Approve", "/approve", a.url, "yes"), no = reply("Reject", "/reject ", a.url, "no");
-    return ok ? el("span", { cls: "acts" }, ok, no) : null;
+    var ok = reply("Approve", "/approve", a.url, "yes"), rv = reply("Revise", "/revise ", a.url, "no"), no = reply("Reject", "/reject ", a.url, "no");
+    return ok ? el("span", { cls: "acts" }, ok, rv, no) : null;
   }
   function tile(k, v, sub) { return el("div", { cls: "tile" }, el("div", { cls: "k", text: k }), el("div", { cls: "v", text: v }), sub ? el("div", { cls: "s", text: sub }) : null); }
   function usd(x) { return "$" + (Number(x) || 0).toFixed(2); }
@@ -515,13 +515,22 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       var claimed = mine.filter(function (t) { return t.claimed && !t.blocked; }), blocked = mine.filter(function (t) { return t.blocked; });
       var last = activity.filter(function (a) { return a.role === k; })[0];
       var stories = (team.tasks || []).filter(function (t) { return t.kind === "story" && t.role === k; });
-      var state = blocked.length ? "blocked" : claimed.length ? "working" : b.enabled ? "idle" : "off";
-      return { role: k, b: b, mine: mine, claimed: claimed, blocked: blocked, last: last, c: spend[k] || {}, state: state,
+      var why = pausedWhy(k);
+      var state = why ? "paused" : blocked.length ? "blocked" : claimed.length ? "working" : b.enabled ? "idle" : "off";
+      return { role: k, paused: why, b: b, mine: mine, claimed: claimed, blocked: blocked, last: last, c: spend[k] || {}, state: state,
         stories: stories, storiesDone: stories.filter(function (t) { return t.status === "done"; }).length };
     });
   }
-  var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off" };
-  function statePill(state) { return pill(STATE_WORDS[state], state === "working" ? "done" : state === "blocked" ? "blocked" : "todo"); }
+  var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off", paused: "paused by you" };
+  function statePill(state) { return pill(STATE_WORDS[state], state === "working" ? "done" : state === "blocked" || state === "paused" ? "blocked" : "todo"); }
+  var CTL = (G.ok && G.control) || {};
+  function pausedWhy(role) { return role === "board" ? null : ((CTL.roles || {})[role] || CTL.all || null); }
+  // Pause and resume: open the agent-controls issue and copy the command, as Approve does. You send it.
+  function controls(a) {
+    var url = safeHref(CTL.url);
+    if (!url) return el("p", { cls: "note", style: "margin:0", text: "Pause and resume: run `python tools/control.py issue` once to create the agent-controls issue." });
+    return el("span", { cls: "acts" }, a.paused ? reply("Resume", "/resume " + a.role, url, "yes") : reply("Pause", "/pause " + a.role + " ", url, "no"));
+  }
   function agentCard(a) {
     var info = ROLE_INFO[a.role], cap = a.c.cap || a.b.monthly_budget_usd || 0, used = a.c.used || 0, p = cap ? used / cap : 0;
     var work = a.claimed.concat(a.blocked).slice(0, 3).map(function (t) { return el("div", null, link("#" + t.number + " " + t.title, t.url), t.blocked ? [" ", pill("blocked", "blocked")] : null); });
@@ -538,7 +547,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         a.stories.length ? [el("dt", { text: "Stories" }), el("dd", null, a.storiesDone + " of " + a.stories.length + " done", bar(a.storiesDone, a.stories.length))] : null,
         el("dt", { text: "Spend" }), el("dd", null, G.ok ? usd(used) + (cap ? " of " + usd(cap) : ", no budget") : "?", G.ok && cap ? bar(used, cap, p >= 1 ? "x" : p >= 0.8 ? "w" : "") : null),
         G.ok && a.c.stats && a.c.stats.runs ? [el("dt", { text: "Runs" }), el("dd", { text: a.c.stats.runs + " this month, " + pctText2(a.c.stats.success) + " worked" })] : null),
-      el("a", { cls: "open", href: "#agent/" + encodeURIComponent(a.role), text: "Open " + roleName(a.role) + "'s record" }));
+      a.paused ? el("p", { cls: "why", style: "margin:0", text: "Paused: " + a.paused }) : null,
+      el("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" },
+        el("a", { cls: "open", href: "#agent/" + encodeURIComponent(a.role), text: "Open " + roleName(a.role) + "'s record" }), G.ok ? controls(a) : null));
   }
 
   // --- one agent's record: its runs, outcomes, time and spend this month ------------------------------------
@@ -592,7 +603,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       el("div", { cls: "head" }, avatar(role, a.state),
         el("div", null, el("h2", { text: roleName(role) + "'s record" }), el("span", { cls: "badge", text: "AI agent" }), " ", statePill(a.state),
           el("div", { cls: "note", text: (info ? info[2] + ". " : "") + "Heartbeat " + (a.b.enabled ? cronText(a.b.cron) : "off") + "." })),
-        el("a", { cls: "close", href: "#team", text: "Close" })),
+        G.ok ? controls(a) : null, el("a", { cls: "close", href: "#team", text: "Close" })),
       !G.ok ? ghMissing() : [
         el("div", { cls: "grid" },
           tile("Runs in " + (costs.month || "this month"), String(st.runs || 0), (oc.worked || 0) + " worked, " + (oc.failed || 0) + " failed, " + (oc["no-work"] || 0) + " with nothing to do"),

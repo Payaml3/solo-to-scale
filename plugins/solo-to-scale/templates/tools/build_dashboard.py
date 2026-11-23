@@ -41,6 +41,7 @@ import approval  # noqa: E402
 import build_roadmap  # noqa: E402
 import build_team  # noqa: E402
 import build_traceability  # noqa: E402
+import control  # noqa: E402
 import doctor  # noqa: E402
 import goals  # noqa: E402
 import heartbeat  # noqa: E402
@@ -58,6 +59,7 @@ TECHNICAL_DOCS = ["specs/*/plan.md", "specs/*/research.md", "specs/*/data-model.
 DOC_COUNT_LIMIT = 150
 STALE_HOURS = 48          # a claimed ticket with no update for this long is stuck (founder/dashboard.json: stale_hours)
 OVERDUE_DAYS, ESCALATE_DAYS = 7, 30   # anything waiting on the founder: overdue after a week, escalated after a month
+APPROVAL_OVERDUE_DAYS = 3             # an approval blocks an agent: overdue after 3 days; it expires after 14
 TREND_DAYS = 14
 # Order inside one urgency level: what only the founder can unblock first.
 NEED_ORDER = ("approval", "budget", "stuck", "decision", "founder item")
@@ -268,8 +270,9 @@ def needs_you(data: dict[str, Any], now: dt.datetime, stale_hours: float = STALE
     def add(kind: str, title: str, url: str = "", since: Any = "", detail: str = "", **extra: Any) -> None:
         d = when_of(since)
         age = (now - d).total_seconds() / 86400 if d else None
+        overdue = APPROVAL_OVERDUE_DAYS if kind == "approval" else OVERDUE_DAYS
         level = "escalated" if age is not None and age >= ESCALATE_DAYS else \
-            "overdue" if age is not None and age >= OVERDUE_DAYS else "new"
+            "overdue" if age is not None and age >= overdue else "new"
         items.append({"kind": kind, "title": clip(title, 200), "url": url, "since": str(since or ""),
                       "age_days": round(age, 1) if age is not None else None, "level": level,
                       "detail": clip(detail, 200), **extra})
@@ -277,9 +280,13 @@ def needs_you(data: dict[str, Any], now: dt.datetime, stale_hours: float = STALE
     if gh_.get("ok"):
         waiting = [a for a in gh_.get("approvals") or [] if a.get("open") and a.get("state") == "waiting"]
         for a in waiting:
+            c = when_of(a.get("created"))
+            left = approval.EXPIRE_DAYS - (now - c).days if c else None
             add("approval", a.get("title", ""), a.get("url", ""), a.get("created"),
-                f"{a.get('gate') or 'gate'} gate, requested by {a.get('by') or 'an agent'}", number=a.get("number"),
-                gate=a.get("gate", ""))
+                f"{a.get('gate') or 'gate'} gate, requested by {a.get('by') or 'an agent'}"
+                + (" (resubmitted after your /revise)" if a.get("kind") == "resubmitted" else "")
+                + (f"; expires in {left} days" if left is not None and 0 < left <= 7 else ""),
+                number=a.get("number"), gate=a.get("gate", ""))
         asked = {a.get("scope") for a in waiting if a.get("gate") == "budget"}
         month = (gh_.get("costs") or {}).get("month", "")
         for r in (gh_.get("costs") or {}).get("roles") or []:
@@ -339,7 +346,11 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.dateti
         before = (first - dt.timedelta(days=1)).strftime("%Y-%m")
         recent_runs = heartbeat.entries(heartbeat.Costs(hub, before).comments(), before)
         c = costs(hub, root, month, now)
-        return {"ok": True, "repo": repo, "activity": activity[-limit:], "tickets": open_tickets,
+        try:
+            ctl = control.read(hub, root)
+        except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
+            ctl = {"all": None, "roles": {}, "url": "", "unknown": True}
+        return {"ok": True, "control": ctl, "repo": repo, "activity": activity[-limit:], "tickets": open_tickets,
                 "approvals": approvals(hub, root), "costs": c, "merged": merged,
                 "trends": trends(recent_runs + c["entries"], activity, merged, now)}
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError, TypeError) as exc:

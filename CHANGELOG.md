@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.13.0 (2026-11-23)
+
+Slice 10 of `ROADMAP-V2.md`: governance 2, control from the phone.
+
+- **`/revise <what to change>`** on any approval request. The role changes the work and runs `approval.py resubmit <n> --note "..."`, and the request waits for the founder again on the same issue. A resubmission only moves a request from "revision" back to "waiting", never to approved. `check` exits 7 on a revision and prints the founder's note.
+- **Pause and resume any agent.** One issue labelled `agent-controls` (`control.py issue` creates it) takes the founder's `/pause <role> [reason]`, `/pause all`, `/resume <role>` and `/resume all`. `heartbeat.py start` stops a paused role before it takes a lock or a ticket, and stops it too when the controls can't be read. Pausing is never gated. Resuming a budget-stopped role still needs the budget approval. `control.py status` lists the pauses.
+- **Plan approval before execution.** A new `plan` gate (on in new repos; add it to `founder/gates.json` to turn it on elsewhere). `tickets.py plan <parent> --by <role>` asks the founder to approve the parent's sub-tickets as one plan. Until then none can be claimed, and a sub-ticket added later needs the new plan approved.
+- **Approval reminders and expiry.** An approval waiting 3 days is overdue on the dashboard, and its last week shows "expires in N days". `approval.py expire`, run by the weekly review, closes requests unanswered for 14 days as not approved, and their roles re-plan.
+- **More actions from the page.** Approvals get a **Revise** button next to Approve and Reject. Each agent card and record gets **Pause** or **Resume**, which opens the agent-controls issue and copies the command. Paused agents show as "paused by you", with the reason. Reassigning a ticket from the page waits for a later slice: hand-offs stay with the roles (`tickets.py handoff`).
+- **The doctor** also checks for the `agent-controls` label.
+- **Docs:** the handbook, and the `gate`, `coordinate` and `weekly-review` skills.
+- **Tests:** 6 new: revise and resubmit, resubmit and expire through the commands, pause and resume from the founder only, a paused role never starting, the plan gate including a changed plan, and pauses and reminders on the page.
+
 ## v1.12.0 (2026-11-23)
 
 Slice 9 of `ROADMAP-V2.md`: one "Needs you" inbox, stuck work, charts and a fresher page.

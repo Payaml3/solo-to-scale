@@ -219,11 +219,17 @@ Every decision has one row, one status and a trace to everything it touches.
 **Approval gates (`gate`):** `founder/gates.json` lists the critical actions only the founder approves:
 - hiring or changing a role, raising a budget, deploying, sending or publishing anything outside the repo
 - spending money, marking a decision Approved, pricing, and anything legal
+- starting a plan: with the `plan` gate on, a parent ticket's sub-tickets can't be claimed until you approve the plan (`tickets.py plan <parent>`), and a sub-ticket added later needs the new plan approved
 
 Each gate is `ask`, `allow` or `off`. Before a gated action, an agent checks for an approval and, if there isn't one, opens an approval request as a GitHub issue, then stops that action. You answer on the issue, from anywhere, including the GitHub phone app:
 - `/approve` for this action only
 - `/approve always` for a standing rule, until `/revoke`
+- `/revise <what to change>`: not like this. The role changes it and resubmits on the same issue (`approval.py resubmit`), and it comes back to you
 - `/reject <reason>`
+
+An approval waiting 3 days is marked overdue on the dashboard. After 14 days with no answer it expires (`approval.py expire`, run by the weekly review): it is closed as not approved and the role re-plans.
+
+**Pause and resume any agent, from your phone.** One issue labelled `agent-controls` (`python tools/control.py issue` creates it) takes `/pause <role> [reason]`, `/pause all`, `/resume <role>` and `/resume all`. A paused role's heartbeat stops at its next start, until you resume it. Pausing is never gated; resuming a role whose budget is spent still needs the budget approval. The dashboard's agent cards have **Pause** and **Resume** buttons that open that issue and copy the command for you.
 
 Only your own GitHub account's words count. A pull request that changes a gated file needs you to add the `founder-approved` label; the `founder-gates` check blocks it until you do. Anything unclear fails closed.
 
@@ -422,7 +428,7 @@ One page shows the whole company, with twelve tabs: **Overview** (what's left to
 - **Your AI team, shown as agents.** The Overview has a strip with every role's avatar and status: green working on a ticket, red blocked, grey idle or heartbeat off. **Team and board** opens with an org chart (you, Claude as chief of staff, the six roles, the advisory board) and a card per agent: what it owns, the ticket it's working on, its heartbeat schedule and next run, what it last did, its stories and its spend against budget. Agent activity shows the same avatars.
 - **A record per agent.** Click an agent on the Overview, or **Open record** on its card, for this month's runs: how many, how many worked, failed or found nothing to do, the share that worked out of the runs that had work, the typical run time, spend per day against the budget's even pace, cost per worked run, every run with its outcome, ticket, objective, time, cost, model and a link to its session, and its tickets, activity and stories. The address (`#agent/engineer`) can be bookmarked.
 - **Costs, four ways.** Spend per role against budget with each role's runs and success rate; spend by objective (from the ticket's `goal:` label), by model and by outcome; and the month-end spend at this month's daily burn, against the budgets.
-- **Sort, filter and act from the page.** Click a column heading to sort; the longer tables have a search box and filters (role, status, gate, epic). Each approval waiting has **Approve** and **Reject**: they open the request's comment box on GitHub and copy `/approve` or `/reject ` for you to paste and send. You still post the reply from your own account, so the gate works exactly as before. The page itself never changes anything.
+- **Sort, filter and act from the page.** Click a column heading to sort; the longer tables have a search box and filters (role, status, gate, epic). Each approval waiting has **Approve**, **Revise** and **Reject**, and each agent **Pause** or **Resume**: they open the right issue on GitHub and copy the command for you to paste and send. You still post the reply from your own account, so the gate works exactly as before. The page itself never changes anything.
 - **The Claude page is the backup.** `publish-views` publishes the same page as a private Claude page, so you can see it before hosting is set up, or if Cloudflare is down.
 
 **Setting it up (once, about 15 minutes, by you):**

@@ -11,7 +11,7 @@ its monthly AI budget, and stops. Policy: founder/heartbeats.json (founder-owned
   python tools/heartbeat.py runs [--role ROLE] [--month YYYY-MM]   # the run log: outcome, time, cost, session
 
 `start` exits 0 with a ticket to work on, 2 when there's nothing to do, 6 when the role must not run
-(paused, no budget, budget spent, or another run of the role is active) and 5 when GitHub is unclear.
+(heartbeat off, paused by the founder with /pause on the agent-controls issue, no budget, budget spent, or another run of the role is active) and 5 when GitHub is unclear.
 Costs go to one issue per month labelled `cost-log`: AI usage, measured from the session transcript where it
 can be, else the policy's flat `fallback_run_usd`, marked estimated. At 80% of a role's budget the log and the
 activity log get a warning; at 100% the role stops until next month, or until the founder `/approve`s the
@@ -36,6 +36,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
 import approval  # noqa: E402
+import control  # noqa: E402
 import goals  # noqa: E402
 import tickets  # noqa: E402
 
@@ -321,6 +322,10 @@ def cmd_start(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
     if not cfg.get("enabled"):
         print(f"stop: role:{a.role}'s heartbeat is off in founder/heartbeats.json")
         return STOP
+    why = control.paused(control.read(hub, a.root), a.role)
+    if why:
+        print(f"stop: role:{a.role} is paused by the founder ({why}); `/resume {a.role}` on the agent-controls issue")
+        return STOP
     month = a.month or this_month()
     cap, used, _ = standing(hub, a.root, pol, a.role, month, Costs(hub, month).totals())
     if cap is None:
@@ -471,7 +476,9 @@ def main(argv: list[str] | None = None) -> int:
         return ERROR
     run = {"plan": cmd_plan, "start": cmd_start, "end": cmd_end, "costs": cmd_costs, "runs": cmd_runs}[a.cmd]
     try:
-        return run(a, tickets.Hub(repo), pol)
+        hub = tickets.Hub(repo)
+        hub.root = a.root
+        return run(a, hub, pol)
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError, TypeError) as exc:
         print(f"GitHub unavailable or unexpected reply ({type(exc).__name__}): stop; nothing more is done")
         return ERROR
