@@ -1,0 +1,9 @@
+{
+  "about": "Money for the dashboard's runway. Only the founder edits this file (the spend gate). Amounts are per month in the currency named here; null means not set. cash: money in the bank on as_of (YYYY-MM-DD). fixed_costs: recurring monthly costs such as tools, hosting and ads; AI spend comes from the cost log. one_offs: single payments in a month (YYYY-MM), positive for a cost, negative for money in.",
+  "currency": "USD",
+  "cash": null,
+  "as_of": "",
+  "monthly_revenue": null,
+  "fixed_costs": [],
+  "one_offs": []
+}

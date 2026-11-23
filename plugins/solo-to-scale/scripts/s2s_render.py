@@ -31,7 +31,7 @@ SECTIONED = ["AGENTS.md", "CLAUDE.md"]
 FOUNDER_OWNED = [
     "HANDOFF.md", "Makefile", "founder/project.json", "founder/status.md", "founder/decisions.md",
     "founder/business-context.md", "founder/brand.md", "founder/playbook.md", "founder/team.md",
-    "founder/artifacts.md", "founder/slices.json", "founder/gates.json", "founder/heartbeats.json", "founder/dashboard.json", "founder/portfolio.json", "founder/goals.json", "founder/sources/README.md", "founder/board/README.md",
+    "founder/artifacts.md", "founder/slices.json", "founder/gates.json", "founder/heartbeats.json", "founder/dashboard.json", "founder/portfolio.json", "founder/goals.json", "founder/finance.json", "founder/sources/README.md", "founder/board/README.md",
     ".claude/governance.json", ".claude/settings.json", ".codex/config.toml",
 ]
 NOT_RENDERED = ["views/*", "agents-optional/*"]

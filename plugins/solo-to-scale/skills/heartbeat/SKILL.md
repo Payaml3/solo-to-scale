@@ -18,7 +18,7 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
 ## Each run
 
 1. `python tools/heartbeat.py start <role>`.
-   - Exit 6 (stop): heartbeat off, no budget, budget spent, or another run of this role is active. Do nothing else; end the turn. At 100% it opens one budget request for the founder.
+   - Exit 6 (stop): heartbeat off, paused, no budget, the role's or the company's budget spent, or another run of this role is active. Do nothing else; end the turn. At 100% it opens one budget request for the founder.
    - Exit 2 (nothing to do): no ready ticket. Run step 5 and stop. No other work.
    - Exit 5: GitHub was unclear; nothing is claimed. Stop.
    - Exit 0: it prints `resume #n` (your earlier claim) or `work on #n` (claimed now, atomically). It also prints the budget left; over 80%, keep the run small.
@@ -34,7 +34,7 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
 ## Budgets
 
 - Costs are AI usage only (API-equivalent prices in the policy), one issue per month labelled `cost-log`. `python tools/heartbeat.py costs` shows spend per role against budget and the month-end forecast; `runs` lists the run log with the success rate.
-- 80%: a warning in the cost log (and on the ticket). 100%: `start` refuses until next month, or until the founder `/approve`s the budget request, which adds one more month's budget for this month.
+- 80%: a warning in the cost log (and on the ticket). 100%: `start` refuses until next month, or until the founder `/approve`s the budget request, which adds one more month's budget for this month. The same holds for `company.monthly_budget_usd`, all roles together: at 100% every role stops.
 - Interactive sessions count too: the `handoff` skill runs `heartbeat.py end <role>` with the session's cost.
 - Never edit `founder/heartbeats.json`, a cost entry or a budget request yourself. A budget raise is the founder's.
 

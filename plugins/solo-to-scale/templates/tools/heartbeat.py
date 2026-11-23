@@ -11,11 +11,12 @@ its monthly AI budget, and stops. Policy: founder/heartbeats.json (founder-owned
   python tools/heartbeat.py runs [--role ROLE] [--month YYYY-MM]   # the run log: outcome, time, cost, session
 
 `start` exits 0 with a ticket to work on, 2 when there's nothing to do, 6 when the role must not run
-(heartbeat off, paused by the founder with /pause on the agent-controls issue, no budget, budget spent, or another run of the role is active) and 5 when GitHub is unclear.
+(heartbeat off, paused by the founder with /pause on the agent-controls issue, no budget, the role's or the company's budget spent, or another run of the role is active) and 5 when GitHub is unclear.
 Costs go to one issue per month labelled `cost-log`: AI usage, measured from the session transcript where it
 can be, else the policy's flat `fallback_run_usd`, marked estimated. At 80% of a role's budget the log and the
 activity log get a warning; at 100% the role stops until next month, or until the founder `/approve`s the
-budget request it opens, which adds one more month's budget.
+budget request it opens, which adds one more month's budget. The policy's `company.monthly_budget_usd` caps all
+roles together in the same way: every run checks both, and the company's 100% stops every role.
 Each cost entry is also the run's record: its outcome, how long it took (from the run lock), the ticket and its
 objective, the model, and a link to the session or its transcript.
 Python 3 standard library plus the gh CLI.
@@ -44,6 +45,7 @@ OK, IDLE, ERROR, STOP = 0, 2, 5, 6
 COST_LOG, RUN_REF = "cost-log", "refs/heartbeats/"
 MARK = re.compile(r"<!-- s2s:cost (\{.*?\}) -->")
 WARN_AT, STALE_HOURS = 0.8, 6
+COMPANY = "company"  # the cap on all roles together; its extra-budget approvals use the scope heartbeat:company:<month>
 BUDGET_ROLES = (*tickets.ROLES, "board")
 # USD per million tokens; used for models the policy's prices don't name, so it is the most expensive tier.
 OUTCOMES = ("worked", "no-work", "blocked", "approval", "failed")
@@ -62,7 +64,7 @@ def policy(root: Path = s.ROOT) -> dict[str, Any]:
 
 
 def budget(pol: dict[str, Any], role: str) -> float | None:
-    v = ((pol.get("roles") or {}).get(role) or {}).get("monthly_budget_usd")
+    v = ((pol.get("company") or {}) if role == COMPANY else ((pol.get("roles") or {}).get(role) or {})).get("monthly_budget_usd")
     return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 else None
 
 
@@ -237,12 +239,13 @@ def ask_for_budget(hub: tickets.Hub, root: Path, role: str, month: str, cap: flo
     if gate.get("mode") != "ask":
         print("the budget gate isn't `ask`: tell the founder in the handoff; no request opened")
         return
+    who = "The company" if role == COMPANY else f"role:{role}"
     body = approval.request_body(
-        "budget", gate.get("what", ""), f"role:{role} has used ${used:.2f} of its ${cap:.2f} AI budget for {month}"
-        " and has stopped.", "Approving adds one more month's budget for this role, this month only. Or raise"
-        " `monthly_budget_usd` in founder/heartbeats.json, or let it wait for next month.",
-        scope(role, month), f"role:{role} (heartbeat)")
-    made = hub.api("issues", "-X", "POST", payload={"title": f"[approval] More AI budget for {role} in {month}",
+        "budget", gate.get("what", ""), f"{who} has used ${used:.2f} of its ${cap:.2f} AI budget for {month}"
+        " and has stopped.", f"Approving adds one more month's budget for {'all roles together' if role == COMPANY else 'this role'},"
+        " this month only. Or raise `monthly_budget_usd` in founder/heartbeats.json, or let it wait for next month.",
+        scope(role, month), f"role:{role} (heartbeat)" if role != COMPANY else "the heartbeats (company budget)")
+    made = hub.api("issues", "-X", "POST", payload={"title": f"[approval] More AI budget for {'the company' if role == COMPANY else role} in {month}",
                                                     "body": body, "labels": [approval.LABEL, "gate:budget"]})
     print(f"opened budget request #{made['number']} for the founder")
 
@@ -250,11 +253,12 @@ def ask_for_budget(hub: tickets.Hub, root: Path, role: str, month: str, cap: flo
 def standing(hub: tickets.Hub, root: Path, pol: dict[str, Any], role: str, month: str,
              totals: dict[str, float]) -> tuple[float | None, float, float]:
     """(cap, used, base budget). cap is None when the role has no budget."""
+    used = sum(totals.values()) if role == COMPANY else totals.get(role, 0.0)
     base = budget(pol, role)
     if base is None:
-        return None, totals.get(role, 0.0), 0.0
+        return None, used, 0.0
     approved, _ = extra_budgets(hub, root, role, month)
-    return base * (1 + approved), totals.get(role, 0.0), base
+    return base * (1 + approved), used, base
 
 
 def run_holder(hub: tickets.Hub, role: str) -> tuple[str, float] | None:
@@ -327,7 +331,14 @@ def cmd_start(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
         print(f"stop: role:{a.role} is paused by the founder ({why}); `/resume {a.role}` on the agent-controls issue")
         return STOP
     month = a.month or this_month()
-    cap, used, _ = standing(hub, a.root, pol, a.role, month, Costs(hub, month).totals())
+    totals = Costs(hub, month).totals()
+    ccap, cused, _ = standing(hub, a.root, pol, COMPANY, month, totals)
+    if ccap is not None and cused >= ccap:
+        print(f"stop: the company has used ${cused:.2f} of its ${ccap:.2f} AI budget for {month}: every role stops")
+        if not extra_budgets(hub, a.root, COMPANY, month)[1]:
+            ask_for_budget(hub, a.root, COMPANY, month, ccap, cused)
+        return STOP
+    cap, used, _ = standing(hub, a.root, pol, a.role, month, totals)
     if cap is None:
         print(f"stop: role:{a.role} has no monthly_budget_usd in founder/heartbeats.json; the founder sets it")
         return STOP
@@ -341,6 +352,9 @@ def cmd_start(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
         return STOP
     print(f"budget: ${used:.2f} of ${cap:.2f} used for {month}; ${cap - used:.2f} left"
           + (" (WARNING: over 80%; keep this run small)" if used >= WARN_AT * cap else ""))
+    if ccap is not None:
+        print(f"company budget: ${cused:.2f} of ${ccap:.2f} used; ${ccap - cused:.2f} left"
+              + (" (WARNING: over 80%; keep this run small)" if cused >= WARN_AT * ccap else ""))
     try:
         return pick(a, hub)
     except Exception:
@@ -396,18 +410,22 @@ def cmd_end(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int
         except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
             pass
     hub.comment(costs.log_issue(create=True), cost_entry(a.role, usd, month, how, a.ticket, a.note, record))
-    cap, used, _ = standing(hub, a.root, pol, a.role, month, {**before, a.role: before.get(a.role, 0) + usd})
+    after = {**before, a.role: before.get(a.role, 0) + usd}
+    cap, used, _ = standing(hub, a.root, pol, a.role, month, after)
     print(f"recorded ${usd:.2f} ({how}) for role:{a.role}; {month}: ${used:.2f}" + (f" of ${cap:.2f}" if cap else ""))
-    if cap:
-        was = before.get(a.role, 0)
-        for mark, word in ((1.0, "spent: the role stops until next month or the founder approves more"),
+    ccap, cused, _ = standing(hub, a.root, pol, COMPANY, month, after)
+    for who, cap_, was, now_, stops in ((f"role:{a.role}", cap, before.get(a.role, 0), used, "the role stops"),
+                                        ("the company", ccap, sum(before.values()), cused, "every role stops")):
+        if not cap_:
+            continue
+        for mark, word in ((1.0, f"spent: {stops} until next month or the founder approves more"),
                            (WARN_AT, "over 80%")):
-            if was < mark * cap <= used:
-                why = f"${used:.2f} of ${cap:.2f} for {month}: {word}."
-                print(f"budget {word}")
-                hub.comment(costs.log_issue(create=True), f"**role:{a.role}** budget warning\n\n{tickets.quote(why)}")
+            if was < mark * cap_ <= now_:
+                why = f"${now_:.2f} of ${cap_:.2f} for {month}: {word}."
+                print(f"{'company ' if who == 'the company' else ''}budget {word}")
+                hub.comment(costs.log_issue(create=True), f"**{who}** budget warning\n\n{tickets.quote(why)}")
                 if a.ticket:
-                    hub.record(a.ticket, a.role, "budget warning", why)
+                    hub.record(a.ticket, a.role, "budget warning", ("company: " if who == "the company" else "") + why)
                 break
     if a.ticket and hub.holder(a.ticket) == f"role:{a.role}" and hub.issue(a.ticket).get("state") == "open":
         print(f"note: #{a.ticket} is still claimed by role:{a.role}. Next run resumes it; release or hand it off"
@@ -423,7 +441,10 @@ def cmd_costs(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
         cap, used, _ = standing(hub, a.root, pol, role, month, totals)
         flag = "" if not cap else " STOPPED" if used >= cap else " WARN" if used >= WARN_AT * cap else ""
         print(f"{role}: ${used:.2f}" + (f" of ${cap:.2f} ({used / cap:.0%}){flag}" if cap else " (no budget set)"))
-    print(f"total {month}: ${sum(totals.values()):.2f}")
+    ccap, cused, _ = standing(hub, a.root, pol, COMPANY, month, totals)
+    print(f"total {month}: ${cused:.2f}" + (f" of the company's ${ccap:.2f} ({cused / ccap:.0%})"
+                                           + (" STOPPED" if cused >= ccap else " WARN" if cused >= WARN_AT * ccap else "")
+                                           if ccap else " (no company budget set)"))
     ahead = forecast(sum(totals.values()), month, dt.datetime.now(dt.timezone.utc).date())
     if ahead is not None:
         print(f"month-end at this pace: ${ahead:.2f}")

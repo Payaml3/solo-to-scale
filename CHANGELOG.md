@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.0.0 (2026-11-23)
+
+Slice 12 of `ROADMAP-V2.md`: money. This completes v2.0 (slices 6 to 12).
+
+- **Runway on the first screen.** A new founder-owned `founder/finance.json` (the `spend` gate) holds cash and its date, monthly revenue, fixed costs (tools, hosting, ads) and one-off items by month. The Overview's new Money panel shows monthly revenue, net burn, runway in months (red under six) and AI spend as a share of costs. AI spend is the cost log's month-end forecast, or the month so far. `tools/finance.py show` prints the same and `finance.py check` validates the file; `check_governance` fails on a malformed one. The portfolio summary carries MRR, net burn and runway.
+- **A company-wide AI budget.** `company.monthly_budget_usd` in `founder/heartbeats.json` caps all roles together. Every `heartbeat.py start` checks it as well as the role's cap, and prints both. The 80% warning and the 100% stop apply to the total: at 100% every role stops and one company budget request (scope `heartbeat:company:<month>`) waits for the founder's `/approve`, which adds one more month's company budget. `heartbeat.py costs` shows the total against it. The Costs tab gets a company budget bar, and a spent company budget joins Needs you.
+- **The doctor** checks that `founder/finance.json` is behind the `spend` gate, and `--repair` adds it. `upgrade` writes an empty `finance.json` into existing repos.
+- **Docs:** the handbook (repository map, budgets, runway) and the `heartbeat` skill.
+- **Tests:** 4 new: runway, burn, one-offs and AI share; an empty, profitable or malformed finance file; the company cap's warning, stop, single request and approval; and money and the company budget on the page.
+
 ## v1.14.0 (2026-11-23)
 
 Slice 11 of `ROADMAP-V2.md`: review before approval and a chain of command.

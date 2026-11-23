@@ -335,3 +335,24 @@ def test_escalations_to_the_founder_and_reviews_show(root, fake):
     tk = {t["number"]: t for t in d["github"]["tickets"]}
     assert tk[mid]["review"] == "qa" and tk[mid]["escalated_to"] == "chief-of-staff"
     assert d["repo"]["reports_to"]["engineer"] == "chief-of-staff" and d["repo"]["reports_to"]["chief-of-staff"] == "founder"
+
+
+def test_money_and_the_company_budget(root, fake):
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    assert d["money"]["set"] is False and "money" not in bd.summary(d)
+    (root / "founder/finance.json").write_text(json.dumps({"cash": 9000, "monthly_revenue": 1000,
+                                                           "fixed_costs": [{"name": "Hosting", "monthly": 1500}]}), encoding="utf-8")
+    p = root / "founder/heartbeats.json"
+    pol = json.loads(p.read_text(encoding="utf-8"))
+    pol["company"] = {"monthly_budget_usd": 5}
+    p.write_text(json.dumps(pol), encoding="utf-8")
+    log = fake.make("Cost log 2026-11", "", [heartbeat.COST_LOG])
+    fake.comments[log].append({"body": heartbeat.cost_entry("qa", 6.0, "2026-11", "measured", None, "run", {"outcome": "worked"}),
+                               "created_at": NOW.isoformat()})
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    m = d["money"]
+    assert m["set"] and m["ai_basis"] == "forecast" and m["ai"] == d["github"]["costs"]["forecast"]
+    assert m["net_burn"] == round(1500 + m["ai"] - 1000, 2) and m["runway_months"] == round(9000 / m["net_burn"], 1)
+    assert d["github"]["costs"]["company"] == {"cap": 5.0, "base": 5.0, "used": 6.0}
+    assert any(x["kind"] == "budget" and "company AI budget" in x["title"] for x in d["needs"]["items"])
+    assert bd.summary(d)["money"]["runway_months"] == m["runway_months"]
