@@ -78,6 +78,9 @@ def test_init_empty_repo(tmp_path):
     assert settings["enabledPlugins"] == {"solo-to-scale@solo-to-scale": True, "superpowers@claude-plugins-official": True}
     beats = json.loads((repo / "founder/heartbeats.json").read_text())["roles"]
     assert beats["engineer"]["monthly_budget_usd"] == 120.0 and not beats["engineer"]["enabled"]
+    assert json.loads((repo / "founder/dashboard.json").read_text())["host"] == "", "the dashboard deploys nowhere until set"
+    assert "founder/dashboard.json" in json.loads((repo / "founder/gates.json").read_text())["gates"]["deploy"]["paths"]
+    assert (repo / ".github/workflows/dashboard.yml").exists() and (repo / "tools/dashboard.html").exists()
     knowledge = (repo / "founder/claude-project/knowledge.md").read_text()
     assert sum(1 for ln in knowledge.splitlines() if ln[:2].rstrip(".").isdigit()) == 8
     out = governance(repo)

@@ -7,7 +7,7 @@
 - **Nothing becomes Approved without your words.** Merging a pull request is approval.
 - **It works in Claude Code and Codex,** from one source.
 
-**Status: v1.3.0.** Fourteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
+**Status: v1.4.0.** Fourteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
 
 ---
 
@@ -75,8 +75,9 @@ Add this repository as a plugin marketplace in your Claude account's plugin sett
   - Codex hooks use `commandWindows` with `cmd` syntax.
   - Claude Code hooks use POSIX shell syntax, which Claude Code on Windows runs through Git Bash.
   - Every script is plain Python 3 with `pathlib`, and is tested on Linux, macOS and Windows.
-- **Budgets are advisory.** Nothing measures or enforces Claude spend per role. The weekly review warns at 80% and proposes a pause at 100%.
-- **Live views need artifact tools.** `publish-views` stops cleanly in sessions without them, which includes Codex.
+- **Budgets cover AI usage only.** Heartbeat runs and handoffs record their cost, measured from the Claude Code transcript where they can be; Codex runs are recorded at the flat estimate.
+- **Live views need artifact tools.** `publish-views` stops cleanly in sessions without them, which includes Codex. The startup dashboard doesn't: GitHub Actions builds it.
+- **The dashboard's login is Cloudflare Access.** Serving it at `pm.<domain>` needs that domain on Cloudflare (the free plan is enough). Without it the dashboard is still built on every run, and the Claude page is the way to see it.
 
 ## Private repository
 

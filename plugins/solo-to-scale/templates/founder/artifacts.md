@@ -4,6 +4,7 @@ Views are generated from the repo and never edited as the source. `publish-views
 
 | View | Artifact type | Slug | Sources | Last published commit |
 | --- | --- | --- | --- | --- |
+| {{project.name}} dashboard (backup of pm.<domain>) | Page | | founder/, specs/, tools/build_dashboard.py | |
 | {{project.name}} progress | Data (dashboard) | | founder/roadmap.json, founder/traceability.json | |
 | {{project.name}} AI team | Team view page | | founder/team.json | |
 | Business docs | Docs | | founder/business-context.md, founder/brand.md, founder/status.md | |

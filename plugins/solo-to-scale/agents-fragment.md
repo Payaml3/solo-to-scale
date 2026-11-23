@@ -6,6 +6,7 @@
 - Claim a story-group issue first (`claim` skill), and start from its goal chain.
 - Work with other roles only through tickets (`coordinate` skill): claim, delegate, hand off, block and finish with `tools/tickets.py`. Write `role:<name>`, never `@<name>`.
 - Heartbeats: a scheduled run of a role uses the `heartbeat` skill: one ticket within its budget (`founder/heartbeats.json`), then hand off and record the cost with `tools/heartbeat.py end`.
+- The startup dashboard is built by the `dashboard` workflow (`tools/build_dashboard.py`). Never weaken its login or change `founder/dashboard.json` without the `deploy` gate.
 - Significant decision: run `board-review` before the founder decides, then `record-decision` after.
 - Approval gates: before any critical action listed in `founder/gates.json` (hire, budget, deploy, external messages, spending, decisions, pricing, legal), run the `gate` skill and wait. Only the founder's own `/approve` counts; fail closed.
 - Engineering standards: `docs/engineering-standards.md`. Journey and gates: `founder/playbook.md`.
