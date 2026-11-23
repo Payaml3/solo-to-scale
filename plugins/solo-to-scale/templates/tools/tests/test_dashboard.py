@@ -310,3 +310,17 @@ def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
     if wf.exists():
         text = wf.read_text(encoding="utf-8")
         assert "issue_comment:" in text and "sleep 60" in text and "cancel-in-progress: true" in text
+
+
+def test_paused_roles_revise_and_approval_reminders_reach_the_page(root, fake):
+    import control
+    issue = fake.make(control.TITLE, control.BODY, [control.LABEL])
+    fake.comments[issue].append({"user": {"login": "acme"}, "body": "/pause qa too many retries"})
+    req = fake.make("[approval] Email users", "**Requested by:** role:growth", [approval.LABEL, "gate:external"])
+    fake.issues[req]["created_at"] = (NOW - dt.timedelta(days=10)).isoformat()
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    assert d["github"]["control"]["roles"] == {"qa": "too many retries"} and d["github"]["control"]["url"].endswith(f"/{issue}")
+    item = next(x for x in d["needs"]["items"] if x["kind"] == "approval")
+    assert item["level"] == "overdue" and "expires in 4 days" in item["detail"]
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert 'reply("Revise", "/revise "' in html and '"/pause " + a.role' in html and '"/resume " + a.role' in html

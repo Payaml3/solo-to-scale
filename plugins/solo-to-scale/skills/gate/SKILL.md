@@ -22,7 +22,7 @@ The founder approves critical actions; agents never do. The gates and their mode
 
 ## Rules
 
-- Only the founder's own GitHub comment decides: `/approve`, `/approve always` (a standing rule for that gate and scope), `/reject <reason>`, `/revoke`. Labels, bots, other people and your own comments never count.
+- Only the founder's own GitHub comment decides: `/approve`, `/approve always` (a standing rule for that gate and scope), `/revise <what to change>`, `/reject <reason>`, `/revoke`. Labels, bots, other people and your own comments never count.
 - Never split an action to stay under a gate, and never ask the founder to approve inside a pull request description instead.
 - Pull requests that change gated files (the `paths` in `founder/gates.json`) need the founder to add the `founder-approved` label; the `founder-gates` check enforces it.
 - Changing `founder/gates.json` is itself gated (`hire`, through `founder/team.md` rules): propose the change, never make it.
@@ -30,3 +30,7 @@ The founder approves critical actions; agents never do. The gates and their mode
 ## The founder's inbox
 
 `python tools/approval.py inbox` lists open requests with their state. The weekly review and the handoff include it.
+
+- Exit 7 from `check`: the founder asked for a revision (the note says what). Change it, then `python tools/approval.py resubmit <n> --note "<what changed>" --role <your role>`; it waits for the founder again.
+- The weekly review runs `python tools/approval.py expire`: requests unanswered for 14 days close as not approved, and their roles re-plan.
+- A role the founder paused (`python tools/control.py status`) doesn't run; never work around a pause.

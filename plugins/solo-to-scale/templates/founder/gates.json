@@ -32,6 +32,11 @@
       "what": "Mark a business, product or engineering decision Approved, or set the company goal, objectives and key results",
       "paths": ["founder/goals.json"]
     },
+    "plan": {
+      "mode": "ask",
+      "what": "Start work on a parent ticket's plan: its sub-tickets can't be claimed until the founder approves the plan",
+      "paths": []
+    },
     "pricing": {
       "mode": "ask",
       "what": "Set or change prices, discounts or terms offered to customers",

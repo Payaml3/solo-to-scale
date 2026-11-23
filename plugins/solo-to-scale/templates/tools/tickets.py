@@ -13,6 +13,7 @@ written to the ticket and to one activity log (an issue labelled `activity-log`)
   python tools/tickets.py handoff <n> --to <role> --note "..." --by <role>
   python tools/tickets.py block <n> --on M --why "..." --by <role>   |   unblock <n> --on M --by <role>
   python tools/tickets.py done <n> --role <role> --note "..."         # closes it and wakes what it blocked
+  python tools/tickets.py plan <parent> --by <role> [--note "..."]   # ask the founder to approve the sub-ticket plan
   python tools/tickets.py queue <role>     # open, unclaimed, unblocked tickets for a role, oldest first
   python tools/tickets.py tree <n>         # a parent and its sub-tickets
   python tools/tickets.py log [--role R] [--ticket N] [--limit 30]
@@ -20,6 +21,8 @@ written to the ticket and to one activity log (an issue labelled `activity-log`)
 
 The claim is a git ref, `refs/claims/<n>`, created through the GitHub API. Creating a ref that exists fails, so
 two agents racing for one ticket can't both win. Anything unclear refuses the claim.
+With the `plan` gate set to ask in founder/gates.json, a sub-ticket can be claimed only when the founder has
+approved its parent's latest plan, and only if it is in that plan: a changed plan needs approval again.
 Text an agent writes is quoted, so it can never read as a founder's /approve.
 Python 3 standard library plus the gh CLI.
 """
@@ -37,6 +40,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
 import goals  # noqa: E402
+import approval  # noqa: E402
 from approval import repo_name  # noqa: E402
 
 OK, REFUSED, ERROR = 0, 1, 5
@@ -132,6 +136,7 @@ def role_of(issue: dict[str, Any]) -> str:
 class Hub:
     def __init__(self, repo: str) -> None:
         self.repo = repo
+        self.root = s.ROOT  # set to --root by main(); the plan gate reads founder/gates.json from here
 
     def api(self, path: str, *args: str, payload: dict | None = None) -> Any:
         return gh(f"repos/{self.repo}/{path}".rstrip("/"), *args, payload=payload)
@@ -261,6 +266,70 @@ def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     return OK
 
 
+PLAN_FOR = re.compile(r"\*\*Plan for:\*\* #(\d+)")
+PLAN_ITEMS = re.compile(r"\*\*Sub-tickets:\*\* (.*)")
+
+
+def plan_gate_on(root: Path) -> bool:
+    return (approval.policy(root)["gates"].get("plan") or {}).get("mode") == "ask"
+
+
+def latest_plan(hub: Hub, parent: int) -> dict[str, Any] | None:
+    """The newest plan request for a parent: its number, decision and the sub-tickets it lists."""
+    found = [i for i in hub.tickets("all", approval.LABEL) if "gate:plan" in labels_of(i)
+             and (PLAN_FOR.search(i.get("body") or "") or [None, ""])[1] == str(parent)]
+    if not found:
+        return None
+    req = max(found, key=lambda i: i["number"])
+    who = approval.founders(approval.policy(hub_root(hub)), hub.repo)
+    comments = hub.api(f"issues/{req['number']}/comments?per_page=100") or []
+    items = numbers((PLAN_ITEMS.search(req.get("body") or "") or [None, ""])[1])
+    return {"number": req["number"], "url": req.get("html_url", ""), "items": items, **approval.decide(comments, who)}
+
+
+def hub_root(hub: Hub) -> Path:
+    return getattr(hub, "root", s.ROOT)
+
+
+def plan_refusal(hub: Hub, t: dict[str, Any]) -> str:
+    """Why a sub-ticket may not be claimed yet under the plan gate; empty when it may."""
+    parents = links(t.get("body", ""))["parent"]
+    if not parents or not plan_gate_on(hub_root(hub)):
+        return ""
+    plan = latest_plan(hub, parents[0])
+    if plan is None:
+        return f"#{parents[0]}'s plan isn't approved yet: its owner runs `tickets.py plan {parents[0]}` first"
+    if plan["state"] != "approved":
+        return f"#{parents[0]}'s plan (#{plan['number']}) is {plan['state']}, not approved"
+    if t["number"] not in plan["items"]:
+        return f"#{t['number']} isn't in #{parents[0]}'s approved plan (#{plan['number']}): ask again with the new plan"
+    return ""
+
+
+def cmd_plan(a: argparse.Namespace, hub: Hub) -> int:
+    need_role(a.by)
+    parent = hub.issue(a.n)
+    kids = [k for k in hub.children(a.n) if k.get("state") == "open"]
+    if not kids:
+        print(f"refused: #{a.n} has no open sub-tickets to plan")
+        return REFUSED
+    lines = [f"- #{k['number']} role:{role_of(k) or '?'}: {k.get('title', '')}" for k in kids]
+    prev = latest_plan(hub, a.n)
+    body = "\n".join([
+        f"**Gate:** `plan`: start work on #{a.n}'s sub-tickets", f"**Requested by:** role:{a.by}",
+        f"**Scope:** plan for #{a.n}" + (f", revision after #{prev['number']}" if prev else ""),
+        f"**Plan for:** #{a.n}", f"**Sub-tickets:** {', '.join('#' + str(k['number']) for k in kids)}", "",
+        f"## The plan for #{a.n}: {parent.get('title', '')}", *lines, "", "## Why this plan", quote(a.note or "(not given)"), "",
+        "## Founder: reply with one line",
+        "- `/approve`: the sub-tickets above may start", "- `/revise <what to change>`", "- `/reject <reason>`", "",
+        "Until you approve, none of these sub-tickets can be claimed. A changed plan is a new request."])
+    req = hub.api("issues", "-X", "POST", payload={"title": f"[approval] Plan for #{a.n}: {parent.get('title', '')}"[:200],
+                                                    "body": body, "labels": [approval.LABEL, "gate:plan"]})
+    hub.record(a.n, a.by, "plan requested", f"{len(kids)} sub-tickets, approval #{req['number']}")
+    print(f"#{req['number']} {req.get('html_url', '')}\nWaiting for the founder: no sub-ticket of #{a.n} can be claimed until then.")
+    return OK
+
+
 def cmd_claim(a: argparse.Namespace, hub: Hub) -> int:
     need_role(a.role)
     t = hub.issue(a.n)
@@ -273,6 +342,10 @@ def cmd_claim(a: argparse.Namespace, hub: Hub) -> int:
     open_blockers = [b for b in links(t.get("body", ""))["blocked by"] if hub.issue(b).get("state") == "open"]
     if open_blockers:
         print(f"refused: #{a.n} is blocked by {', '.join(f'#{b}' for b in open_blockers)}")
+        return REFUSED
+    why_not = plan_refusal(hub, {**t, "number": a.n})
+    if why_not:
+        print(f"refused: {why_not}")
         return REFUSED
     who = f"role:{a.role}"
     current = hub.lock(a.n, who)
@@ -441,6 +514,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--on", type=int, required=True)
         p.add_argument("--why", default="")
         p.add_argument("--by", required=True)
+    p = sub.add_parser("plan", parents=[common])
+    p.add_argument("n", type=int)
+    p.add_argument("--by", required=True)
+    p.add_argument("--note", default="")
     sub.add_parser("queue", parents=[common]).add_argument("role")
     sub.add_parser("tree", parents=[common]).add_argument("n", type=int)
     sub.add_parser("closed", parents=[common]).add_argument("n", type=int)
@@ -454,7 +531,8 @@ def main(argv: list[str] | None = None) -> int:
         print("can't tell which GitHub repo this is: nothing done")
         return ERROR
     hub = Hub(repo)
-    run = {"new": cmd_new, "claim": cmd_claim, "release": cmd_release, "handoff": cmd_handoff, "done": cmd_done,
+    hub.root = a.root
+    run = {"plan": cmd_plan, "new": cmd_new, "claim": cmd_claim, "release": cmd_release, "handoff": cmd_handoff, "done": cmd_done,
            "block": lambda a, h: cmd_block(a, h, True), "unblock": lambda a, h: cmd_block(a, h, False),
            "queue": cmd_queue, "tree": cmd_tree, "log": cmd_log, "closed": cmd_closed}[a.cmd]
     try:
