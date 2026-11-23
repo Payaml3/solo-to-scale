@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.1 (2026-11-23)
+
+- **Back to the portfolio from each dashboard:** set `portfolio_url` in a venture's `founder/dashboard.json` and its dashboard shows a "← Portfolio" link at the top. Only an `https://` address is used. New repos get the empty field; in existing repos, add it yourself (the file is founder-owned and behind the `deploy` gate). The portfolio already links each venture to its dashboard.
+- **Tests:** 1 new: the link appears only for an `https://` address.
+
 ## v1.5.0 (2026-11-23)
 
 Slice 5 of `ROADMAP.md`: the portfolio. The roadmap is complete.

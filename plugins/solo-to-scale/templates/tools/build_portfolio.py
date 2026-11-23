@@ -60,13 +60,8 @@ def ventures(cfg: dict[str, Any]) -> list[dict[str, str]]:
         if repo.lower() in seen:
             continue
         seen.add(repo.lower())
-        out.append({"repo": repo, "dashboard": https(v.get("dashboard"))})
+        out.append({"repo": repo, "dashboard": bd.https_url(v.get("dashboard"))})
     return out
-
-
-def https(url: Any) -> str:
-    url = str(url or "").strip()
-    return url if re.fullmatch(r"https://[^\s\"'<>]+", url) else ""
 
 
 def enabled(cfg: dict[str, Any]) -> bool:

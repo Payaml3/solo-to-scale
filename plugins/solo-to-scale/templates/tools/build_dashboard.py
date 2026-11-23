@@ -202,6 +202,12 @@ def embed(data: Any) -> str:
     return text
 
 
+def https_url(url: Any) -> str:
+    """An https address safe to put in a link, or ''."""
+    url = str(url or "").strip()
+    return url if re.fullmatch(r"https://[^\s\"'<>]+", url) else ""
+
+
 def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> dict[str, Any]:
     now = now or dt.datetime.now(dt.timezone.utc)
     cfg_dash = settings(root)
@@ -213,6 +219,7 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
                     "stage": proj.get("stage")},
         "commit": head[0] if head and head[0] else "", "commit_date": head[1] if len(head) > 1 else "",
         "built": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "month": month,
+        "links": {"portfolio": https_url(cfg_dash.get("portfolio_url"))},
         "repo": repo_data(root, cfg_dash),
         "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month),
     }
