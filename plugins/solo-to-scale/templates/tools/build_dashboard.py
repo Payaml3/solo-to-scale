@@ -5,7 +5,8 @@ journey, Team and board, Agent activity, Decisions, Approvals inbox, Costs), bui
 The dashboard workflow rebuilds it on every merge to main and every hour, and serves it at the host in
 founder/dashboard.json behind a Cloudflare Access login. The Claude page from publish-views is the backup.
 
-  python tools/build_dashboard.py build [--out DIR] [--offline]   # DIR/index.html (default .dashboard/)
+  python tools/build_dashboard.py build [--out DIR] [--offline] [--summary FILE]
+                                       # DIR/index.html (default .dashboard/); FILE: the portfolio summary
   python tools/build_dashboard.py guard [--github-output FILE]    # may this build be deployed? (CI)
   python tools/build_dashboard.py verify                          # after a deploy: is it behind the login? (CI)
 
@@ -15,6 +16,8 @@ host and a Pages project, the Cloudflare secrets are set, and a Cloudflare Acces
 policy (not `everyone`, not `bypass`) covers both the host and <project>.pages.dev. It exits 0 with
 deploy=no when hosting isn't set up, and 1 when it is set up but the login isn't. `verify` exits 1 if an
 anonymous visitor gets the dashboard. Every text on the page is shown as text, never as HTML.
+`--summary` also writes the small, document-free summary that a portfolio reads (tools/build_portfolio.py);
+the dashboard workflow uploads it as the `dashboard-data` workflow artifact.
 Python 3 standard library plus the gh CLI.
 """
 from __future__ import annotations
@@ -49,6 +52,7 @@ DEFAULT_DOCS = ["founder/business-context.md", "founder/brand.md", "founder/stat
 HOST = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 PAGES_PROJECT = re.compile(r"^[a-z0-9]([a-z0-9-]{0,56}[a-z0-9])?$")
 CF_API = "https://api.cloudflare.com/client/v4"
+SUMMARY_SCHEMA = 1
 
 
 def settings(root: Path) -> dict[str, Any]:
@@ -220,8 +224,53 @@ def page(data: dict[str, Any]) -> str:
     return before.replace("__S2S_TITLE__", html.escape(f"{name} dashboard")) + embed(data) + after
 
 
+def clip(text: Any, n: int = 300) -> str:
+    text = str(text or "")
+    return text if len(text) <= n else text[: n - 1] + "…"
+
+
+def summary(data: dict[str, Any]) -> dict[str, Any]:
+    """What a portfolio shows for this venture: counts and short lists, never the business documents."""
+    repo, gh_ = data.get("repo") or {}, data.get("github") or {}
+    road = repo.get("roadmap") or {}
+    stages, slices = road.get("stages") or [], road.get("slices") or []
+    cur = next((x for x in stages if x.get("stage") == road.get("current_stage")), {})
+    building = [x for x in slices if re.search(r"progress|building", str(x.get("status")), re.I)]
+    out: dict[str, Any] = {
+        "schema": SUMMARY_SCHEMA, "project": data.get("project") or {}, "commit": data.get("commit", ""),
+        "built": data.get("built", ""), "month": data.get("month", ""),
+        "stage": {"number": road.get("current_stage"), "phase": cur.get("phase", ""), "name": cur.get("name", "")},
+        "slices": {"total": len(slices), "done": sum(str(x.get("status")).lower() == "done" for x in slices),
+                   "building": [clip(f"{x.get('id')}: {x.get('name')}", 120) for x in building][:3]},
+        "trace": [{k: c.get(k) for k in ("level", "done", "total", "pct")} for c in (repo.get("trace") or {}).get("chain") or []],
+        "blockers": [{"item": clip(b.get("item"), 200), "needed_by": b.get("needed_by", "")} for b in road.get("blockers") or []][:10],
+        "decisions_waiting": [{"id": d.get("id"), "decision": clip(d.get("decision"), 200), "status": d.get("status"),
+                               "date": d.get("date", "")} for d in road.get("decisions_waiting") or []][:10],
+        "github": {"ok": bool(gh_.get("ok")), "why": gh_.get("why", "")},
+    }
+    if gh_.get("ok"):
+        open_t = gh_.get("tickets") or []
+        roles = (gh_.get("costs") or {}).get("roles") or []
+        out["github"].update({
+            "approvals_waiting": [{k: a.get(k) for k in ("number", "title", "url", "gate", "by", "created")}
+                                  for a in gh_.get("approvals") or [] if a.get("open") and a.get("state") == "waiting"][:20],
+            "tickets": {"open": len(open_t), "claimed": sum(bool(t.get("claimed")) for t in open_t),
+                        "blocked": sum(bool(t.get("blocked")) for t in open_t)},
+            "costs": {"total": (gh_.get("costs") or {}).get("total", 0),
+                      "cap": round(sum(r.get("cap") or 0 for r in roles), 4),
+                      "roles": [{k: r.get(k) for k in ("role", "used", "cap")} for r in roles if r.get("cap") or r.get("used")]},
+            "activity": [{**{k: a.get(k) for k in ("role", "action", "ticket", "to", "at")}, "why": clip(a.get("why"))}
+                         for a in (gh_.get("activity") or [])[-20:]],
+            "merged": (gh_.get("merged") or [])[:5],
+        })
+    return out
+
+
 def cmd_build(a: argparse.Namespace) -> int:
     data = build(a.root, a.offline)
+    if a.summary:
+        a.summary.parent.mkdir(parents=True, exist_ok=True)
+        a.summary.write_text(json.dumps(summary(data), ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
     out = (a.out or a.root / ".dashboard")
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(page(data), encoding="utf-8", newline="\n")
@@ -311,24 +360,30 @@ def targets(cfg: dict[str, Any]) -> tuple[str, str]:
 
 
 def cmd_guard(a: argparse.Namespace) -> int:
+    return guard(settings(a.root), a.github_output)
+
+
+def guard(cfg: dict[str, Any], github_output: str, file: str = "founder/dashboard.json", what: str = "dashboard",
+          section: str = "The startup dashboard") -> int:
+    """Shared by the dashboard and the portfolio: deploy only behind a Cloudflare Access login."""
     def out(deploy: bool, project: str = "") -> None:
-        if a.github_output:
-            with open(a.github_output, "a", encoding="utf-8") as f:
+        if github_output:
+            with open(github_output, "a", encoding="utf-8") as f:
                 f.write(f"deploy={'yes' if deploy else 'no'}\nproject={project}\n")
-    host, proj = targets(settings(a.root))
+    host, proj = targets(cfg)
     if not host and not proj:
-        print("hosting not set up (founder/dashboard.json has no host): built only, not deployed")
+        print(f"hosting not set up ({file} has no host): built only, not deployed")
         out(False)
         return 0
     if not HOST.match(host) or not PAGES_PROJECT.match(proj):
-        print("founder/dashboard.json: host must be a domain like pm.example.com and cloudflare_pages_project a "
+        print(f"{file}: host must be a domain like pm.example.com and cloudflare_pages_project a "
               "Pages project name (lower-case letters, digits, hyphens): not deployed")
         out(False)
         return 1
     token, account = os.environ.get("CLOUDFLARE_API_TOKEN", ""), os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
     if not token or not re.fullmatch(r"[0-9a-f]{32}", account):
         print("CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID isn't set as a repository secret: built only, not deployed."
-              " The founder adds them (handbook: 'The startup dashboard').")
+              f" The founder adds them (handbook: '{section}').")
         out(False)
         return 0
     try:
@@ -340,7 +395,7 @@ def cmd_guard(a: argparse.Namespace) -> int:
         return 1
     problems = [f"{h}: {why}" for h in (host, f"{proj}.pages.dev") if (why := protection(apps, h))]
     if problems:
-        print("not deployed: the dashboard must sit behind a login.\n  " + "\n  ".join(problems)
+        print(f"not deployed: the {what} must sit behind a login.\n  " + "\n  ".join(problems)
               + "\nAdd a self-hosted Cloudflare Access application covering both, with an allow policy for your"
                 " own email addresses.")
         out(False)
@@ -350,26 +405,30 @@ def cmd_guard(a: argparse.Namespace) -> int:
     return 0
 
 
-def exposed(url: str) -> str:
-    """'' when an anonymous request doesn't get the dashboard, 'unreachable' or 'EXPOSED' otherwise."""
+def exposed(url: str, marker: str = MARKER) -> str:
+    """'' when an anonymous request doesn't get the page, 'unreachable' or 'EXPOSED' otherwise."""
     try:
         status, _, body = http(url)
     except OSError:
         return "unreachable"
-    return "EXPOSED" if status == 200 and MARKER in body else ""
+    return "EXPOSED" if status == 200 and marker in body else ""
 
 
 def cmd_verify(a: argparse.Namespace) -> int:
-    host, proj = targets(settings(a.root))
+    return verify(settings(a.root))
+
+
+def verify(cfg: dict[str, Any], marker: str = MARKER, what: str = "dashboard") -> int:
+    host, proj = targets(cfg)
     if not HOST.match(host) or not PAGES_PROJECT.match(proj):
         print("hosting not set up: nothing to verify")
         return 0
     bad = 0
     for url in (f"https://{host}/", f"https://{proj}.pages.dev/"):
-        state = exposed(url)
+        state = exposed(url, marker)
         if state == "EXPOSED":
             bad = 1
-            print(f"EXPOSED: {url} serves the dashboard without a login. Turn on Cloudflare Access for it now.")
+            print(f"EXPOSED: {url} serves the {what} without a login. Turn on Cloudflare Access for it now.")
         elif state:
             print(f"{url}: unreachable (DNS or the custom domain may not be set up yet)")
         else:
@@ -385,6 +444,7 @@ def main(argv: list[str] | None = None) -> int:
     b = sub.add_parser("build", parents=[common])
     b.add_argument("--out", type=Path)
     b.add_argument("--offline", action="store_true", help="skip GitHub")
+    b.add_argument("--summary", type=Path, help="also write the portfolio summary here")
     sub.add_parser("guard", parents=[common]).add_argument("--github-output", default="")
     sub.add_parser("verify", parents=[common])
     a = ap.parse_args(argv)

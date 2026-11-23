@@ -15,7 +15,7 @@
     "deploy": {
       "mode": "ask",
       "what": "Deploy to production, or change production settings or infrastructure",
-      "paths": [".github/workflows/deploy*", "founder/dashboard.json", "render.yaml", "vercel.json", "fly.toml", "netlify.toml", "infra/*"]
+      "paths": [".github/workflows/deploy*", "founder/dashboard.json", "founder/portfolio.json", "render.yaml", "vercel.json", "fly.toml", "netlify.toml", "infra/*"]
     },
     "external": {
       "mode": "ask",

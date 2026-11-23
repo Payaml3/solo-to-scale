@@ -2,7 +2,8 @@
 # The startup dashboard: rebuilt from the repo and GitHub on every merge to main and every hour, and deployed to
 # the host in founder/dashboard.json (Cloudflare Pages) only when a Cloudflare Access login covers it. Until
 # hosting is set up it only builds, so you can see it works. Secrets, added by the founder: CLOUDFLARE_API_TOKEN
-# (Pages: Edit; Access: Apps and Policies: Read) and CLOUDFLARE_ACCOUNT_ID.
+# (Pages: Edit; Access: Apps and Policies: Read) and CLOUDFLARE_ACCOUNT_ID. Each run also keeps a short summary
+# (counts, approvals waiting, recent activity; no business documents) as the dashboard-data artifact for a portfolio.
 name: dashboard
 on:
   push:
@@ -28,7 +29,14 @@ jobs:
       - name: build the page from the repo and GitHub
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python -I tools/build_dashboard.py build --out .dashboard
+        run: python -I tools/build_dashboard.py build --out .dashboard --summary .dashboard-data/summary.json
+      - name: keep the summary a portfolio reads (no business documents in it)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-data
+          path: .dashboard-data/summary.json
+          retention-days: 7
+          if-no-files-found: error
       - name: is hosting set up, and behind a login?
         id: guard
         env:
