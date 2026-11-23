@@ -120,6 +120,21 @@ def test_bad_status_fails(repo):
     assert any("status 'Maybe'" in e for e in gov(repo)[0])
 
 
+def test_empty_status_fails(repo):
+    write(repo / "founder/decisions.md", REGISTER.replace("Proposed", ""))
+    assert any("has no status" in e for e in gov(repo)[0])
+
+
+def test_log_table_without_status_column_passes(repo):
+    log = "\n## Approvals log\n\n| ID | Decision | Date | Approval |\n| --- | --- | --- | --- |\n| D-01 | Ship the pilot | 2026-01-02 | founder reply |\n"
+    write(repo / "founder/decisions.md", REGISTER + log)
+    write(repo / "docs/note.md", "See D-01.\n")
+    for tool in ("build_roadmap", "build_team", "build_traceability"):
+        subprocess.run([sys.executable, str(repo / "tools" / f"{tool}.py")], check=True, capture_output=True)
+    commit(repo)
+    assert gov(repo)[0] == []
+
+
 def test_protocol_copy_fails(repo):
     write(repo / "docs/copy.md", f"{MARK}\n")
     commit(repo)

@@ -80,7 +80,7 @@ def check(root: Path, base_ref: str, today: dt.date) -> tuple[list[str], list[st
     for r in rows:
         if r["status"] and r["status"] not in allowed:
             errors.append(f"{r['register']}: {r['id']} has status '{r['status']}'; use one of {sorted(allowed)}")
-        if not r["status"]:
+        if not r["status"] and r["has_status"]:
             errors.append(f"{r['register']}: {r['id']} has no status")
     prefixes = {r["id"].split("-")[0] for r in rows} | {"B", "D"}
 

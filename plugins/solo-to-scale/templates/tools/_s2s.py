@@ -94,7 +94,11 @@ def status_word(cell: str) -> str:
 
 
 def decisions(root: Path, cfg: dict[str, Any]) -> list[dict[str, str]]:
-    """Every register row whose first cell is an ID like B-01 or D-12."""
+    """Every register row whose first cell is an ID like B-01 or D-12.
+
+    `has_status` is "yes" when the row's table has a status column. A log table without one
+    (for example an approvals log of D- rows) is still read, so its IDs can be cited.
+    """
     rows: list[dict[str, str]] = []
     for path in register_paths(root, cfg):
         for table in tables(read(path)):
@@ -103,6 +107,7 @@ def decisions(root: Path, cfg: dict[str, Any]) -> list[dict[str, str]]:
                 if ROW_ID.match(first):
                     rows.append({"id": first, "decision": r.get("decision", r.get("item", "")),
                                  "status": status_word(r.get("status", "")), "date": r.get("date", ""),
+                                 "has_status": "yes" if "status" in r else "",
                                  "register": path.relative_to(root).as_posix()})
     return rows
 
