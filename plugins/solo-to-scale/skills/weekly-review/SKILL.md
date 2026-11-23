@@ -30,6 +30,7 @@ If GitHub can't be reached, say so and use the local git log only.
 - **Contradictions,** with both sources named
 - **Merged branches not yet deleted**
 - **Founder items** blocking the next stage
+- **Approvals waiting** for the founder: `python3 tools/approval.py inbox`, oldest first
 - **One recommended focus** for the week
 
 ## Then

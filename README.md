@@ -110,7 +110,7 @@ The plugin is generic. It contains no startup's name, repo, epics, slices, invar
 | `.claude-plugin/marketplace.json` | Claude Code marketplace (one plugin) |
 | `.agents/plugins/marketplace.json` | Codex marketplace (the same plugin) |
 | `plugins/solo-to-scale/.claude-plugin/`, `.codex-plugin/` | The two plugin manifests |
-| `plugins/solo-to-scale/skills/` | The 11 skills, in the shared `SKILL.md` format, with details in `references/` |
+| `plugins/solo-to-scale/skills/` | The 12 skills, in the shared `SKILL.md` format, with details in `references/` |
 | `plugins/solo-to-scale/roles/` | One source per role: 7 team roles, 4 advisors and the sales template |
 | `plugins/solo-to-scale/agents/` | Generated from `roles/` by `scripts/sync_agents.py`; never edit by hand |
 | `plugins/solo-to-scale/hooks/`, `scripts/hooks/` | Hook registrations for each tool, and the shared hook scripts (`--agent claude\|codex`) |

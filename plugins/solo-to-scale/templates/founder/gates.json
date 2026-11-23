@@ -1,0 +1,51 @@
+{
+  "about": "Founder approval gates. Only the founder edits this file. mode: ask (an agent requests approval and waits), allow (no approval needed), off (founder only: agents never do it). paths: files whose change in a pull request needs the founder-approved label. founders: GitHub logins whose words count; empty means the repo owner.",
+  "founders": [],
+  "gates": {
+    "hire": {
+      "mode": "ask",
+      "what": "Add, remove or change a role or agent, or what it may do",
+      "paths": ["founder/team.md", ".claude/agents/*", ".codex/agents/*"]
+    },
+    "budget": {
+      "mode": "ask",
+      "what": "Raise a budget, a spending limit or a usage limit",
+      "paths": []
+    },
+    "deploy": {
+      "mode": "ask",
+      "what": "Deploy to production, or change production settings or infrastructure",
+      "paths": [".github/workflows/deploy*", "render.yaml", "vercel.json", "fly.toml", "netlify.toml", "infra/*"]
+    },
+    "external": {
+      "mode": "ask",
+      "what": "Send an email or message, post, or publish anything outside the repo",
+      "paths": []
+    },
+    "spend": {
+      "mode": "ask",
+      "what": "Spend money, start a paid plan, or open an account in the company's name",
+      "paths": []
+    },
+    "decision": {
+      "mode": "ask",
+      "what": "Mark a business, product or engineering decision Approved",
+      "paths": []
+    },
+    "pricing": {
+      "mode": "ask",
+      "what": "Set or change prices, discounts or terms offered to customers",
+      "paths": []
+    },
+    "legal": {
+      "mode": "ask",
+      "what": "Accept terms, sign anything, or make a legal, compliance or certification claim",
+      "paths": []
+    },
+    "secrets": {
+      "mode": "off",
+      "what": "Create, view or change secrets, keys, wallets or credentials",
+      "paths": []
+    }
+  }
+}
