@@ -180,28 +180,40 @@ def approvals(hub: tickets.Hub, root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def costs(hub: tickets.Hub, root: Path, month: str) -> dict[str, Any]:
+def costs(hub: tickets.Hub, root: Path, month: str, now: dt.datetime | None = None) -> dict[str, Any]:
+    """The month's spend per role against budget, the run log, spend grouped four ways, and a month-end forecast."""
     pol = heartbeat.policy(root)
-    c = heartbeat.Costs(hub, month)
-    comments = c.comments()
-    totals = heartbeat.spent(comments, month)
-    entries = []
-    for cm in comments:
-        m = heartbeat.MARK.search(cm.get("body") or "")
-        try:
-            data = json.loads(m.group(1)) if m else None
-        except ValueError:
-            data = None
-        if isinstance(data, dict) and data.get("month") == month:
-            entries.append({**data, "at": cm.get("created_at", "")})
+    runs = heartbeat.entries(heartbeat.Costs(hub, month).comments(), month)
+    totals: dict[str, float] = {}
+    for r in runs:
+        totals[r["role"]] = totals.get(r["role"], 0.0) + r["usd"]
     roles = []
     for role in heartbeat.BUDGET_ROLES:
         cap, used, base = heartbeat.standing(hub, root, pol, role, month, totals) if pol.get("roles") else (None, totals.get(role, 0.0), 0.0)
-        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None})
-    return {"month": month, "roles": roles, "entries": entries[-100:], "total": round(sum(totals.values()), 4)}
+        mine = [r for r in runs if r["role"] == role]
+        daily: dict[str, float] = {}
+        for r in mine:
+            if r["at"][:10]:
+                daily[r["at"][:10]] = round(daily.get(r["at"][:10], 0.0) + r["usd"], 4)
+        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None,
+                      "stats": heartbeat.run_stats(mine), "daily": [{"date": d, "usd": v} for d, v in sorted(daily.items())]})
+
+    def group(key: str, none: str) -> list[dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for r in runs:
+            g = out.setdefault(r[key] or none, {"key": r[key] or none, "usd": 0.0, "runs": 0})
+            g["usd"], g["runs"] = round(g["usd"] + r["usd"], 4), g["runs"] + 1
+        return sorted(out.values(), key=lambda g: -g["usd"])
+    total = round(sum(totals.values()), 4)
+    today = (now or dt.datetime.now(dt.timezone.utc)).date()
+    return {"month": month, "roles": roles, "entries": runs[-200:], "total": total,
+            "forecast": heartbeat.forecast(total, month, today),
+            "cap_total": round(sum(r["cap"] or 0 for r in roles), 4),
+            "by": {"objective": group("objective", "no objective"), "role": group("role", "?"),
+                   "model": group("model", "not recorded"), "outcome": group("outcome", "not recorded")}}
 
 
-def github_data(root: Path, cfg_dash: dict[str, Any], month: str) -> dict[str, Any]:
+def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.datetime | None = None) -> dict[str, Any]:
     repo = approval.repo_name(root)
     if not repo:
         return {"ok": False, "why": "can't tell which GitHub repo this is"}
@@ -219,7 +231,7 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str) -> dict[str, A
                    "by": (p.get("user") or {}).get("login", ""), "merged": p.get("merged_at", "")}
                   for p in pulls if p.get("merged_at")]
         return {"ok": True, "repo": repo, "activity": activity[-limit:], "tickets": open_tickets,
-                "approvals": approvals(hub, root), "costs": costs(hub, root, month), "merged": merged}
+                "approvals": approvals(hub, root), "costs": costs(hub, root, month, now), "merged": merged}
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError, TypeError) as exc:
         return {"ok": False, "repo": repo, "why": f"GitHub unavailable or unexpected reply ({type(exc).__name__})"}
 
@@ -263,7 +275,7 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
                   "portfolio_name": " ".join(str(cfg_dash.get("portfolio_name") or "").split())[:80]},
         "repo": repo_data(root, cfg_dash),
         "setup": setup(root, offline, now),
-        "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month),
+        "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month, now),
     }
 
 

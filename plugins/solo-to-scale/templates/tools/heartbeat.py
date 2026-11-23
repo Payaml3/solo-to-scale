@@ -5,8 +5,10 @@ its monthly AI budget, and stops. Policy: founder/heartbeats.json (founder-owned
 
   python tools/heartbeat.py plan                  # each role's schedule, budget, spend, and its task prompt
   python tools/heartbeat.py start <role>          # budget check, run lock, then resume or claim one ticket
-  python tools/heartbeat.py end <role> [--ticket N] [--usd X | --transcript PATH] [--note "..."]
+  python tools/heartbeat.py end <role> [--ticket N] [--outcome worked|no-work|blocked|approval|failed]
+                                       [--session URL] [--model NAME] [--usd X | --transcript PATH] [--note "..."]
   python tools/heartbeat.py costs [--month YYYY-MM]
+  python tools/heartbeat.py runs [--role ROLE] [--month YYYY-MM]   # the run log: outcome, time, cost, session
 
 `start` exits 0 with a ticket to work on, 2 when there's nothing to do, 6 when the role must not run
 (paused, no budget, budget spent, or another run of the role is active) and 5 when GitHub is unclear.
@@ -14,6 +16,8 @@ Costs go to one issue per month labelled `cost-log`: AI usage, measured from the
 can be, else the policy's flat `fallback_run_usd`, marked estimated. At 80% of a role's budget the log and the
 activity log get a warning; at 100% the role stops until next month, or until the founder `/approve`s the
 budget request it opens, which adds one more month's budget.
+Each cost entry is also the run's record: its outcome, how long it took (from the run lock), the ticket and its
+objective, the model, and a link to the session or its transcript.
 Python 3 standard library plus the gh CLI.
 """
 from __future__ import annotations
@@ -21,6 +25,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 import sys
@@ -31,6 +36,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
 import approval  # noqa: E402
+import goals  # noqa: E402
 import tickets  # noqa: E402
 
 OK, IDLE, ERROR, STOP = 0, 2, 5, 6
@@ -39,6 +45,8 @@ MARK = re.compile(r"<!-- s2s:cost (\{.*?\}) -->")
 WARN_AT, STALE_HOURS = 0.8, 6
 BUDGET_ROLES = (*tickets.ROLES, "board")
 # USD per million tokens; used for models the policy's prices don't name, so it is the most expensive tier.
+OUTCOMES = ("worked", "no-work", "blocked", "approval", "failed")
+SESSION_ENV = ("S2S_SESSION_URL", "CLAUDE_CODE_SESSION_URL")
 TOP_PRICE = {"input": 10.0, "output": 50.0, "cache_write": 12.5, "cache_read": 1.0}
 
 
@@ -96,14 +104,30 @@ def latest_transcript(root: Path, home: Path | None = None) -> Path | None:
     return found[-1] if found else None
 
 
-def cost_entry(role: str, usd: float, month: str, how: str, ticket: int | None, note: str) -> str:
-    data = {"role": role, "usd": round(usd, 4), "month": month, "how": how, **({"ticket": ticket} if ticket else {})}
-    head = f"**role:{role}** ${usd:.2f} ({how})" + (f" on #{ticket}" if ticket else "")
+def session_link(url: str) -> str:
+    """An https link to the run's session or transcript, or nothing: never a local path or another scheme."""
+    url = str(url or "").strip()
+    return url if re.fullmatch(r"https://[^\s<>\"'`]{1,300}", url) else ""
+
+
+def cost_entry(role: str, usd: float, month: str, how: str, ticket: int | None, note: str,
+               run: dict[str, Any] | None = None) -> str:
+    """One cost-log comment. `run` adds the run record: outcome, seconds, session, model, objective."""
+    extra = {k: v for k, v in (run or {}).items() if v not in (None, "")}
+    data = {"role": role, "usd": round(usd, 4), "month": month, "how": how, **({"ticket": ticket} if ticket else {}), **extra}
+    head = f"**role:{role}** ${usd:.2f} ({how})" + (f" on #{ticket}" if ticket else "") + \
+        (f", {extra['outcome']}" if extra.get("outcome") else "") + \
+        (f", {minutes(extra['seconds'])}" if extra.get("seconds") else "")
     return f"<!-- s2s:cost {json.dumps(data)} -->\n{head}\n\n{tickets.quote(note or 'heartbeat run')}"
 
 
-def spent(comments: list[dict[str, Any]], month: str) -> dict[str, float]:
-    totals: dict[str, float] = {}
+def minutes(seconds: float) -> str:
+    return f"{seconds / 60:.0f} min" if seconds >= 60 else f"{seconds:.0f} s"
+
+
+def entries(comments: list[dict[str, Any]], month: str) -> list[dict[str, Any]]:
+    """The month's cost entries as records, oldest first. Anything malformed is skipped, never trusted."""
+    out = []
     for c in comments:
         m = MARK.search(c.get("body") or "")
         try:
@@ -113,9 +137,44 @@ def spent(comments: list[dict[str, Any]], month: str) -> dict[str, float]:
         if not isinstance(data, dict) or data.get("month") != month:
             continue
         usd = data.get("usd")
-        if isinstance(usd, (int, float)) and usd >= 0:
-            totals[str(data.get("role"))] = totals.get(str(data.get("role")), 0.0) + float(usd)
+        if not isinstance(usd, (int, float)) or isinstance(usd, bool) or usd < 0:
+            continue
+        secs = data.get("seconds")
+        out.append({"role": str(data.get("role")), "usd": float(usd), "how": str(data.get("how") or ""),
+                    "ticket": data["ticket"] if isinstance(data.get("ticket"), int) else None,
+                    "outcome": data.get("outcome") if data.get("outcome") in OUTCOMES else "",
+                    "seconds": float(secs) if isinstance(secs, (int, float)) and not isinstance(secs, bool) and secs >= 0 else None,
+                    "session": session_link(data.get("session")), "model": str(data.get("model") or "")[:40],
+                    "objective": str(data.get("objective") or "")[:12], "at": str(c.get("created_at") or "")})
+    return out
+
+
+def spent(comments: list[dict[str, Any]], month: str) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for e in entries(comments, month):
+        totals[e["role"]] = totals.get(e["role"], 0.0) + e["usd"]
     return totals
+
+
+def run_stats(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Outcome counts, success rate (worked out of the runs that had work), median time, cost per worked run."""
+    counts = {o: sum(r["outcome"] == o for r in runs) for o in OUTCOMES}
+    tried = sum(counts[o] for o in OUTCOMES if o != "no-work")
+    secs = sorted(r["seconds"] for r in runs if r["seconds"] is not None)
+    median = (secs[len(secs) // 2] if len(secs) % 2 else (secs[len(secs) // 2 - 1] + secs[len(secs) // 2]) / 2) if secs else None
+    total = sum(r["usd"] for r in runs)
+    return {"runs": len(runs), "outcomes": counts, "success": round(counts["worked"] / tried, 4) if tried else None,
+            "median_seconds": median, "usd": round(total, 4),
+            "usd_per_worked": round(total / counts["worked"], 4) if counts["worked"] else None}
+
+
+def forecast(total: float, month: str, today: dt.date) -> float | None:
+    """Month-end spend at this month's daily burn so far; None for a month that isn't this one."""
+    y, m = (int(x) for x in month.split("-"))
+    if (today.year, today.month) != (y, m):
+        return None
+    days = ((dt.date(y + m // 12, m % 12 + 1, 1)) - dt.date(y, m, 1)).days
+    return round(total / today.day * days, 2)
 
 
 def this_month() -> str:
@@ -316,9 +375,22 @@ def cmd_end(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int
             usd, how = float(pol.get("fallback_run_usd") or 2.0), "estimated"
     if usd < 0:
         raise SystemExit("--usd can't be negative")
+    if a.outcome and a.outcome not in OUTCOMES:
+        raise SystemExit(f"--outcome must be one of {', '.join(OUTCOMES)}")
     costs = Costs(hub, month)
     before = costs.totals()
-    hub.comment(costs.log_issue(create=True), cost_entry(a.role, usd, month, how, a.ticket, a.note))
+    record = {"outcome": a.outcome or ("worked" if a.ticket else "no-work"), "model": a.model[:40],
+              "session": session_link(a.session or next((os.environ[k] for k in SESSION_ENV if os.environ.get(k)), ""))}
+    held = run_holder(hub, a.role)
+    now = a.now or dt.datetime.now(dt.timezone.utc).timestamp()
+    if held and held[1] and 0 <= now - held[1] < STALE_HOURS * 3600:
+        record["seconds"] = round(now - held[1])
+    if a.ticket:
+        try:  # the objective is a nice-to-have; the cost is recorded either way
+            record["objective"] = goals.objective_of(tickets.labels_of(hub.issue(a.ticket)))
+        except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
+            pass
+    hub.comment(costs.log_issue(create=True), cost_entry(a.role, usd, month, how, a.ticket, a.note, record))
     cap, used, _ = standing(hub, a.root, pol, a.role, month, {**before, a.role: before.get(a.role, 0) + usd})
     print(f"recorded ${usd:.2f} ({how}) for role:{a.role}; {month}: ${used:.2f}" + (f" of ${cap:.2f}" if cap else ""))
     if cap:
@@ -347,6 +419,22 @@ def cmd_costs(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
         flag = "" if not cap else " STOPPED" if used >= cap else " WARN" if used >= WARN_AT * cap else ""
         print(f"{role}: ${used:.2f}" + (f" of ${cap:.2f} ({used / cap:.0%}){flag}" if cap else " (no budget set)"))
     print(f"total {month}: ${sum(totals.values()):.2f}")
+    ahead = forecast(sum(totals.values()), month, dt.datetime.now(dt.timezone.utc).date())
+    if ahead is not None:
+        print(f"month-end at this pace: ${ahead:.2f}")
+    return OK
+
+
+def cmd_runs(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int:
+    month = a.month or this_month()
+    runs = [r for r in entries(Costs(hub, month).comments(), month) if not a.role or r["role"] == a.role]
+    print(f"| When | Role | Outcome | Ticket | Time | Cost | Session |\n| --- | --- | --- | --- | --- | --- | --- |")
+    for r in runs:
+        print(f"| {r['at'][:16]} | {r['role']} | {r['outcome'] or '-'} | {'#' + str(r['ticket']) if r['ticket'] else '-'} | "
+              f"{minutes(r['seconds']) if r['seconds'] is not None else '-'} | ${r['usd']:.2f} | {r['session'] or '-'} |")
+    st = run_stats(runs)
+    print(f"\n{st['runs']} runs in {month}; success " + (f"{st['success']:.0%}" if st["success"] is not None else "n/a")
+          + " (worked out of runs that had work); " + ", ".join(f"{o} {n}" for o, n in st["outcomes"].items() if n))
     return OK
 
 
@@ -358,6 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan", parents=[common])
     sub.add_parser("costs", parents=[common])
+    sub.add_parser("runs", parents=[common]).add_argument("--role", default="")
     p = sub.add_parser("start", parents=[common])
     p.add_argument("role")
     p.add_argument("--now", type=float, default=0, help=argparse.SUPPRESS)
@@ -367,6 +456,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--usd", type=float)
     p.add_argument("--transcript", type=Path)
     p.add_argument("--note", default="")
+    p.add_argument("--outcome", default="", help="worked, no-work, blocked, approval or failed")
+    p.add_argument("--session", default="", help="https link to this run's session or transcript")
+    p.add_argument("--model", default="")
+    p.add_argument("--now", type=float, default=0, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     pol = policy(a.root)
     if not pol.get("roles"):
@@ -376,7 +469,7 @@ def main(argv: list[str] | None = None) -> int:
     if not repo:
         print("can't tell which GitHub repo this is: nothing done")
         return ERROR
-    run = {"plan": cmd_plan, "start": cmd_start, "end": cmd_end, "costs": cmd_costs}[a.cmd]
+    run = {"plan": cmd_plan, "start": cmd_start, "end": cmd_end, "costs": cmd_costs, "runs": cmd_runs}[a.cmd]
     try:
         return run(a, tickets.Hub(repo), pol)
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError, TypeError) as exc:

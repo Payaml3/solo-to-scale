@@ -32,7 +32,7 @@ When unsure, use the full handoff. A handoff happens at a slice end or when the 
    `Outcome / Approved (the founder's words only) / Pending (IDs) / Files changed / Risks / Next`.
    Pending includes any approval requests this session opened (`python3 tools/approval.py inbox`).
    Close out the claimed ticket with `python3 tools/tickets.py done`, `handoff` or `release` (`coordinate` skill), and list the tickets this session opened.
-   Record the session's cost: `python3 tools/heartbeat.py end <role> --ticket <n> --note "<one line>"` (`heartbeat` skill).
+   Record the session's cost: `python3 tools/heartbeat.py end <role> --ticket <n> --outcome <worked|blocked|failed> --session <https link, if any> --note "<one line>"` (`heartbeat` skill).
 2. Write it into the files with line-level edits, never whole-file rewrites:
    - `HANDOFF.md`: build state, what was built, known gaps, next story groups
    - `founder/status.md`: risks, founder items, "Last updated"
