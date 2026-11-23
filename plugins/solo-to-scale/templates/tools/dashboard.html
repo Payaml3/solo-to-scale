@@ -64,10 +64,10 @@ th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line
 th { font-weight: 600; color: var(--muted); font-size: .8rem; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pill { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: .78rem; border: 1px solid currentColor; white-space: nowrap; }
-.s-done, .s-approved { color: var(--done); }
-.s-progress, .s-current, .s-proposed, .s-waiting { color: var(--progress); }
-.s-todo, .s-open, .s-assumption { color: var(--todo); }
-.s-rejected, .s-revoked, .s-blocked, .s-stopped { color: var(--waiting); }
+.s-done, .s-approved, .s-achieved, .s-ontrack { color: var(--done); }
+.s-progress, .s-current, .s-proposed, .s-waiting, .s-active { color: var(--progress); }
+.s-todo, .s-open, .s-assumption, .s-planned, .s-cancelled, .s-notmeasured { color: var(--todo); }
+.s-rejected, .s-revoked, .s-blocked, .s-stopped, .s-behind { color: var(--waiting); }
 .bar { height: 8px; background: var(--sunk); border-radius: 4px; overflow: hidden; min-width: 80px; }
 .bar > i { display: block; height: 100%; background: var(--done); }
 .bar.w > i { background: var(--progress); }
@@ -155,6 +155,16 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .stage h3 { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
 .stage h3:first-child { margin-top: 0; }
 .empty { color: var(--muted); font-style: italic; }
+.goal { font-size: 1.15rem; font-weight: 600; margin: 0; }
+.objective h3 { margin: 0 0 4px; font-size: 1.05rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.objective .prog { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.objective .prog .bar { flex: 1; }
+.objective .prog b { font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; }
+.spark { display: block; width: 96px; height: 24px; }
+.spark polyline { fill: none; stroke: var(--link); stroke-width: 1.5; }
+.spark circle { fill: var(--link); }
+.goalrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 160px) 3.5em; gap: 10px; align-items: center; padding: 4px 0; }
+.goalrow b { font-variant-numeric: tabular-nums; text-align: right; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 </style>
 </head>
@@ -509,7 +519,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
   // --- tabs ---------------------------------------------------------------------------------------------
   var TABS = [
-    ["overview", "Overview", overview], ["documents", "Documents", documentsTab], ["trace", "Progress trace", traceTab],
+    ["overview", "Overview", overview], ["goals", "Goals", goalsTab], ["documents", "Documents", documentsTab], ["trace", "Progress trace", traceTab],
     ["roadmap", "Roadmap", roadmapTab], ["scope", "Scope and journey", scopeTab], ["team", "Team and board", teamTab],
     ["activity", "Agent activity", activityTab], ["decisions", "Decisions", decisionsTab],
     ["approvals", "Approvals inbox", approvalsTab], ["costs", "Costs", costsTab]
@@ -576,11 +586,100 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     });
     return [tiles, G.ok ? null : ghMissing(),
       stagePanel(),
+      goalStrip(),
       crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
       el("div", { cls: "cols" },
         panel("Needs you", "Approvals, founder items and decisions waiting.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." })),
         panel("Latest agent activity", null, recent.length ? el("ul", { cls: "list" }, recent) : el("p", { cls: "empty", text: G.ok ? "No activity yet." : "GitHub data missing." })),
         panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: G.ok ? "Nothing merged recently." : "GitHub data missing." })))];
+  }
+
+  // --- goals: founder/goals.json, through tools/goals.py --------------------------------------------------
+  var GOALS = R.goals || {}, OBJS = GOALS.objectives || [];
+  function pctText(p) { return p === null || p === undefined ? "–" : Math.round(100 * p) + "%"; }
+  function num(v, unit) {
+    if (v === null || v === undefined) return "–";
+    var n = Math.round(Number(v) * 100) / 100;
+    return unit === "$" || unit === "£" || unit === "€" ? unit + n : unit === "%" ? n + "%" : n + (unit ? " " + unit : "");
+  }
+  // How much of the objective's quarter (YYYY-Qn) has passed, 0..1, or null without one.
+  function elapsed(quarter) {
+    var m = /^(\d{4})-Q([1-4])$/.exec(String(quarter || "")); if (!m) return null;
+    var y = +m[1], q = +m[2], start = Date.UTC(y, (q - 1) * 3, 1), end = Date.UTC(q === 4 ? y + 1 : y, q === 4 ? 0 : q * 3, 1);
+    return Math.max(0, Math.min(1, (Date.now() - start) / (end - start)));
+  }
+  // On track: progress no more than 10 points behind the share of the quarter gone.
+  function pace(progress, quarter) {
+    if (progress === null || progress === undefined) return pill("not measured", "notmeasured");
+    if (progress >= 1) return pill("achieved", "achieved");
+    var e = elapsed(quarter);
+    if (e === null) return null;
+    return progress + 0.1 >= e ? pill("on track", "ontrack") : pill("behind", "behind");
+  }
+  function spark(hist) {
+    var pts = (hist || []).filter(function (h) { return h.value !== null && h.value !== undefined; });
+    if (pts.length < 2) return null;
+    var NS = "http://www.w3.org/2000/svg", W = 96, H = 24, lo = Infinity, hi = -Infinity;
+    pts.forEach(function (h) { lo = Math.min(lo, h.value); hi = Math.max(hi, h.value); });
+    var span = hi - lo || 1, xy = pts.map(function (h, i) { return [2 + i * (W - 4) / (pts.length - 1), H - 2 - (h.value - lo) * (H - 4) / span]; });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("class", "spark"); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "History: " + pts.map(function (h) { return h.date + " " + h.value; }).join(", "));
+    var line = document.createElementNS(NS, "polyline");
+    line.setAttribute("points", xy.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" "));
+    var dot = document.createElementNS(NS, "circle"), last = xy[xy.length - 1];
+    dot.setAttribute("cx", last[0].toFixed(1)); dot.setAttribute("cy", last[1].toFixed(1)); dot.setAttribute("r", "2");
+    svg.appendChild(line); svg.appendChild(dot);
+    return svg;
+  }
+  function goalStrip() {
+    var live = OBJS.filter(function (o) { return o.status === "active"; });
+    if (!GOALS.goal && !live.length) return null;
+    return panel("Goals", GOALS.goal ? null : "No company goal yet: set it in founder/goals.json.",
+      GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : null,
+      live.map(function (o) {
+        return el("div", { cls: "goalrow" }, el("div", null, o.id + " " + o.title, " ", pace(o.progress, o.quarter)),
+          bar(o.progress || 0, 1, o.progress >= 1 ? "" : "w"), el("b", { text: pctText(o.progress) }));
+      }),
+      live.length ? null : el("p", { cls: "empty", text: "No active objectives this quarter." }),
+      el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#goals", text: "Key results and linked work in Goals" })));
+  }
+  function goalsTab() {
+    var out = [];
+    if ((GOALS.problems || []).length) out.push(panel("founder/goals.json needs fixing", "tools/goals.py check lists the same.",
+      el("ul", { cls: "list" }, GOALS.problems.map(function (p) { return el("li", { text: p }); }))));
+    out.push(panel("Company goal", GOALS.horizon ? "By " + GOALS.horizon : null,
+      GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : el("p", { cls: "empty", text: "Open: the founder sets the company goal in founder/goals.json." })));
+    if (!OBJS.length) {
+      out.push(panel("Objectives", null, el("p", { cls: "empty", text: "No objectives yet. Add this quarter's objectives and 2 to 4 key results each to founder/goals.json; tickets then carry the label goal:O1." })));
+      return out;
+    }
+    var order = { active: 0, planned: 1, achieved: 2, cancelled: 3 };
+    OBJS.slice().sort(function (a, b) { return (order[a.status] || 0) - (order[b.status] || 0) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }).forEach(function (o) {
+      var tix = openTickets.filter(function (t) { return t.goal === o.id; });
+      var krs = table([
+        { h: "Key result", f: function (k) { return k.id + " " + k.metric; } },
+        { h: "Start", num: true, f: function (k) { return num(k.baseline, k.unit); }, k: function (k) { return k.baseline; } },
+        { h: "Now", num: true, f: function (k) { return num(k.current, k.unit); }, k: function (k) { return k.current; } },
+        { h: "Target", num: true, f: function (k) { return num(k.target, k.unit); }, k: function (k) { return k.target; } },
+        { h: "Progress", f: function (k) { return el("div", { style: "display:flex;gap:8px;align-items:center" }, bar(k.progress || 0, 1, k.progress >= 1 ? "" : "w"), pctText(k.progress)); }, k: function (k) { return k.progress; } },
+        { h: "Trend", f: function (k) { return spark(k.history); }, k: function (k) { return (k.history || []).length; } },
+        { h: "Owner", f: function (k) { return k.owner ? roleName(k.owner) : ""; } },
+        { h: "Updated", f: function (k) { return k.updated; } }
+      ], o.key_results || [], "No key results yet: add 2 to 4, each with a metric, a target and a current value.");
+      out.push(el("div", { cls: "panel objective" },
+        el("h3", null, o.id + " " + o.title, pill(o.status, o.status), o.status === "active" ? pace(o.progress, o.quarter) : null),
+        el("p", { cls: "note", text: [o.quarter, o.owner ? "owner: " + roleName(o.owner) : ""].filter(Boolean).join(" · ") + (o.why ? (o.quarter || o.owner ? ". " : "") + o.why : "") }),
+        el("div", { cls: "prog" }, bar(o.progress || 0, 1, o.progress >= 1 ? "" : "w"), el("b", { text: pctText(o.progress) })),
+        krs,
+        el("p", { cls: "note", style: "margin:10px 0 0", text: "Slices: " + (o.slices.total ? o.slices.done + " of " + o.slices.total + " done (" + o.slices.ids.join(", ") + ")" : "none linked") +
+          (o.epics.length ? ". Epics: " + o.epics.join(", ") : "") + ". Open tickets: " + (G.ok ? String(tix.length) : "? (GitHub data missing)") + "." }),
+        tix.length ? el("ul", { cls: "list" }, tix.slice(0, 10).map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : null, el("div", { cls: "why", text: roleName(t.role) })); })) : null));
+    });
+    var unlinked = openTickets.filter(function (t) { return !t.goal; });
+    if (G.ok && unlinked.length) out.push(panel("Open tickets with no objective", "Give each one an objective (label goal:O1), or close it if it serves none.",
+      el("ul", { cls: "list" }, unlinked.slice(0, 20).map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), el("div", { cls: "why", text: roleName(t.role) })); }))));
+    return out;
   }
 
   var GROUPS = [["business", "Business", "Business context, brand, status, sources"], ["product", "Product", "Feature specs and screen specs (specs/*/spec.md, ux/)"],

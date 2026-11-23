@@ -29,8 +29,8 @@
     },
     "decision": {
       "mode": "ask",
-      "what": "Mark a business, product or engineering decision Approved",
-      "paths": []
+      "what": "Mark a business, product or engineering decision Approved, or set the company goal, objectives and key results",
+      "paths": ["founder/goals.json"]
     },
     "pricing": {
       "mode": "ask",

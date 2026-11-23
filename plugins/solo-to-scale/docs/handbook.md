@@ -49,7 +49,8 @@ Each kind of information has exactly one home. If something seems to belong in t
 | `CLAUDE.md` | Imports AGENTS.md, the instructions shared by Claude and Codex: standing rules, invariants, stack, commands, model choice. The two together stay under 200 lines | Founder approval only |
 | `HANDOFF.md` | Build state, next story groups, known gaps, where to start | `handoff` skill |
 | `founder/operating-protocol.md` | The protocol: the only copy | Founder approval only |
-| `founder/status.md` | Objectives, stage, risks, founder items, weekly focus | `handoff`, `weekly-review` |
+| `founder/status.md` | Objectives in words, stage, risks, founder items, weekly focus | `handoff`, `weekly-review` |
+| `founder/goals.json` | The company goal, this quarter's objectives and their key results, as data (the `decision` gate) | Founder; agents propose values in a PR with `tools/goals.py update` |
 | `founder/decisions.md` | Business register (`B-`): GTM, pricing, brand, legal, hiring | `record-decision` |
 | `founder/business-context.md` | Problem, customer, evidence, model, positioning, regulation | Discovery chats |
 | `founder/brand.md` | Name, positioning line, voice, wording rules | brand-skills |
@@ -137,7 +138,7 @@ Four loops keep the system current. Only the session loop needs you every day.
 | Session | Each story group or task | Start from `HANDOFF.md` → plan → tests first → build → checks → handoff → PR | Answer questions, merge the PR |
 | Weekly | Monday, scheduled task | Weekly review with the five DORA metrics (stops early if nothing changed) → status PR → refresh views | Merge the status PR, act on blockers |
 | Monthly | First Monday | Metrics, evidence, error budget and unit-cost review, stale Proposed or Open items, roadmap check, cost of Claude usage | Decide or close stale items |
-| Quarterly | Start of quarter | Objectives in `status.md`, strategy check against evidence, Well-Architected review, investor or board update from views | Set objectives, approve strategy changes |
+| Quarterly | Start of quarter | Objectives and key results in `goals.json`, strategy check against evidence, Well-Architected review, investor or board update from views | Set objectives, approve strategy changes |
 
 ## Session rules
 
@@ -195,6 +196,14 @@ Every decision has one row, one status and a trace to everything it touches.
 - `specs/<feature>/decisions.md` (`D-`, plus `C-` contradictions, `G-` gaps, `A-` assumptions): product behaviour, architecture, design, engineering
 
 **The chain every decision is traced through:** Business objectives → product capabilities → MVP requirements → architecture → tasks → tests → release.
+
+**Goals and key results (`founder/goals.json`).** The top of the chain, as data the dashboard can count:
+- **One company goal**, specific and measurable ("100 paying studios by June 2027"), with an optional `horizon`.
+- **Objectives** (`O1`, `O2`, ...) for the quarter, each with a title, `quarter` (`2027-Q1`), an owner role, a status (`planned`, `active`, `achieved`, `cancelled`) and 2 to 4 **key results** (`O1.1`, ...): a metric, an optional unit, a baseline, a target and the current value.
+- **Progress** is how far the current value has moved from the baseline (0 when unset) to the target, from 0 to 100%; a target below the baseline (cut churn from 8% to 3%) counts down. An objective's progress is the mean of its measured key results. It's **on track** when it's no more than 10 points behind the share of its quarter that has passed.
+- **Work names the objective it serves.** Epics and slices in `slices.json` take `"objective": "O1"`. Tickets carry the label `goal:O1`: `tools/tickets.py new --objective O1`, and a sub-ticket inherits its parent's. While any objective is active, a ticket that names none is refused.
+- **Values change through a PR.** The owner role runs `python tools/goals.py update O1.1 --value 7` (it keeps a dated history), and you merge. The file is behind the `decision` gate, so only you set the goal, the objectives and the targets.
+- **Checked in CI.** `python tools/goals.py check` (also part of `check_governance.py`) fails on a malformed file or a slice naming an objective that doesn't exist. `python tools/goals.py show` prints it all.
 
 **Approval gates (`gate`):** `founder/gates.json` lists the critical actions only the founder approves:
 - hiring or changing a role, raising a budget, deploying, sending or publishing anything outside the repo
@@ -388,13 +397,14 @@ Artifacts are views of the repo, regenerated from it, and each one shows the com
 
 ### The startup dashboard
 
-One page shows the whole company, with ten tabs: **Overview** (this stage, your AI team, what needs you, the latest activity, recent merges), **Documents** (business, product and technical), **Progress trace** (stories to criteria to tested code), **Roadmap** (slices, blockers, decisions waiting), **Scope and journey** (phases A to G and the epics), **Team and board** (heartbeats, budgets, tickets, advisors, memos), **Agent activity** (what the roles did and said to each other, from the activity log), **Decisions**, **Approvals inbox** and **Costs**.
+One page shows the whole company, with eleven tabs: **Overview** (this stage, the goals, your AI team, what needs you, the latest activity, recent merges), **Goals** (the company goal, each objective with its key results, progress, trend, owner and linked slices and tickets), **Documents** (business, product and technical), **Progress trace** (stories to criteria to tested code), **Roadmap** (slices, blockers, decisions waiting), **Scope and journey** (phases A to G and the epics), **Team and board** (heartbeats, budgets, tickets, advisors, memos), **Agent activity** (what the roles did and said to each other, from the activity log), **Decisions**, **Approvals inbox** and **Costs**.
 
 - **Built by `tools/build_dashboard.py`** from the repo (the same generators as the other views) and from GitHub (activity log, tickets, approval requests, cost log, merged pull requests). It is never a source: change things in the repo or on GitHub. If GitHub can't be reached, the repo tabs are still built and the page says what's missing.
 - **Rebuilt on every merge to main and every hour** by the `dashboard` workflow. It needs no server: GitHub Actions builds it, and Cloudflare Pages serves it.
 - **Behind a login, or not at all.** The workflow deploys only when a Cloudflare Access application with a login policy covers both `pm.<domain>` and `<project>.pages.dev`; a policy for `everyone` or a `bypass` policy doesn't count. After each deploy it checks that an anonymous visitor gets the login page; if not, the run fails loudly. Every text on the page is shown as text, so nothing an agent writes can run in your browser.
 - **This stage, at the top of the Overview:** where the venture is in the journey (phase, stage, how far through the phase, what "done" means, what's next), the blockers (blocked agents, founder items, approvals and decisions waiting), the agents working now and the latest documents.
 - **Documents, grouped:** **Business** (the files listed in `founder/dashboard.json`), **Product** (`specs/*/spec.md`, `specs/*/ux/`, `docs/product/`) and **Technical** (plans, research, data models, contracts and tasks under `specs/`, `docs/`, the constitution). Product and technical documents are picked up automatically as the journey writes them. A tile per group shows how many there are and the latest; each document is a card with its feature, size and last change, and opens in place.
+- **Goals, on the Overview and in their own tab.** The Overview shows the company goal and each active objective's progress and pace. **Goals** shows every objective with its key results (start, now, target, progress, a trend line from the history, owner, last update), the slices and epics linked to it, its open tickets, and the open tickets that name no objective. The portfolio shows each venture's goal and active objectives too.
 - **Your AI team, shown as agents.** The Overview has a strip with every role's avatar and status: green working on a ticket, red blocked, grey idle or heartbeat off. **Team and board** opens with an org chart (you, Claude as chief of staff, the six roles, the advisory board) and a card per agent: what it owns, the ticket it's working on, its heartbeat schedule and next run, what it last did, its stories and its spend against budget. Agent activity shows the same avatars.
 - **Sort, filter and act from the page.** Click a column heading to sort; the longer tables have a search box and filters (role, status, gate, epic). Each approval waiting has **Approve** and **Reject**: they open the request's comment box on GitHub and copy `/approve` or `/reject ` for you to paste and send. You still post the reply from your own account, so the gate works exactly as before. The page itself never changes anything.
 - **The Claude page is the backup.** `publish-views` publishes the same page as a private Claude page, so you can see it before hosting is set up, or if Cloudflare is down.

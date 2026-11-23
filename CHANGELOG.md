@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.9.0 (2026-11-23)
+
+Slice 6 of `ROADMAP-V2.md`: goals and key results, as data.
+
+- **`founder/goals.json` (founder-owned, the `decision` gate):** one company goal, the quarter's objectives (`O1`, ...) with an owner, a quarter and a status, and 2 to 4 key results each (`O1.1`, ...): metric, unit, baseline, target, current value and a dated history.
+- **`tools/goals.py`:** `check` (malformed file, duplicate or badly formed ids, missing targets, slices or epics naming an objective that doesn't exist; also run by `check_governance.py`), `show`, and `update O1.1 --value N`, which records the value and its date for a PR.
+- **Work names its objective.** Epics and slices take `"objective": "O1"` in `slices.json`; tickets carry the label `goal:O1` from `tickets.py new --objective O1`, and sub-tickets inherit it. While an objective is active, a ticket that names none is refused.
+- **The dashboard:** a **Goals** tab (each objective's progress, pace against its quarter, key results with start, now, target, progress and a trend line, owner, linked slices, epics and open tickets, and open tickets with no objective), and a goals panel on the Overview. Every text stays text; the trend line is drawn in the page, with no library.
+- **The portfolio** shows each venture's goal and its active objectives' progress. The summary carries titles and numbers only, never the reasons or the history.
+- **In existing repos:** `upgrade` adds an empty `founder/goals.json`; add it to the `decision` gate's `paths` in `founder/gates.json` yourself (that file is founder-owned).
+- **Docs:** the handbook explains goals and key results, and the quarterly review sets them in `goals.json`.
+- **Tests:** 15 new: progress up and down, roll-up to objectives, each malformed case, unknown objectives, updates with history, ticket labels and inheritance, and goal text staying text on the dashboard and in the summary.
+
 ## v1.8.0 (2026-11-23)
 
 The dashboard follows the journey: this stage, and every document the team writes, grouped.
