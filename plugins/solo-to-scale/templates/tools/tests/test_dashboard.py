@@ -230,3 +230,20 @@ def test_the_team_shows_as_ai_agents():
     for role in ("chief-of-staff", "research", "product", "architect", "engineer", "qa", "growth"):
         assert f'"{role}"' in page or f"{role}:" in page, role
     assert 'k !== "board"' in page, "the board budget is not an agent"
+
+
+def test_documents_are_grouped_business_product_technical(root):
+    for rel, text in {"specs/001-pay/spec.md": "# Pay spec\n", "specs/001-pay/ux/checkout.md": "# Checkout\n",
+                      "specs/001-pay/plan.md": "# Pay plan\n", "specs/001-pay/contracts/api.md": "# API\n",
+                      "docs/engineering-standards.md": "# Standards\n", "docs/product/vision.md": "# Vision\n"}.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
+    docs = {d["path"]: d for d in bd.build(root, offline=True, now=NOW)["repo"]["documents"]}
+    assert {p: d["group"] for p, d in docs.items()} == {
+        "founder/business-context.md": "business", "founder/sources/interviews.md": "business",
+        "specs/001-pay/spec.md": "product", "specs/001-pay/ux/checkout.md": "product", "docs/product/vision.md": "product",
+        "specs/001-pay/plan.md": "technical", "specs/001-pay/contracts/api.md": "technical",
+        "docs/engineering-standards.md": "technical"}
+    assert docs["specs/001-pay/plan.md"]["feature"] == "001-pay" and docs["docs/product/vision.md"]["feature"] == ""
+    page = bd.PAGE.read_text(encoding="utf-8")
+    assert "function stagePanel" in page and '"This stage"' in page and '["documents", "Documents", documentsTab]' in page

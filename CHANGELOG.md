@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.8.0 (2026-11-23)
+
+The dashboard follows the journey: this stage, and every document the team writes, grouped.
+
+- **This stage** at the top of the Overview: phase and stage ("stage 2 of 30"), progress through the phase, what "done" means (the gate) and what's next; the blockers (blocked agents, founder items, approvals and decisions waiting); the agents working now with their tickets; and the latest documents.
+- **Documents, grouped into Business, Product and Technical.** The tab (was "Business documents") opens with a tile per group: how many documents and the latest one. Each document is a card with its group, its feature (`specs/<feature>/`), its size and when it last changed, newest first; it opens in place.
+- **Product and technical documents are picked up automatically:** `specs/*/spec.md` and `specs/*/ux/` (product), `docs/product/` (product), plans, research, data models, contracts, quickstarts and tasks under `specs/`, the rest of `docs/` and `.specify/memory/constitution.md` (technical). `founder/dashboard.json`'s `documents` still lists the business ones. At most 150 documents.
+- **Docs:** the handbook describes both.
+- **Tests:** 1 new: documents land in the right group with their feature, and the page has the stage panel and the grouped tab.
+
 ## v1.7.1 (2026-11-23)
 
 - **Name the portfolio:** `name` in `founder/portfolio.json` (for example your holding company) is the portfolio page's title and heading; empty means "Portfolio". Change it any time; the next hourly build shows it. A venture's dashboard can show the same name on its link back, with `portfolio_name` in its `founder/dashboard.json`. Venture names still come from each venture's `founder/project.json`.

@@ -133,6 +133,27 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .strip { display: flex; flex-wrap: wrap; gap: 14px; }
 .strip .who2 { display: flex; gap: 8px; align-items: center; font-size: .85rem; }
 .strip .who2 small { display: block; color: var(--muted); font-size: .75rem; }
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.group { text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--g); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.group[aria-pressed="true"] { outline: 2px solid var(--g); outline-offset: -1px; }
+.group .v { font-size: 1.5rem; font-weight: 600; line-height: 1.2; }
+.group .s { font-size: .8rem; color: var(--muted); }
+.g-business { --g: #b5651d; } .g-product { --g: #7b4fb3; } .g-technical { --g: #1f7a8c; } .g-all { --g: var(--muted); }
+.doccards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.doccard { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--g); border-radius: 8px; padding: 10px 12px; cursor: pointer; min-width: 0; }
+.doccard[aria-current="true"] { background: var(--sunk); }
+.doccard b { display: block; overflow-wrap: anywhere; }
+.doccard small { display: block; color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
+.doccard .path { font-family: var(--mono); }
+.gtag { display: inline-block; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--g); }
+.stage { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+.stage .big { font-size: 1.35rem; font-weight: 700; margin: 2px 0 4px; }
+.steps { display: flex; gap: 4px; margin: 10px 0 6px; }
+.steps i { flex: 1; height: 6px; border-radius: 3px; background: var(--sunk); }
+.steps i.done { background: var(--done); } .steps i.cur { background: var(--accent); }
+.stage h3 { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
+.stage h3:first-child { margin-top: 0; }
 .empty { color: var(--muted); font-style: italic; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 </style>
@@ -488,11 +509,45 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
   // --- tabs ---------------------------------------------------------------------------------------------
   var TABS = [
-    ["overview", "Overview", overview], ["documents", "Business documents", documentsTab], ["trace", "Progress trace", traceTab],
+    ["overview", "Overview", overview], ["documents", "Documents", documentsTab], ["trace", "Progress trace", traceTab],
     ["roadmap", "Roadmap", roadmapTab], ["scope", "Scope and journey", scopeTab], ["team", "Team and board", teamTab],
     ["activity", "Agent activity", activityTab], ["decisions", "Decisions", decisionsTab],
     ["approvals", "Approvals inbox", approvalsTab], ["costs", "Costs", costsTab]
   ];
+
+  // This stage: where the venture is in the journey, who is on it, what blocks it and what was written lately.
+  function stagePanel() {
+    if (!current && !road.current_stage) return null;
+    var inPhase = current ? stages.filter(function (x) { return x.phase === current.phase; }) : [];
+    var next = stages.filter(function (x) { return x.stage > (current ? current.stage : road.current_stage); })[0];
+    var crew = agents(), busy = crew.filter(function (a) { return a.state === "working" || a.state === "blocked"; });
+    var blockers = [];
+    crew.forEach(function (a) { a.blocked.forEach(function (t) { blockers.push(el("li", null, avatar(a.role, null, true), roleName(a.role) + " is blocked on ", link("#" + t.number + " " + t.title, t.url))); }); });
+    (road.blockers || []).forEach(function (b) { blockers.push(el("li", null, pill("founder item", "todo"), " ", b.item)); });
+    if (waiting.length) blockers.push(el("li", null, pill("approval", "waiting"), " " + waiting.length + " approval" + (waiting.length > 1 ? "s" : "") + " waiting for you"));
+    if ((road.decisions_waiting || []).length) blockers.push(el("li", null, pill("decision", "proposed"), " " + road.decisions_waiting.length + " decision" + (road.decisions_waiting.length > 1 ? "s" : "") + " waiting"));
+    var docs = (R.documents || []).filter(function (d) { return d.updated; }).sort(function (a, b) { return String(b.updated).localeCompare(String(a.updated)); }).slice(0, 4);
+    return panel("This stage", null, el("div", { cls: "stage" },
+      el("div", null,
+        el("div", { cls: "note", style: "margin:0", text: current ? current.phase + " · stage " + current.stage + " of " + stages.length : "stage " + road.current_stage }),
+        el("div", { cls: "big", text: current ? current.name : "Stage " + road.current_stage }),
+        inPhase.length ? el("div", { cls: "steps", role: "img", "aria-label": "Stage " + (inPhase.map(function (x) { return x.stage; }).indexOf(current.stage) + 1) + " of " + inPhase.length + " in this phase" },
+          inPhase.map(function (x) { return el("i", { cls: x.stage === current.stage ? "cur" : /done/i.test(x.status) ? "done" : null, title: x.stage + ". " + x.name }); })) : null,
+        current && current.gate ? el("p", { style: "margin:6px 0" }, el("b", { text: "Done when: " }), current.gate) : null,
+        next ? el("p", { cls: "note", style: "margin:0", text: "Next: " + next.stage + ". " + next.name }) : null,
+        el("h3", { text: "Blockers" }), blockers.length ? el("ul", { cls: "list" }, blockers) : el("p", { cls: "empty", style: "margin:0", text: "Nothing is blocking this stage." })),
+      el("div", null,
+        el("h3", { text: "Agents working now" }),
+        busy.length ? el("ul", { cls: "list" }, busy.map(function (a) {
+          var t = a.claimed[0] || a.blocked[0];
+          return el("li", null, avatar(a.role, null, true), roleName(a.role) + " ", statePill(a.state), t ? el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)) : null);
+        })) : el("p", { cls: "empty", style: "margin:0", text: G.ok ? "No agent has a ticket right now." : "GitHub data missing." }),
+        el("h3", { text: "Latest documents" }),
+        docs.length ? el("ul", { cls: "list" }, docs.map(function (d) {
+          return el("li", null, el("span", { cls: "gtag g-" + d.group, text: (GROUPS.filter(function (g) { return g[0] === d.group; })[0] || [0, d.group])[1] }), " ",
+            el("a", { href: "#documents", text: d.title }), el("div", { cls: "why", text: d.path + ", changed " + ago(d.updated) }));
+        })) : el("p", { cls: "empty", style: "margin:0", text: "No documents yet." }))));
+  }
 
   function overview() {
     var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0);
@@ -520,6 +575,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
     });
     return [tiles, G.ok ? null : ghMissing(),
+      stagePanel(),
       crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
       el("div", { cls: "cols" },
         panel("Needs you", "Approvals, founder items and decisions waiting.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." })),
@@ -527,9 +583,44 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: G.ok ? "Nothing merged recently." : "GitHub data missing." })))];
   }
 
+  var GROUPS = [["business", "Business", "Business context, brand, status, sources"], ["product", "Product", "Feature specs and screen specs (specs/*/spec.md, ux/)"],
+    ["technical", "Technical", "Plans, research, data models, contracts, tasks, docs/"]];
   function documentsTab() {
-    return panel("Business documents", "Read-only copies from the repo. Change them through the skills, in a pull request.",
-      docViewer(R.documents || [], "No business documents found. founder/dashboard.json lists which files appear here."));
+    var docs = (R.documents || []).slice().sort(function (a, b) { return String(b.updated || "").localeCompare(String(a.updated || "")) || String(a.path).localeCompare(String(b.path)); });
+    if (!docs.length) return panel("Documents", null, el("p", { cls: "empty", text: "No documents found. founder/dashboard.json lists the business documents; product and technical ones come from specs/ and docs/." }));
+    var pick = "all", cur = 0, shown = docs, cards = el("div", { cls: "doccards" }), view = el("div", { cls: "panel" }), buttons = [];
+    function groupName(g) { return (GROUPS.filter(function (x) { return x[0] === g; })[0] || [g, g])[1]; }
+    function open(i) {
+      cur = i; Array.prototype.forEach.call(cards.children, function (c, j) { c.setAttribute("aria-current", j === i ? "true" : "false"); });
+      view.textContent = ""; var d = shown[i]; if (!d) return;
+      view.appendChild(el("p", { cls: "note" }, el("span", { cls: "gtag g-" + d.group, text: groupName(d.group) }), " · From " + d.path + (d.updated ? ", changed " + ago(d.updated) : "") + ". Edit it in the repo, not here."));
+      view.appendChild(markdown(d.text));
+    }
+    function draw() {
+      shown = docs.filter(function (d) { return pick === "all" || d.group === pick; });
+      buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.g === pick ? "true" : "false"); });
+      cards.textContent = "";
+      shown.forEach(function (d, i) {
+        var words = String(d.text || "").split(/\s+/).filter(Boolean).length;
+        cards.appendChild(el("button", { type: "button", cls: "doccard g-" + d.group, on: { click: function () { open(i); view.scrollIntoView({ block: "start", behavior: "smooth" }); } } },
+          el("span", { cls: "gtag", text: groupName(d.group) + (d.feature ? " · " + d.feature : "") }), el("b", { text: d.title }),
+          el("small", { cls: "path", text: d.path }), el("small", { text: words + " words" + (d.updated ? " · changed " + ago(d.updated) : "") })));
+      });
+      if (!shown.length) cards.appendChild(el("p", { cls: "empty", text: "None yet. They appear as the journey reaches this part." }));
+      open(0);
+    }
+    var counts = { all: docs.length };
+    docs.forEach(function (d) { counts[d.group] = (counts[d.group] || 0) + 1; });
+    var tiles = [["all", "All documents", "Everything the team has written so far"]].concat(GROUPS).map(function (g) {
+      var latest = docs.filter(function (d) { return g[0] === "all" || d.group === g[0]; })[0];
+      var b = el("button", { type: "button", cls: "group g-" + g[0], "data-g": g[0], "aria-pressed": "false", on: { click: function () { pick = g[0]; draw(); } } },
+        el("div", { cls: "s", text: g[1] }), el("div", { cls: "v", text: String(counts[g[0]] || 0) }),
+        el("div", { cls: "s", text: latest && latest.updated ? "latest: " + latest.title + ", " + ago(latest.updated) : g[2] }));
+      buttons.push(b); return b;
+    });
+    draw();
+    return [el("div", { cls: "groups" }, tiles),
+      panel(null, "Read-only copies from the repo, newest first. Change them through the skills, in a pull request.", cards), view];
   }
 
   function traceTab() {
