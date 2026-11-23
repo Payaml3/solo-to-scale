@@ -531,6 +531,8 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     if (!url) return el("p", { cls: "note", style: "margin:0", text: "Pause and resume: run `python tools/control.py issue` once to create the agent-controls issue." });
     return el("span", { cls: "acts" }, a.paused ? reply("Resume", "/resume " + a.role, url, "yes") : reply("Pause", "/pause " + a.role + " ", url, "no"));
   }
+  function reportsTo(role) { var b = (R.reports_to || {})[role]; return !b ? "?" : b === "founder" ? "you" : roleName(b); }
+  function reviewPill(t) { return t.escalated_to ? [" ", pill("escalated to " + (t.escalated_to === "founder" ? "you" : t.escalated_to), "waiting")] : t.review ? [" ", pill("review: " + t.review, "proposed")] : null; }
   function agentCard(a) {
     var info = ROLE_INFO[a.role], cap = a.c.cap || a.b.monthly_budget_usd || 0, used = a.c.used || 0, p = cap ? used / cap : 0;
     var work = a.claimed.concat(a.blocked).slice(0, 3).map(function (t) { return el("div", null, link("#" + t.number + " " + t.title, t.url), t.blocked ? [" ", pill("blocked", "blocked")] : null); });
@@ -542,6 +544,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       info ? el("p", { cls: "owns", text: info[2] }) : null,
       el("dl", null,
         el("dt", { text: "Working on" }), el("dd", null, !G.ok ? "?" : work.length ? work : el("span", { cls: "empty", text: "no claimed ticket" })),
+        el("dt", { text: "Reports to" }), el("dd", { text: reportsTo(a.role) }),
         el("dt", { text: "Heartbeat" }), el("dd", { text: a.b.enabled ? cronText(a.b.cron) + (nextRun(a.b.cron) ? ", next " + nextRun(a.b.cron) : "") : "off" }),
         el("dt", { text: "Last active" }), el("dd", { text: !G.ok ? "?" : a.last ? a.last.action + " #" + a.last.ticket + (ago(a.last.at) ? ", " + ago(a.last.at) : "") : "no activity yet" }),
         a.stories.length ? [el("dt", { text: "Stories" }), el("dd", null, a.storiesDone + " of " + a.stories.length + " done", bar(a.storiesDone, a.stories.length))] : null,
@@ -613,7 +616,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
           tile("Cost per worked run", st.usd_per_worked === null || st.usd_per_worked === undefined ? "n/a" : usd(st.usd_per_worked))),
         panel("Spend per day", "Bars are each day's spend; the dashed line is the budget spread evenly over the month.", dailyBars(a.c.daily, cap, costs.month)),
         panel("Runs", "Every heartbeat run and session this month, newest first, from the cost log.", runTable(runs, false)),
-        panel("Tickets", null, a.mine.length ? el("ul", { cls: "list" }, a.mine.map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : pill("ready", "todo"), t.goal ? " " + t.goal : ""); })) : el("p", { cls: "empty", text: "No open tickets." })),
+        panel("Tickets", null, a.mine.length ? el("ul", { cls: "list" }, a.mine.map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : pill("ready", "todo"), reviewPill(t), t.goal ? " " + t.goal : ""); })) : el("p", { cls: "empty", text: "No open tickets." })),
         panel("Recent activity", null, mine.length ? el("ul", { cls: "list" }, mine.map(activityItem)) : el("p", { cls: "empty", text: "No activity yet." }))],
       a.stories.length ? panel("Stories", null, el("p", null, a.storiesDone + " of " + a.stories.length + " done"), bar(a.storiesDone, a.stories.length)) : null);
   }
@@ -633,9 +636,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
   // --- needs you: everything waiting on the founder, one list, oldest and most blocking first ----------------
   var NEED = D.needs || {}, NEEDS = NEED.items || [];
-  var NEED_WORDS = { approval: "approval", budget: "budget stop", stuck: "stuck", decision: "decision", "founder item": "founder item" };
-  var NEED_TILES = { approval: "Approvals", budget: "Budget stops", stuck: "Stuck work", decision: "Decisions", "founder item": "Founder items" };
-  var NEED_STATE = { approval: "waiting", budget: "stopped", stuck: "blocked", decision: "proposed", "founder item": "todo" };
+  var NEED_WORDS = { approval: "approval", escalation: "escalation", budget: "budget stop", stuck: "stuck", decision: "decision", "founder item": "founder item" };
+  var NEED_TILES = { approval: "Approvals", escalation: "Escalations", budget: "Budget stops", stuck: "Stuck work", decision: "Decisions", "founder item": "Founder items" };
+  var NEED_STATE = { approval: "waiting", escalation: "waiting", budget: "stopped", stuck: "blocked", decision: "proposed", "founder item": "todo" };
   function needAge(x) {
     if (x.age_days === null || x.age_days === undefined) return "";
     var d = Math.floor(x.age_days); return d < 1 ? "today" : d + (d === 1 ? " day" : " days");

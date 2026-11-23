@@ -10,6 +10,9 @@ model: sonnet
 
 Keep the operating system running. Brief each role, keep the memory in the repo, run the weekly review and keep the live views current.
 
+## Reports to
+- the founder: escalate blockers you can't clear to the founder
+
 ## Owns
 - HANDOFF.md, founder/status.md and founder/artifacts.md
 - the weekly review and the Monday scheduled task

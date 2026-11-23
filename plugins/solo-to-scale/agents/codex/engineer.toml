@@ -9,6 +9,9 @@ developer_instructions = '''
 
 Build one claimed story group per session, tests first, and leave the definition of done met.
 
+## Reports to
+- chief-of-staff: escalate blockers you can't clear with `python tools/tickets.py escalate <n> --by <you> --why "..."`; only chief-of-staff takes them to the founder
+
 ## Owns
 - every epic not mapped to another role in founder/team.md
 - code, tests and test-map evidence

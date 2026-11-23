@@ -40,6 +40,15 @@ def test_roles_complete():
         assert roles[name]["tier"] == "strongest" and roles[name]["access"] == "read-only"
 
 
+def test_chain_of_command_matches_tickets():
+    sys.path.insert(0, str(PLUGIN / "templates" / "tools"))
+    import tickets
+    roles = {x["name"]: x for x in sync_agents.load_roles()}
+    team = {n: r for n, r in roles.items() if r.get("reports_to")}
+    assert set(team) == set(tickets.REPORTS_TO)
+    assert all(tickets.REPORTS_TO[n] == r["reports_to"] for n, r in team.items())
+
+
 def test_models_have_every_tier():
     models = s2s_yaml.load(PLUGIN / "models.yaml")
     for tool in ("claude", "codex"):

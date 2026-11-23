@@ -1,6 +1,7 @@
 {
-  "about": "Founder approval gates. Only the founder edits this file. mode: ask (an agent requests approval and waits), allow (no approval needed), off (founder only: agents never do it). paths: files whose change in a pull request needs the founder-approved label. founders: GitHub logins whose words count; empty means the repo owner.",
+  "about": "Founder approval gates. Only the founder edits this file. mode: ask (an agent requests approval and waits), allow (no approval needed), off (founder only: agents never do it). paths: files whose change in a pull request needs the founder-approved label. founders: GitHub logins whose words count; empty means the repo owner. review: which role reviews another role's tickets before they can be finished (tickets.py review); a role never reviews its own.",
   "founders": [],
+  "review": {"engineer": "qa", "growth": "product"},
   "gates": {
     "hire": {
       "mode": "ask",

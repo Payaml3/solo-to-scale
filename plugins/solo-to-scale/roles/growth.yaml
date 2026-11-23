@@ -2,6 +2,7 @@
 name: growth
 title: Growth (06)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use for brand, website, docs and SDK experience, content and launch.
 tier: mid

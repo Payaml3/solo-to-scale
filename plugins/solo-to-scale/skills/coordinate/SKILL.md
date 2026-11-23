@@ -31,9 +31,15 @@ Roles work together only through tickets: GitHub issues labelled `ticket` and `r
 - Need another role to continue: `python tools/tickets.py handoff <n> --to <role> --note "<state, what's left, where>" --by <your role>`. It frees your claim and moves the ticket to them.
 - Stopping without finishing: `python tools/tickets.py release <n> --role <your role> --why "<state>"`.
 
+## Review and escalate
+
+- A ticket labelled `needs-review:<role>` is checked by that role before `done` (set with `new --review <role>`, or by the `review` map in `founder/gates.json`; `--review none` skips it). Hand it over with `handoff`, or ask on the ticket.
+- Reviewing: `python tools/tickets.py review <n> --verdict approved|changes --by <your role> --note "<what you checked>"`. Never review your own ticket. `queue` lists the reviews waiting for you.
+- Stuck and it isn't yours to decide: `python tools/tickets.py escalate <n> --by <your role> --why "<what you need>"`. It goes to your manager (`reports_to`); only the chief of staff escalates to the founder.
+
 ## Finish
 
-`python tools/tickets.py done <n> --role <your role> --note "<what you did, evidence, pull request>"` closes the ticket, releases the claim and unblocks every ticket that waited only on it. When the last sub-ticket closes, the parent gets a comment so its role can check the goal. Issues closed any other way (a merged pull request's `Closes #n`, the founder) get the same through the `tickets` workflow.
+`python tools/tickets.py done <n> --role <your role> --note "<what you did, evidence, pull request>"` (refused until the reviewer approves) closes the ticket, releases the claim and unblocks every ticket that waited only on it. When the last sub-ticket closes, the parent gets a comment so its role can check the goal. Issues closed any other way (a merged pull request's `Closes #n`, the founder) get the same through the `tickets` workflow.
 
 ## Rules
 

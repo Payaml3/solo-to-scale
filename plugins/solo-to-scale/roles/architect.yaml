@@ -2,6 +2,7 @@
 name: architect
 title: Architect and security (03)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use for stack, architecture, data model, threat model, and the foundation, operations and audit epics.
 tier: strongest
