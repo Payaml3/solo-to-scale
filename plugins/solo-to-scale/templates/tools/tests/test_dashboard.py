@@ -221,3 +221,12 @@ def test_verify_fails_when_anyone_can_read_it(root, monkeypatch, capsys):
     assert "EXPOSED: https://example-pm.pages.dev/" in capsys.readouterr().out
     replies["https://example-pm.pages.dev/"] = (403, {}, "Forbidden")
     assert bd.main(["verify", "--root", str(root)]) == 0
+
+
+def test_the_team_shows_as_ai_agents():
+    page = bd.PAGE.read_text(encoding="utf-8")
+    for part in ("function orgChart", "function agentCard", '"AI agent"', '"AI advisor"', "Your AI team", "function nextRun"):
+        assert part in page, part
+    for role in ("chief-of-staff", "research", "product", "architect", "engineer", "qa", "growth"):
+        assert f'"{role}"' in page or f"{role}:" in page, role
+    assert 'k !== "board"' in page, "the board budget is not an agent"

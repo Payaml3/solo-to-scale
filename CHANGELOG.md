@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.0 (2026-11-23)
+
+The dashboard shows the AI team as agents.
+
+- **Org chart** at the top of Team and board: you as CEO and chair, Claude as chief of staff, the six roles, and the advisory board (advice only, no vote) on the side, each with its status.
+- **A card per AI agent:** avatar with a status dot, an "AI agent" badge, its plugin name (`solo-to-scale:<role>`), what it owns, the ticket it's working on (or blocked on), its heartbeat in words with the next run ("weekdays at 09:00 UTC, next in 18h"), what it last did, its stories done and its spend against budget.
+- **Your AI team on the Overview:** every agent's avatar and status at a glance. Avatars also appear in Agent activity and the team table; advisors get an "AI advisor" badge.
+- Built from data the page already had (heartbeats, tickets, the activity log, costs, team.json); still no server. The `board` budget in `founder/heartbeats.json` is not shown as an agent.
+- **Tests:** 1 new: the page carries the org chart, the agent cards and the status words, and the board budget isn't an agent.
+
 ## v1.6.0 (2026-11-23)
 
 The dashboard and the portfolio: sort, filter and act from the page, still with no server.
