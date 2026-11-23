@@ -25,7 +25,7 @@ If GitHub can't be reached, say so and use the local git log only.
 - **Progress:** stages and slices moved (`founder/roadmap.json`), stories and criteria done
 - **CI health:** last runs on the default branch, flaky or failing checks
 - **Delivery (last 4 weeks):** the five DORA metrics; method in `references/dora.md`. Report "n/a until deploys exist" rather than guessing
-- **Claude usage by role this month,** against the budgets in `founder/team.md`: warn at 80%, propose pausing the role at 100%. If usage can't be measured per role, say so plainly and show the session count per role from `role:*` issue labels instead. Budgets are advisory; never claim one is enforced
+- **AI cost by role this month:** `python3 tools/heartbeat.py costs`, against the budgets in `founder/heartbeats.json`. Name roles over 80% and roles stopped at 100%, and how many entries are estimated rather than measured
 - **Stale items:** Proposed or Open rows older than 7 days (grep the status and date columns of both registers)
 - **Contradictions,** with both sources named
 - **Merged branches not yet deleted**

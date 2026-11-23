@@ -10,7 +10,7 @@
     "budget": {
       "mode": "ask",
       "what": "Raise a budget, a spending limit or a usage limit",
-      "paths": []
+      "paths": ["founder/heartbeats.json"]
     },
     "deploy": {
       "mode": "ask",

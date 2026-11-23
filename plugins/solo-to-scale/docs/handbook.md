@@ -65,7 +65,7 @@ Each kind of information has exactly one home. If something seems to belong in t
 | `.claude/` | Skills, hooks, `governance.json`, `settings.json` | Founder-approved PRs |
 | `tools/` | Generators and checks: governance, roadmap `--json`, tokens | Build sessions |
 
-Two more homes: founder/team.md holds the roles, epic ownership, advisor routing and role budgets, and every generator reads its mapping from there; founder/board/ holds the advisors' memos. Plugins that save into `founder/` (founder, brand-skills) must never overwrite `status.md`, `decisions.md` or `business-context.md`. Changes to those go through the skills.
+Two more homes: founder/team.md holds the roles, epic ownership and advisor routing (heartbeats and role budgets are in founder/heartbeats.json), and every generator reads its mapping from there; founder/board/ holds the advisors' memos. Plugins that save into `founder/` (founder, brand-skills) must never overwrite `status.md`, `decisions.md` or `business-context.md`. Changes to those go through the skills.
 
 ## The journey: zero to scale
 
@@ -389,7 +389,7 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
-| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, coordinate, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
+| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, coordinate, heartbeat, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
 | founder | Account plugin | validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy, product-brief, mvp-scope, go-to-market, landing-page, email-sequence, metrics-dashboard, pitch-deck, fundraise-prep | A, B, E, F |
 | brand-skills | Account marketplace, plus repo via `npx skills add` | naming, brand-architecture, brand-identity, brand-guidelines, brand-audit | B, C |
 | marketing | Account plugin | brand-review, competitive-brief, content-creation, campaign-plan, email-sequence, seo-audit, performance-report | B, E, F |
@@ -442,8 +442,8 @@ A solo founder runs the company as CEO and board. Claude sits at the centre as t
 - **Roles delegate through tickets (`coordinate`).** A role splits a goal into sub-tickets, one per role and outcome, each linked to its parent and ordered with "Blocked by". It hands a ticket to another role, marks blockers, and finishes with `done`, which closes it and unblocks every ticket that waited only on it. When the last sub-ticket closes, the parent gets a comment. The `tickets` workflow does the same when an issue closes any other way. Hand-offs name `role:<name>`, never `@<name>`, which would notify a real GitHub user.
 - **One activity log.** Every claim, hand-off, blocker and finish is a comment on the ticket and an entry in one issue labelled `activity-log`: who did what, and why. `python tools/tickets.py log` reads it; the weekly review summarises it. The log is a record, never an approval: agents' notes are quoted, so they can't read as your `/approve`.
 - **The goal chain comes first.** Every issue and every session's first message starts with the chain: company goal → initiative → story → acceptance criteria. Each role knows why it's doing the work.
-- **Each role runs on its own schedule.** Scheduled tasks wake a role: Claude on Mondays, QA nightly through CI, Growth weekly.
-- **A monthly Claude budget per role.** The weekly review warns at 80% of the budget, and at 100% proposes pausing that role. The founder decides, because nothing enforces a Claude budget automatically.
+- **Each role wakes on its own schedule (`heartbeat`).** You turn a role's heartbeat on in `founder/heartbeats.json` and create one cloud scheduled task for it; `python tools/heartbeat.py plan` prints the schedule and the prompt. Each run checks the budget, takes a run lock so two runs of one role never overlap, resumes its claimed ticket or claims one ready ticket atomically, works it, then opens a pull request, hands off, blocks or asks for approval, and stops. With nothing ready it stops at once.
+- **A monthly AI budget per role, enforced.** Every run, and every interactive session's handoff, logs its AI usage cost in a monthly issue labelled `cost-log`, measured from the session transcript at API prices (or a flat estimate, marked as such). At 80% of the budget the log warns; at 100% the role stops until next month. It opens one budget request for you: `/approve` adds one more month's budget for this month. Raising the budget itself is the `budget` gate, because `founder/heartbeats.json` is a gated file.
 - **Running Paperclip itself waits until phase F or G,** when more than about five agents run on schedules at the same time. The role definitions and budgets carry over, because Paperclip can drive Claude Code agents.
 
 **The advisory board**

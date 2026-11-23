@@ -31,7 +31,7 @@ SECTIONED = ["AGENTS.md", "CLAUDE.md"]
 FOUNDER_OWNED = [
     "HANDOFF.md", "Makefile", "founder/project.json", "founder/status.md", "founder/decisions.md",
     "founder/business-context.md", "founder/brand.md", "founder/playbook.md", "founder/team.md",
-    "founder/artifacts.md", "founder/slices.json", "founder/gates.json", "founder/sources/README.md", "founder/board/README.md",
+    "founder/artifacts.md", "founder/slices.json", "founder/gates.json", "founder/heartbeats.json", "founder/sources/README.md", "founder/board/README.md",
     ".claude/governance.json", ".claude/settings.json", ".codex/config.toml",
 ]
 NOT_RENDERED = ["views/*", "agents-optional/*"]
@@ -139,12 +139,25 @@ def customise(rel: str, text: str, answers: dict[str, Any]) -> str:
         data = json.loads(text)
         data.update(answers.get("guard") or {})
         return json.dumps(data, indent=2) + "\n"
+    if rel == "founder/heartbeats.json":
+        data = json.loads(text)
+        for role, cfg in data["roles"].items():
+            cfg["monthly_budget_usd"] = usd((answers.get("budgets") or {}).get(role))
+        return json.dumps(data, indent=2) + "\n"
     if rel == "founder/playbook.md":
         stage = int((answers.get("project") or {}).get("stage") or 1)
         return re.sub(rf"^(\| {stage} \|.*\| )To do( \|)$", r"\1Current\2", text, flags=re.M)
     if rel == "founder/.solo-to-scale-version":
         return text + f"rendered-for: {(answers.get('project') or {}).get('name', '')}\n"
     return text
+
+
+def usd(value: Any) -> float | None:
+    """A budget answer ("$40", "40 USD", 40) as a number; anything else is not set."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value) if value > 0 else None
+    m = re.fullmatch(r"\s*\$?\s*(\d+(?:\.\d+)?)\s*(?:USD|usd|\$)?\s*(?:/\s*month)?\s*", str(value or ""))
+    return float(m.group(1)) if m and float(m.group(1)) > 0 else None
 
 
 def render_all(answers: dict[str, Any], today: str) -> dict[str, str]:

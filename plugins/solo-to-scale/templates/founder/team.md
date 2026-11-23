@@ -40,20 +40,9 @@ The only copy of the epic-to-role mapping. `tools/build_team.py` and `tools/buil
 | growth | Weekly; each launch |
 | board | Significant decisions (`board-review`); the quarterly strategy review |
 
-## Monthly budget per role
+## Heartbeats and budgets
 
-Advisory only: nothing enforces a Claude budget. The weekly review warns at 80% and proposes a pause at 100%; the founder decides.
-
-| Role | Monthly budget |
-| --- | --- |
-| chief-of-staff | {{budget.chief-of-staff}} |
-| research | {{budget.research}} |
-| product | {{budget.product}} |
-| architect | {{budget.architect}} |
-| engineer | {{budget.engineer}} |
-| qa | {{budget.qa}} |
-| growth | {{budget.growth}} |
-| board | {{budget.board}} |
+The only copy is `founder/heartbeats.json`: each role's heartbeat (on or off, and its schedule) and its monthly AI budget in USD. Changing it is the `budget` gate. A role on a heartbeat wakes as a cloud scheduled task, works one ticket and stops (`heartbeat` skill). `tools/heartbeat.py` logs every run's cost, warns at 80% and stops the role at 100% until next month or until the founder approves more. `python tools/heartbeat.py costs` shows this month.
 
 ## Advisor routing
 
