@@ -1,6 +1,6 @@
 # Roadmap v2: gaps against Paperclip, and what to build next
 
-**What this is.** A gap analysis of Solo to Scale (v1.7.x, plus the "This stage" panel and document grouping in v1.8.0) against [Paperclip](https://github.com/paperclipai/paperclip), the MIT-licensed control plane for AI-agent companies that inspired our team model. It was written from Paperclip's code, docs and UI source on 2026-11-23: `README.md`, `ROADMAP.md`, `doc/` (product, goals, watchdog, artifacts, search, trust presets), `docs/guides/board-operator/` (dashboard, approvals, budgets, delegation, org structure, activity log, status cards), `docs/guides/execution-policy.md`, `docs/api/` (goals and projects, attention inbox, routines) and `ui/src/pages/` (Dashboard, AgentDetail, Goals, Costs, Timeline, Inbox, Search, Artifacts, Routines).
+**What this is.** A gap analysis of Solo to Scale (v1.7.x, plus the "This stage" panel and document grouping in v1.8.0) against [Paperclip](https://github.com/paperclipai/paperclip), the MIT-licensed control plane for AI-agent companies that inspired our team model. It was written from Paperclip's code, docs and UI source on 2026-11-23: `README.md`, `ROADMAP.md`, `doc/` (product, goals, watchdog, artifacts, search, trust presets), `docs/guides/board-operator/` (dashboard, approvals, budgets, delegation, org structure, activity log, status cards), `docs/guides/execution-policy.md`, `docs/api/` (goals and projects, attention inbox, routines), the install and onboarding docs (`doc/INSTALLING.md`, `docs/start/`, `docs/cli/setup-commands.md`, `docs/deploy/deployment-modes.md`, `doc/onboarding-chat.md`, company import and export) and `ui/src/pages/` (Dashboard, AgentDetail, Goals, Costs, Timeline, Inbox, Search, Artifacts, Routines).
 
 **What it is not.** A plan to copy Paperclip. We take ideas, never its branding, names, artwork or look. Every item below is re-expressed in our own model: the repo is the memory, GitHub is the control plane, and only the founder's own words approve.
 
@@ -11,7 +11,7 @@
 
 ---
 
-## The short version: the ten things to build first
+## The short version: the eleven things to build first
 
 1. **Goals and key results as data** (D1–D3). Paperclip's core promise is that every task traces to a company goal and the founder sees progress against it. We have the goal chain as text; we need goals with targets, owners and progress the dashboard can count.
 2. **A run log and a page per agent** (C1–C2). Paperclip shows every agent's runs, outcomes, cost and history. We record cost, not outcomes, so we can't say which agent is working well.
@@ -23,6 +23,7 @@
 8. **Plan approval before execution** (B3). An initiative's plan of sub-tickets waits for your approval before any agent claims it.
 9. **Routines for recurring business work** (E4). Named jobs such as the investor update, support digest or content calendar, each run creating a ticket with an owner and a history.
 10. **Charts and freshness** (A1, T1). Trends on the Overview, and a rebuild within a minute of an approval or a ticket change instead of up to an hour.
+11. **A quicker start and a doctor** (H1–H3). Paperclip starts with one command and sensible defaults, checks its own health with `doctor --repair`, and ends onboarding with a goal and first tasks. Our `init` asks every question up front, hosting and the portfolio are set up by hand, and nothing checks in one place what's missing.
 
 Suggested order and grouping are under **v2 slices** at the end.
 
@@ -132,6 +133,23 @@ So the lists below stay honest, these Paperclip capabilities already exist in v1
 | T3 | **Machine-readable status for agents** | A dashboard API agents and tools can call | Agents should read the same picture you see | S | P3 | Fits | Each heartbeat reads the newest `dashboard-data` summary for its own role instead of re-querying GitHub |
 | T4 | **More agent runtimes** | Adapters for many harnesses (Cursor, Gemini CLI, OpenCode and others), plus HTTP and process agents | Choice of model and tool per role | L | P3 | Trade-off | Stay with Claude Code and Codex from one source. Add a third only when one is needed; `roles/` already makes it a generator change |
 
+## H. Install, setup and upgrade
+
+**Paperclip's path:** a checksummed installer script (or `npx paperclipai onboard --yes`) → **Quickstart** with local defaults, or **Advanced setup** → `run`, which onboards if needed, runs `doctor` with repair, then starts → the first screen asks for a company, a goal and a first agent, then opens a chat that gathers the goal and exit criteria and proposes first tasks. Updates follow a recorded channel (`update`, `--latest`, `--canary`, `--version`), take a database backup first, and can be rolled back. Imports start agents and routines paused and list what an export didn't carry.
+
+**Ours:** install the plugin from the GitHub marketplace, run `init` (questions, then one PR), set up hosting and the portfolio by following the handbook, update with `upgrade` (one PR of differences), roll back by reverting PRs. That's already safer than most, because nothing changes until you merge, but it's slower to start and harder to check.
+
+| # | Gap | What Paperclip has | Why it matters | Size | Pri | Fit | Recommendation |
+|---|---|---|---|---|---|---|---|
+| H1 | **Quick start with defaults** | `onboard --yes`: Quickstart defaults, nothing else asked, change later with `configure` | The first 10 minutes decide whether a founder keeps going | S | P1 | Fits | `init --quick`: ask only the project name and a one-line goal; take defaults for the rest (gates on `ask`, heartbeats off, starting budgets from the handbook) and list them in the PR so they can be changed before merging. Add `upgrade --configure` to change answers later |
+| H2 | **Doctor, with repair** | `doctor` checks configuration, database, secrets, storage and missing files; `--repair` fixes them; `run` calls it on every start | Today nothing tells you that a secret is missing, a scheduled task was never created or the Access policy drifted, until something silently doesn't happen | M | P1 | Fits | A `doctor` skill and `tools/doctor.py`. It checks: the repo's version against the plugin, plugin-owned files, labels, CI workflows, the Cloudflare secrets and Access guard, `PORTFOLIO_TOKEN`, a scheduled task for each enabled heartbeat, budgets set, and gates covering the founder-owned files. `--repair` opens one PR for what it can fix and lists the rest with handbook links. The session-start hook runs the fast checks; the dashboard's Setup card (F1) shows the result |
+| H3 | **Goal-first onboarding** | Onboarding ends in a conversation with the first agent that gathers the goal and clear exit criteria and proposes first tasks for you to accept | An empty repo with a team and nothing to do is where most setups stall | S | P1 | Fits | `init` ends by writing the company goal and first quarterly objective into `goals.json` (D1), and proposes three starter tickets (for example: write the business context, validate the idea, plan the first interviews) as a plan for your approval (B3) |
+| H4 | **Pin, preview and roll back versions** | Update channels (stable, canary, a pinned version), a backup before each update, one-command rollback | A bad plugin release shouldn't reach every venture at once | S | P2 | Fits | `upgrade --to vX.Y.Z` to pin a version; a `next` marketplace ref for trying a release on one venture first; `upgrade --rollback` opens the revert PR for the last upgrade. Git is the backup |
+| H5 | **Pinned install source** | A checksummed installer, pinned bootstrap scripts, and advice to pin to a tag or commit | The plugin's hooks run on your machine; a moving branch is a supply-chain risk | S | P2 | Fits | `init` writes the marketplace entry pinned to the release tag, and `upgrade` moves the pin. Document how to check a release tag |
+| H6 | **Guided hosting setup** | Onboarding sets the deployment mode, URL and login; `doctor` is stricter for public deployments | The 15-minute Cloudflare setup is the step most likely to be skipped | M | P2 | Fits | `tools/build_dashboard.py setup` walks the Cloudflare steps through the API with your token: checks the zone, the Pages project and the Access application, and prints the exact next step. It never publishes an open page; `guard` still fails closed |
+| H7 | **Safe import of a template** | Imported agents and routines start paused; an export lists what it didn't include | Starting the next venture from a template shouldn't start spending on day one | S | P2 | Fits | With E6: `init --from <template>` lands every heartbeat and routine off, and the template's README lists what it leaves out (documents, decisions, costs, history) |
+| H8 | **Local and private modes** | `local_trusted` on localhost, or login-required on a private network or the internet | A choice of where the board lives | — | — | Trade-off | Not needed: the repo is the system and the dashboard is a static page. Our two modes are the Claude page (private, no hosting) and Cloudflare Access (login); `build_dashboard.py build` also works locally |
+
 ---
 
 ## Deliberate trade-offs: what we won't build, and why
@@ -160,18 +178,20 @@ Each slice is one pull request with a version bump, tests and handbook text, pic
 | # | Slice | Items | Size | Why this order |
 |---|---|---|---|---|
 | 6 | **Goals and key results** | D1, D2, D3, E3 | M | Everything else reports against goals |
-| 7 | **Run log and agent pages** | C2, C1, C5, T2 | M | Outcomes are the data scorecards, charts and retries need |
-| 8 | **Needs you, stuck work and charts** | A3, A2, A1, A8, T1, F1 | M | The founder's daily screen, now trustworthy and current |
-| 9 | **Governance 2** | B1, B4, A4, B3, B5 | M | Revise, pause and plan approval: control from the phone |
-| 10 | **Review before approval** | B2, B6 | M | Fewer things reach the founder, and they arrive checked |
-| 11 | **Money** | E1, E2 | M | Runway and a total budget on the first screen |
-| 12 | **Routines** | E4, D4 | M | Recurring business work runs itself, linked to goals |
-| 13 | **Untrusted input and per-role permissions** | B9, B10 | M | Required before opening intake to customers (E5) |
-| 14 | **Scorecards and the monthly agent review** | C3, C4, A10 | M | Needs three months of run log from slice 7 |
-| 15 | **Watchdog and retries** | B7, B8 | M | Safety net once more roles run on schedules |
-| Later | Search, timeline, work products, templates, lessons, ask the team, intake, document history, digests, delegates, role prompt tests | A5, A6, A7, E6, F4, F2, E5, F3, E7, F5, C6, A9, B11, T3, T4 | S–M each | Add when the need shows up |
+| 7 | **Quick start and doctor** | H1, H2, H3, F1 | M | A new venture is running in minutes, and every later slice's setup is checked in one place |
+| 8 | **Run log and agent pages** | C2, C1, C5, T2 | M | Outcomes are the data scorecards, charts and retries need |
+| 9 | **Needs you, stuck work and charts** | A3, A2, A1, A8, T1 | M | The founder's daily screen, now trustworthy and current |
+| 10 | **Governance 2** | B1, B4, A4, B3, B5 | M | Revise, pause and plan approval: control from the phone |
+| 11 | **Review before approval** | B2, B6 | M | Fewer things reach the founder, and they arrive checked |
+| 12 | **Money** | E1, E2 | M | Runway and a total budget on the first screen |
+| 13 | **Routines** | E4, D4 | M | Recurring business work runs itself, linked to goals |
+| 14 | **Untrusted input and per-role permissions** | B9, B10 | M | Required before opening intake to customers (E5) |
+| 15 | **Scorecards and the monthly agent review** | C3, C4, A10 | M | Needs three months of run log from slice 8 |
+| 16 | **Watchdog and retries** | B7, B8 | M | Safety net once more roles run on schedules |
+| 17 | **Safer upgrades and templates** | H4, H5, H6, E6, H7 | M | Before running several ventures from one plugin version |
+| Later | Search, timeline, work products, lessons, ask the team, intake, document history, digests, delegates, role prompt tests | A5, A6, A7, F4, F2, E5, F3, E7, F5, C6, A9, B11, T3, T4 | S–M each | Add when the need shows up |
 
-**v2.0 is slices 6 to 11.** They give a solo founder a measurable goal, an honest record of each agent, one inbox, control from the phone, a review step before them, and runway on the first screen, all with no server.
+**v2.0 is slices 6 to 12.** They give a solo founder a measurable goal, a quick start that checks itself, an honest record of each agent, one inbox, control from the phone, a review step before them, and runway on the first screen, all with no server.
 
 ---
 
