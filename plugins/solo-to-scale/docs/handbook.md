@@ -55,6 +55,7 @@ Each kind of information has exactly one home. If something seems to belong in t
 | `founder/brand.md` | Name, positioning line, voice, wording rules | brand-skills |
 | `founder/playbook.md` | This journey's stage-gate table with the current stage marked | `weekly-review` |
 | `founder/artifacts.md` | Registry of live views: ID, type, sources, last published commit | `publish-views` |
+| `founder/dashboard.json` | Where the startup dashboard is served (`pm.<domain>`) and which documents it shows | Founder (the `deploy` gate) |
 | `founder/sources/` | Original source documents | Founder |
 | `founder/claude-project/` | Project instructions, knowledge list, scheduled-task prompts | Bootstrap |
 | `specs/<NNN-feature>/` | Spec Kit: `spec.md`, requirements, plan, data model, contracts, tasks, product register (`D-`), `ux/<screen>.md` | Spec Kit, `product-design` |
@@ -367,6 +368,7 @@ Artifacts are views of the repo, regenerated from it, and each one shows the com
 
 | Content | Artifact type | Source in the repo |
 | --- | --- | --- |
+| The whole company on one page: overview, business documents, progress trace, roadmap, scope and journey, team and board, agent activity, decisions, approvals, costs | The startup dashboard at `pm.<domain>`, behind a login; a Claude page as the backup | `tools/build_dashboard.py`: the repo and GitHub |
 | Roadmap, stage progress, blockers, decisions waiting, CI health; traceability from source models to tested code, completion by function, initiatives | Data (dashboard) | Roadmap `--json`, `status.md`, registers, tools/build\_traceability.py |
 | Decision registers, filterable by status and age | Inside the Data dashboard | `founder/decisions.md`, `specs/*/decisions.md` |
 | Business docs: context, brand, protocol, status | Docs, read-only mirrors with a "Generated from … at …" banner | `founder/*.md` |
@@ -382,6 +384,24 @@ Artifacts are views of the repo, regenerated from it, and each one shows the com
 2. `founder/artifacts.md` records each view's ID, type, sources and last published commit.
 3. The `publish-views` skill republishes only the views whose sources changed, and stops if none did.
 4. Publishing runs where artifact tools exist: the Monday scheduled task, after the weekly review. Handoffs never publish; they only note which views are out of date. There is one progress view (the Data dashboard, which replaces any older roadmap page) and one team view.
+
+### The startup dashboard
+
+One page shows the whole company, with ten tabs: **Overview** (what needs you, the latest activity, recent merges), **Business documents**, **Progress trace** (stories to criteria to tested code), **Roadmap** (slices, blockers, decisions waiting), **Scope and journey** (phases A to G and the epics), **Team and board** (heartbeats, budgets, tickets, advisors, memos), **Agent activity** (what the roles did and said to each other, from the activity log), **Decisions**, **Approvals inbox** and **Costs**.
+
+- **Built by `tools/build_dashboard.py`** from the repo (the same generators as the other views) and from GitHub (activity log, tickets, approval requests, cost log, merged pull requests). It is never a source: change things in the repo or on GitHub. If GitHub can't be reached, the repo tabs are still built and the page says what's missing.
+- **Rebuilt on every merge to main and every hour** by the `dashboard` workflow. It needs no server: GitHub Actions builds it, and Cloudflare Pages serves it.
+- **Behind a login, or not at all.** The workflow deploys only when a Cloudflare Access application with a login policy covers both `pm.<domain>` and `<project>.pages.dev`; a policy for `everyone` or a `bypass` policy doesn't count. After each deploy it checks that an anonymous visitor gets the login page; if not, the run fails loudly. Every text on the page is shown as text, so nothing an agent writes can run in your browser.
+- **The Claude page is the backup.** `publish-views` publishes the same page as a private Claude page, so you can see it before hosting is set up, or if Cloudflare is down.
+
+**Setting it up (once, about 15 minutes, by you):**
+
+1. Put your domain on Cloudflare (the free plan is enough) and create a Cloudflare Pages project, for example `<startup>-pm`, with `pm.<domain>` as its custom domain.
+2. In Cloudflare Zero Trust, add a self-hosted Access application for `pm.<domain>` and `<project>.pages.dev`, with an allow policy for your own email addresses (or your GitHub account).
+3. Create an API token with **Cloudflare Pages: Edit** and **Access: Apps and Policies: Read**, and add it and your account ID as the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+4. Set `host` and `cloudflare_pages_project` in `founder/dashboard.json`, in a pull request (the `deploy` gate), and merge it. The next run deploys.
+
+GitHub pauses scheduled workflows in a repo with no activity for 60 days; any push turns the hourly rebuild back on.
 
 ## Skills and plugins
 

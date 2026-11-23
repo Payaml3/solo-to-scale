@@ -19,6 +19,7 @@ For each row in `founder/artifacts.md`: if the last published commit is empty, o
 ## 2. Republish each changed view from its sources
 
 - **Progress (Data dashboard):** regenerate `founder/roadmap.json` and `founder/traceability.json` (`python3 tools/build_roadmap.py`, `tools/build_traceability.py`), then publish them as a Data dashboard: stages and the current stage, slices with criteria done, blockers, decisions waiting (with age computed from their dates), the chain, completion by function, initiatives. One progress view only; it replaces any older roadmap page.
+- **Startup dashboard (the Claude backup):** `python3 tools/build_dashboard.py build --out .dashboard` (it reads GitHub through `gh`; add `--offline` if this session can't), then publish `.dashboard/index.html` as a page as it is. Never commit `.dashboard/`. The hosted copy at `pm.<domain>` is the `dashboard` workflow's job, not this skill's.
 - **Team view:** regenerate `founder/team.json` (`python3 tools/build_team.py`). Take `<plugin>/templates/views/team-view.html` (`<plugin>` is `${CLAUDE_PLUGIN_ROOT}`, or two folders above this file), replace `__PROJECT_NAME__` with `name` from `founder/project.json`, and replace `__DATA__` with the JSON plus `"commit"` (short HEAD) and `"date"` (its commit date). Publish it as a page.
 - **Docs views:** read-only mirrors, headed `Generated from <path> at <commit>. Edit in GitHub.`
 - **Design system:** from `design/tokens.json` and the components, once stage 11 has run.

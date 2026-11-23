@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.4.0 (2026-11-23)
+
+Slice 4 of `ROADMAP.md`: the startup dashboard.
+
+- **One page, ten tabs:** Overview (what needs you, latest activity, recent merges), Business documents, Progress trace, Roadmap, Scope and journey, Team and board, Agent activity (what the roles did and said to each other), Decisions, Approvals inbox (only the founder's own `/approve` counts) and Costs (spend against budget per role, the 80% warning and the 100% stop).
+- **`tools/build_dashboard.py build`:** builds the page from the repo, through the existing generators, and from GitHub: the activity log, open tickets, approval requests, the month's cost log and merged pull requests. If GitHub can't be reached, the repo tabs are still built and the page says what's missing. Every text is shown with `textContent` and the embedded data is escaped, so nothing an agent or an issue says can run in the browser. The page has a strict content security policy, `noindex` and a `robots.txt` that disallows everything.
+- **`dashboard` workflow:** rebuilds the page on every merge to main and every hour, and deploys it to Cloudflare Pages at the host in `founder/dashboard.json`. Until hosting is set up it only builds.
+- **Behind a login, fail closed:** `guard` allows a deploy only when a Cloudflare Access application with a login policy covers both the host and `<project>.pages.dev`. A path-only rule, a preview-only wildcard, an `everyone` policy, a `bypass` policy or an unreadable API all stop the deploy. After each deploy, `verify` fails the run if an anonymous visitor gets the dashboard.
+- **`founder/dashboard.json` (founder-owned, the `deploy` gate):** the host, the Pages project and the documents to show. `upgrade` adds it to existing repos; add it to the `deploy` gate's paths yourself.
+- **The Claude page stays as the backup:** `publish-views` publishes the same page, and `founder/artifacts.md` gets a row for it.
+- **Docs:** the handbook explains the tabs and the 15-minute setup (Cloudflare domain, Pages project, Access application, two secrets).
+- **Tests:** 14 new, against a fake GitHub and a fake Cloudflare API: hostile text stays text; only the founder's `/approve` counts in the inbox; costs and budgets match the cost log; a GitHub outage still builds; documents never leave the repo; eight ways of being unprotected each stop the deploy; an exposed page fails `verify`.
+- **Roadmap:** slice 3 is done.
+
 ## v1.3.0 (2026-11-23)
 
 Slice 3 of `ROADMAP.md`: heartbeats and budgets.

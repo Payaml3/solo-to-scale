@@ -1,0 +1,13 @@
+{
+  "about": "The startup dashboard: one page, rebuilt from the repo and GitHub on every merge to main and every hour by the dashboard workflow. Only the founder edits this file (the deploy gate). host: where it is served, for example pm.example.com; empty means it is built but never deployed. cloudflare_pages_project: the Cloudflare Pages project that serves it. The workflow deploys only when a Cloudflare Access application with a login policy covers both the host and <project>.pages.dev, and checks after each deploy that an anonymous visitor gets the login page, not the dashboard. Setup: the handbook, 'The startup dashboard'.",
+  "host": "",
+  "cloudflare_pages_project": "",
+  "documents": [
+    "founder/business-context.md",
+    "founder/brand.md",
+    "founder/status.md",
+    "founder/operating-protocol.md",
+    "founder/sources/*.md"
+  ],
+  "activity_limit": 200
+}
