@@ -7,7 +7,7 @@
       "name": "solo-to-scale",
       "source": "./plugins/solo-to-scale",
       "description": "Founder HQ, AI team and board, decision governance, context guard, live views and release checks, from idea to scale",
-      "version": "1.5.1"
+      "version": "1.6.0"
     }
   ]
 }
