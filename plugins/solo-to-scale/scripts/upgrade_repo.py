@@ -49,6 +49,9 @@ def answers_from_repo(repo: Path, extra: dict[str, Any]) -> dict[str, Any]:
                                      ("warn_pct", "handoff_pct", "warn_tokens", "handoff_tokens", "context_window_tokens")})
     except ValueError:
         pass
+    if "budgets" not in answers:  # founder/team.md's budget table seeds a new founder/heartbeats.json
+        rows = re.findall(r"^\|\s*([a-z-]+)\s*\|\s*(\$?\s*\d+(?:\.\d+)?)[^|]*\|\s*$", ini.read(repo / "founder/team.md"), re.M)
+        answers["budgets"] = {role: value for role, value in rows if role in r.ROLES}
     answers.setdefault("cross_review", (repo / ".github/workflows/cross-review.yml").exists())
     answers.setdefault("sales_advisor", (repo / ".codex/agents/sales-advisor.toml").exists())
     return answers

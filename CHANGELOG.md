@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.3.0 (2026-11-23)
+
+Slice 3 of `ROADMAP.md`: heartbeats and budgets.
+
+- **`founder/heartbeats.json` (founder-owned, the `budget` gate):** per role, whether its heartbeat is on, its schedule (cron, UTC) and its monthly AI budget in USD, plus the API prices used to cost a run. Heartbeats start off; a role without a budget never runs one. `init` writes the budgets from its answers; `upgrade` seeds them from `founder/team.md`'s budget table, which now points here as the only copy.
+- **`tools/heartbeat.py`:**
+  - `start <role>` refuses (exit 6) when the heartbeat is off, no budget is set, the budget is spent, or another run of the role is active (a `refs/heartbeats/<role>` lock, stale after 6 hours). Otherwise it resumes the role's own claimed ticket or claims one ready ticket with slice 2's atomic claim; with nothing ready it exits 2 and frees the lock.
+  - `end <role>` records the run's AI usage cost in the month's `cost-log` issue: measured from the Claude Code session transcript, given with `--usd`, or the policy's flat estimate, marked as such. It frees the run lock and reminds the role about a ticket it still holds.
+  - Budgets: a warning at 80% (cost log and ticket), a hard stop at 100%. At 100% `start` opens one `budget` approval request; the founder's own `/approve` adds one more month's budget for that month. Nothing else raises it.
+  - `plan` prints each role's schedule, budget and spend, and the prompt for its cloud scheduled task; `costs` shows the month per role.
+- **`heartbeat` skill** (the 14th): one unattended run, one ticket, within budget; finish with a pull request, a hand-off, a blocker or an approval request, then `end`. No questions to the founder inside a run.
+- **Gates:** `founder/heartbeats.json` is a gated path of `budget` in new repos' `founder/gates.json` (existing repos: add it yourself).
+- **Review and handoff:** the weekly review reports cost per role from the cost log; the handoff records an interactive session's cost too.
+- **Tests:** 9 new, against a fake GitHub: off, unbudgeted and spent roles never claim; a second concurrent run stops; resume beats a new claim; costs are summed across pages and months; 80% and 100% fire once; only the founder's `/approve` adds budget; transcripts are costed once per message; `upgrade` reads budgets from the team table.
+- **Roadmap:** slices 1 and 2 are done.
+
 ## v1.2.0 (2026-11-23)
 
 Slice 2 of `ROADMAP.md`: agent coordination.

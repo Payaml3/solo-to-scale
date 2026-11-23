@@ -76,7 +76,8 @@ def test_init_empty_repo(tmp_path):
     assert json.loads((repo / ".claude/governance.json").read_text())["warn_pct"] == 55
     settings = json.loads((repo / ".claude/settings.json").read_text())
     assert settings["enabledPlugins"] == {"solo-to-scale@solo-to-scale": True, "superpowers@claude-plugins-official": True}
-    assert "| engineer | $120 |" in (repo / "founder/team.md").read_text()
+    beats = json.loads((repo / "founder/heartbeats.json").read_text())["roles"]
+    assert beats["engineer"]["monthly_budget_usd"] == 120.0 and not beats["engineer"]["enabled"]
     knowledge = (repo / "founder/claude-project/knowledge.md").read_text()
     assert sum(1 for ln in knowledge.splitlines() if ln[:2].rstrip(".").isdigit()) == 8
     out = governance(repo)
@@ -165,3 +166,14 @@ def test_upgrade_rerenders_plugin_files_and_reports_rename(tmp_path):
     assert "Founder note." in status.read_text()
     assert "Example Labs" in (repo / "founder/claude-project/instructions.md").read_text()
     assert "rendered-for: Example Labs" in (repo / "founder/.solo-to-scale-version").read_text()
+
+
+def test_upgrade_seeds_heartbeat_budgets_from_the_team_table(tmp_path):
+    (tmp_path / "founder").mkdir()
+    (tmp_path / "founder/team.md").write_text("## Monthly budget per role\n\n| Role | Monthly budget |\n| --- | --- |\n"
+                                              "| engineer | $120 |\n| qa | Open (founder sets it) |\n| 04 | x |\n",
+                                              encoding="utf-8")
+    answers = upgrade_repo.answers_from_repo(tmp_path, {})
+    assert answers["budgets"] == {"engineer": "$120"}
+    assert upgrade_repo.r.usd("$120") == 120.0 and upgrade_repo.r.usd("Open (founder sets it)") is None
+    assert upgrade_repo.r.usd("40 USD/month") == 40.0 and upgrade_repo.r.usd(0) is None
