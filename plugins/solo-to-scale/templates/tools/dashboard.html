@@ -769,7 +769,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
   // --- shell ----------------------------------------------------------------------------------------------
   var back = safeHref((D.links || {}).portfolio);
-  if (back) { var bk = document.getElementById("back"); bk.appendChild(el("a", { href: back, text: "← Portfolio" })); bk.hidden = false; }
+  if (back) { var bk = document.getElementById("back"); bk.appendChild(el("a", { href: back, text: "← " + (D.links.portfolio_name || "Portfolio") })); bk.hidden = false; }
   document.getElementById("title").textContent = (D.project.name || "Startup") + " dashboard";
   document.getElementById("oneline").textContent = D.project.one_line || "";
   document.getElementById("meta").textContent = "Built " + when(D.built) + " UTC from " + (D.commit ? "commit " + D.commit : "the repo") +

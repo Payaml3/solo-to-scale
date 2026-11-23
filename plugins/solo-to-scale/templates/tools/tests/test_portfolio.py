@@ -136,6 +136,17 @@ def test_the_token_is_portfolio_token_when_set(monkeypatch):
     assert calls == ["repo-token", "portfolio-token"]
 
 
+def test_the_founder_names_the_portfolio(root):
+    portfolio(root, [OTHER], include_this_repo=False)
+    data = bp.build(root, offline=True, now=NOW)
+    assert data["name"] == "Portfolio" and "<title>Portfolio</title>" in bp.page(data)
+    portfolio(root, [OTHER], include_this_repo=False, name=f"Acme  Holdings\n{EVIL}" + "x" * 100)
+    data = bp.build(root, offline=True, now=NOW)
+    assert data["name"].startswith("Acme Holdings </script>") and len(data["name"]) == 80
+    page = bp.page(data)
+    assert page.count("</script>") == 2 and "<title>Acme Holdings &lt;/script&gt;" in page
+
+
 def test_no_ventures_means_no_portfolio(root, tmp_path, capsys):
     out = tmp_path / "gh-out"
     assert bp.main(["enabled", "--root", str(root), "--github-output", str(out)]) == 0

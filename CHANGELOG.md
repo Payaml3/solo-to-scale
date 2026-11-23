@@ -10,6 +10,12 @@ The dashboard follows the journey: this stage, and every document the team write
 - **Docs:** the handbook describes both.
 - **Tests:** 1 new: documents land in the right group with their feature, and the page has the stage panel and the grouped tab.
 
+## v1.7.1 (2026-11-23)
+
+- **Name the portfolio:** `name` in `founder/portfolio.json` (for example your holding company) is the portfolio page's title and heading; empty means "Portfolio". Change it any time; the next hourly build shows it. A venture's dashboard can show the same name on its link back, with `portfolio_name` in its `founder/dashboard.json`. Venture names still come from each venture's `founder/project.json`.
+- In existing repos, add the two fields yourself (both files are founder-owned and behind the `deploy` gate).
+- **Tests:** 1 new: the name is one line of at most 80 characters, defaults to "Portfolio", and stays text.
+
 ## v1.7.0 (2026-11-23)
 
 The dashboard shows the AI team as agents.
