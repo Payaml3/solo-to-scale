@@ -217,3 +217,27 @@ def test_run_stats_and_the_forecast():
            {"body": '<!-- s2s:cost {"role": "qa", "usd": 1, "month": "2026-11", "outcome": "<b>", "session": "javascript:x", "seconds": -5} -->'}]
     (only,) = heartbeat.entries(bad, MONTH)
     assert only["outcome"] == "" and only["session"] == "" and only["seconds"] is None
+
+
+def test_the_company_budget_caps_all_roles_together(root, fake, capsys):
+    p = root / "founder/heartbeats.json"
+    pol = json.loads(p.read_text(encoding="utf-8"))
+    pol["company"] = {"monthly_budget_usd": 10}
+    p.write_text(json.dumps(pol), encoding="utf-8")
+    ticket(fake, "qa")
+    assert spend(root, "engineer", 5.0) == heartbeat.OK
+    capsys.readouterr()
+    assert spend(root, "product", 3.5) == heartbeat.OK
+    assert "company budget over 80%" in capsys.readouterr().out, "each role is under its own cap, the total isn't"
+    assert run(root, "start", "qa") == heartbeat.OK and "company budget: $8.50 of $10.00" in capsys.readouterr().out
+    assert run(root, "end", "qa", "--usd", "2.0") == heartbeat.OK and "company budget spent" in capsys.readouterr().out
+    ticket(fake, "architect")
+    assert run(root, "start", "architect") == heartbeat.STOP
+    assert "every role stops" in capsys.readouterr().out
+    assert run(root, "start", "architect") == heartbeat.STOP
+    reqs = [i for i in fake.issues.values() if "gate:budget" in fake.names(i["number"])]
+    assert len(reqs) == 1 and f"**Scope:** heartbeat:company:{MONTH}" in reqs[0]["body"]
+    capsys.readouterr()
+    assert run(root, "costs") == heartbeat.OK and "of the company's $10.00 (105%) STOPPED" in capsys.readouterr().out
+    fake.comments[reqs[0]["number"]].append({"user": {"login": "acme"}, "body": "/approve"})
+    assert run(root, "start", "architect") == heartbeat.OK, "the founder's /approve adds one more month's company budget"

@@ -26,7 +26,7 @@
     "spend": {
       "mode": "ask",
       "what": "Spend money, start a paid plan, or open an account in the company's name",
-      "paths": []
+      "paths": ["founder/finance.json"]
     },
     "decision": {
       "mode": "ask",

@@ -18,7 +18,7 @@ import heartbeat  # noqa: E402
 from test_dashboard import NOW, data_of, root  # noqa: E402,F401
 
 ALL_GATES = {"founders": [], "gates": {g: {"mode": "ask", "what": g, "paths": []}
-                                       for g in ("hire", "budget", "deploy", "decision")}}
+                                       for g in ("hire", "budget", "deploy", "decision", "spend")}}
 
 
 class Hub:

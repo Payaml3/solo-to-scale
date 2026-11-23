@@ -35,7 +35,8 @@ import tickets  # noqa: E402
 
 # Founder-owned files and the gate that must cover each, so an agent can't change them without the founder.
 GATED = {"founder/team.md": "hire", "founder/heartbeats.json": "budget", "founder/dashboard.json": "deploy",
-         "founder/portfolio.json": "deploy", "founder/goals.json": "decision"}
+         "founder/portfolio.json": "deploy", "founder/goals.json": "decision",
+         "founder/finance.json": "spend"}
 WORKFLOWS = ["governance.yml", "founder-gates.yml", "tickets.yml", "dashboard.yml", "portfolio.yml"]
 LABELS = {tickets.TICKET: "0e8a16", tickets.CLAIMED: "fbca04", tickets.BLOCKED: "b60205", tickets.LOG: "c5def5",
           approval.LABEL: "d93f0b", approval.PR_LABEL: "0e8a16", heartbeat.COST_LOG: "c5def5",

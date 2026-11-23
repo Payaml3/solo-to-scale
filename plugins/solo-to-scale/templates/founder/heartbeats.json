@@ -1,6 +1,7 @@
 {
-  "about": "Heartbeats and AI budgets per role. Only the founder edits this file (the budget gate). enabled: the role wakes on its cron schedule (UTC) as a cloud scheduled task; run `python tools/heartbeat.py plan` for the prompts. monthly_budget_usd: AI usage cost per calendar month (UTC), warned at 80% and stopped at 100%; null means not set, and a role without a budget never runs a heartbeat. Costs are API-equivalent prices per million tokens, measured from session transcripts; fallback_run_usd is recorded when a run can't be measured.",
+  "about": "Heartbeats and AI budgets per role. Only the founder edits this file (the budget gate). enabled: the role wakes on its cron schedule (UTC) as a cloud scheduled task; run `python tools/heartbeat.py plan` for the prompts. monthly_budget_usd: AI usage cost per calendar month (UTC), warned at 80% and stopped at 100%; null means not set, and a role without a budget never runs a heartbeat. company.monthly_budget_usd caps all roles together: every run checks it too, with the same 80% warning and 100% stop. Costs are API-equivalent prices per million tokens, measured from session transcripts; fallback_run_usd is recorded when a run can't be measured.",
   "fallback_run_usd": 2.0,
+  "company": {"monthly_budget_usd": null},
   "prices_usd_per_mtok": {
     "opus": {"input": 4.0, "output": 20.0, "cache_write": 5.0, "cache_read": 0.2},
     "sonnet": {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.1},

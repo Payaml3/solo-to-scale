@@ -58,6 +58,7 @@ h3 { font-size: 1rem; margin: 0 0 6px; }
 .tile .k { font-size: .8rem; color: var(--muted); }
 .tile .v { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .tile .s { font-size: .8rem; color: var(--muted); }
+.tile.alert { border-color: var(--waiting); } .tile.alert .v { color: var(--waiting); }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: .9rem; }
 th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -723,6 +724,21 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         })) : el("p", { cls: "empty", style: "margin:0", text: "No documents yet." }))));
   }
 
+  // --- money: runway from founder/finance.json, AI spend from the cost log -------------------------------------
+  function money(x, cur) { var n = Number(x) || 0; return (n < 0 ? "-" : "") + (cur === "USD" || !cur ? "$" : cur + " ") + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 }); }
+  function moneyPanel() {
+    var m = D.money || {}, cur = m.currency;
+    if (!m.set) return panel("Money", null, el("p", { cls: "empty", text: (m.problems && m.problems.length ? "founder/finance.json has a problem: " + m.problems.join("; ") + "." : "Runway shows here once you fill in founder/finance.json: cash, monthly revenue and fixed costs.") }));
+    var co = costs.company || {};
+    var runway = m.runway_months !== null && m.runway_months !== undefined ? m.runway_months + " months" : m.net_burn <= 0 ? "not burning" : "set cash";
+    var low = m.runway_months !== null && m.runway_months !== undefined && m.runway_months < 6;
+    return panel("Money", "From founder/finance.json" + (m.as_of ? " (cash as of " + m.as_of + ")" : "") + ". AI spend is " + (m.ai_basis === "forecast" ? "this month's month-end forecast" : m.ai_basis === "so far" ? "this month so far" : "unknown without GitHub data") + ".",
+      el("div", { cls: "grid" },
+        tile("Monthly revenue", m.mrr === null || m.mrr === undefined ? "not set" : money(m.mrr, cur), "MRR"),
+        tile("Net burn", money(m.net_burn, cur), "a month: " + money(m.fixed, cur) + " fixed + " + money(m.ai, cur) + " AI − revenue"),
+        el("div", { cls: "tile" + (low ? " alert" : "") }, el("div", { cls: "k", text: "Runway" }), el("div", { cls: "v", text: runway }), el("div", { cls: "s", text: m.cash_left === null || m.cash_left === undefined ? "cash not set" : money(m.cash_left, cur) + " cash" + (m.one_offs_total ? " after " + money(m.one_offs_total, cur) + " of one-offs" : "") })),
+        tile("AI share of costs", m.ai_share === null || m.ai_share === undefined ? "n/a" : Math.round(100 * m.ai_share) + "%", co.cap ? "company AI budget " + usd(co.used) + " of " + usd(co.cap) : "no company AI budget set")));
+  }
   function overview() {
     var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0);
     var sDone = slices.filter(function (x) { return String(x.status).toLowerCase() === "done"; }).length;
@@ -745,6 +761,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     return [tiles, G.ok ? null : ghMissing(),
       setupPanel(),
       panel("Needs you", "Oldest and most blocking first." + (NEEDS.length > 8 ? " " + (NEEDS.length - 8) + " more in the Needs you tab." : ""), needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }), NEEDS.length > 8 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
+      moneyPanel(),
       stagePanel(),
       goalStrip(),
       trendPanel(),
@@ -1045,6 +1062,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         costs.forecast !== null && costs.forecast !== undefined ? tile("Month-end at this pace", usd(costs.forecast), costs.cap_total ? (costs.forecast > costs.cap_total ? "over" : "within") + " the budgets" : "from the daily burn so far") : null,
         tile("Runs", String(entries.length), tried ? Math.round(100 * worked / tried) + "% worked of the runs that had work" : "no outcomes recorded yet"),
         tile("Estimated", String(entries.filter(function (e) { return e.how === "estimated"; }).length), "entries with a flat estimate, not measured")),
+      costs.company && costs.company.cap ? panel("Company AI budget", "All roles together. Warning at 80%; at 100% every role stops until next month or you approve more.",
+        el("p", null, usd(costs.company.used) + " of " + usd(costs.company.cap) + " (" + Math.round(100 * costs.company.used / costs.company.cap) + "%)"),
+        bar(costs.company.used, costs.company.cap, costs.company.used >= costs.company.cap ? "x" : costs.company.used >= 0.8 * costs.company.cap ? "w" : "")) : null,
       panel("Budget per role", "Warning at 80%, stop at 100%. Approving a budget request adds one more month's budget for that month.", table([
         { h: "Role", f: function (r) { return el("a", { href: "#agent/" + encodeURIComponent(r.role), text: roleName(r.role) }); } }, { h: "Spent", num: true, k: function (r) { return Number(r.used) || 0; }, f: function (r) { return usd(r.used); } },
         { h: "Budget", num: true, k: function (r) { return r.cap ? Number(r.cap) : null; }, f: function (r) { return r.cap ? usd(r.cap) : "not set"; } },

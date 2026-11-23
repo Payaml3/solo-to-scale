@@ -43,6 +43,7 @@ import build_team  # noqa: E402
 import build_traceability  # noqa: E402
 import control  # noqa: E402
 import doctor  # noqa: E402
+import finance  # noqa: E402
 import goals  # noqa: E402
 import heartbeat  # noqa: E402
 import tickets  # noqa: E402
@@ -214,7 +215,9 @@ def costs(hub: tickets.Hub, root: Path, month: str, now: dt.datetime | None = No
         return sorted(out.values(), key=lambda g: -g["usd"])
     total = round(sum(totals.values()), 4)
     today = (now or dt.datetime.now(dt.timezone.utc)).date()
+    ccap, _, cbase = heartbeat.standing(hub, root, pol, heartbeat.COMPANY, month, totals)
     return {"month": month, "roles": roles, "entries": runs[-200:], "total": total,
+            "company": {"cap": ccap, "base": cbase or None, "used": total},
             "forecast": heartbeat.forecast(total, month, today),
             "cap_total": round(sum(r["cap"] or 0 for r in roles), 4),
             "by": {"objective": group("objective", "no objective"), "role": group("role", "?"),
@@ -290,6 +293,10 @@ def needs_you(data: dict[str, Any], now: dt.datetime, stale_hours: float = STALE
                 number=a.get("number"), gate=a.get("gate", ""))
         asked = {a.get("scope") for a in waiting if a.get("gate") == "budget"}
         month = (gh_.get("costs") or {}).get("month", "")
+        co = (gh_.get("costs") or {}).get("company") or {}
+        if co.get("cap") and co.get("used", 0) >= co["cap"] and heartbeat.scope(heartbeat.COMPANY, month) not in asked:
+            add("budget", "Every agent stopped: the company AI budget is spent", "", "",
+                f"${co['used']:.2f} of ${co['cap']:.2f} for {month}", role="")
         for r in (gh_.get("costs") or {}).get("roles") or []:
             if r.get("cap") and r.get("used", 0) >= r["cap"] and heartbeat.scope(r["role"], month) not in asked:
                 add("budget", f"role:{r['role']} stopped: budget spent", "", "",
@@ -411,10 +418,22 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
     except (TypeError, ValueError):
         hours = STALE_HOURS
     data["needs"] = needs_you(data, now, hours)
+    data["money"] = money(root, data, month)
     repo_name = data["github"].get("repo") or proj.get("repo", "")
     data["rebuild_url"] = (f"https://github.com/{repo_name}/actions/workflows/dashboard.yml"
                            if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", str(repo_name)) else "")
     return data
+
+
+def money(root: Path, data: dict[str, Any], month: str) -> dict[str, Any]:
+    """Runway from founder/finance.json, with AI spend from the cost log: the month-end forecast when there is one."""
+    c = (data.get("github") or {}).get("costs") if (data.get("github") or {}).get("ok") else None
+    ai, basis = 0.0, "unknown"
+    if c:
+        ai, basis = (c["forecast"], "forecast") if c.get("forecast") is not None else (c.get("total") or 0.0, "so far")
+    out = finance.summary(finance.load(root), float(ai), month)
+    out["ai_basis"] = basis
+    return out
 
 
 def page(data: dict[str, Any]) -> str:
@@ -471,6 +490,9 @@ def summary(data: dict[str, Any]) -> dict[str, Any]:
                          for a in (gh_.get("activity") or [])[-20:]],
             "merged": (gh_.get("merged") or [])[:5],
         })
+    m = data.get("money") or {}
+    if m.get("set"):
+        out["money"] = {k: m.get(k) for k in ("currency", "mrr", "net_burn", "runway_months", "profitable", "as_of")}
     needs = data.get("needs") or {}
     out["needs"] = {"counts": needs.get("counts") or {}, "overdue": needs.get("overdue", 0),
                     "stuck": len(needs.get("stuck") or [])}
