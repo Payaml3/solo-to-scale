@@ -263,6 +263,17 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     return pill("current", "done");
   }
 
+  // The venture's company goal and each active objective's progress, from its summary (1.9.0 and later).
+  function goalLine(g) {
+    if (!g || (!g.goal && !(g.objectives || []).length)) return null;
+    return el("div", { cls: "note", style: "margin:4px 0 8px" }, g.goal ? el("div", null, el("b", { text: "Goal: " }), g.goal) : null,
+      (g.objectives || []).map(function (o) {
+        var p = o.progress === null || o.progress === undefined ? null : o.progress;
+        return el("div", { style: "display:flex;gap:8px;align-items:center" }, el("span", { style: "flex:1", text: o.id + " " + o.title }),
+          bar(p || 0, 1, p >= 1 ? "" : "w"), el("span", { text: p === null ? "–" : Math.round(100 * p) + "%" }));
+      }));
+  }
+
   function card(x) {
     var S = x.S, st = S.stage || {}, sl = S.slices || {}, G = x.G, c = G.costs || {}, t = G.tickets || {};
     var head = el("h3", null, name(x), x.name === x.v.repo && !x.v.here ? null : el("span", { cls: "repo", text: x.v.repo + (x.v.here ? " (this repo)" : "") }), health(x));
@@ -270,6 +281,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     var last = (G.activity || []).slice(-1)[0];
     return el("div", { cls: "panel venture" + (waitingOf(x).length ? " warn" : "") }, head,
       (S.project || {}).one_line ? el("p", { cls: "note", text: S.project.one_line }) : null,
+      goalLine(S.goals),
       el("div", { cls: "facts" },
         el("div", null, el("b", { text: st.number ? "Stage " + st.number : "Stage ?" }), (st.phase ? st.phase + " · " : "") + (st.name || "")),
         el("div", null, el("b", { text: (sl.done || 0) + " of " + (sl.total || 0) }), "slices done", sl.building && sl.building.length ? el("div", { cls: "why", text: "Building " + sl.building.join("; ") }) : null),

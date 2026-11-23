@@ -4,7 +4,10 @@ Agent coordination through GitHub issues. A ticket is an issue labelled `ticket`
 holds the parent and the blockers. Roles delegate, hand off, block and finish work here, and every action is
 written to the ticket and to one activity log (an issue labelled `activity-log`).
 
-  python tools/tickets.py new <role> --title "..." --goal "..." [--parent N] [--blocked-by N ...] --by <role>
+  python tools/tickets.py new <role> --title "..." --goal "..." [--objective O1] [--parent N] [--blocked-by N ...] --by <role>
+                                         # the objective (founder/goals.json) becomes the label goal:O1; a
+                                         # sub-ticket inherits its parent's. While goals.json has active
+                                         # objectives, a ticket that names none is refused.
   python tools/tickets.py claim <n> --role <role>      # atomic: exactly one claimant wins
   python tools/tickets.py release <n> --role <role>
   python tools/tickets.py handoff <n> --to <role> --note "..." --by <role>
@@ -33,6 +36,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
+import goals  # noqa: E402
 from approval import repo_name  # noqa: E402
 
 OK, REFUSED, ERROR = 0, 1, 5
@@ -77,9 +81,11 @@ def set_blockers(body: str, blockers: list[int]) -> str:
     return (body or "").rstrip("\n") + "\n" + line + "\n"
 
 
-def ticket_body(role: str, goal: str, done_when: str, why: str, parent: int | None, blockers: list[int], by: str) -> str:
+def ticket_body(role: str, goal: str, done_when: str, why: str, parent: int | None, blockers: list[int], by: str,
+                objective: str = "") -> str:
     return "\n".join([
         f"**Role:** `role:{role}`", f"**Opened by:** `role:{by}`" if by else "**Opened by:** the founder",
+        *([f"**Objective:** {objective} (label `{goals.label(objective)}`)"] if objective else []),
         f"**Parent:** #{parent}" if parent else "**Parent:** none",
         "**Blocked by:** " + (", ".join(f"#{n}" for n in blockers) or "nothing"),
         "", "## Goal", quote(goal), "", "## Done when", quote(done_when), "", "## Why", quote(why), "",
@@ -211,13 +217,34 @@ def need_role(role: str) -> None:
         raise SystemExit(f"unknown role {role!r}; roles: {', '.join(ROLES)}")
 
 
+def which_objective(a: argparse.Namespace, hub: Hub) -> str:
+    """The ticket's objective: --objective, else its parent's goal: label. A ticket with neither is refused
+    while founder/goals.json has active objectives, so every piece of work says which one it serves."""
+    data = goals.load(a.root)
+    known = goals.ids(data)
+    if a.objective:
+        if a.objective not in known:
+            raise SystemExit(f"unknown objective {a.objective!r}; founder/goals.json has: {', '.join(sorted(known)) or 'none'}")
+        return a.objective
+    if a.parent:
+        inherited = goals.objective_of(labels_of(hub.issue(a.parent)))
+        if inherited:
+            return inherited
+    live = [o["id"] for o in goals.active(data)]
+    if live:
+        raise SystemExit("name the objective this ticket serves: --objective " + " or ".join(live)
+                         + " (or give a --parent that has one)")
+    return ""
+
+
 def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     need_role(a.role)
     if a.by:
         need_role(a.by)
     blockers = sorted(set(a.blocked_by or []))
-    body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by)
-    labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else [])
+    objective = which_objective(a, hub)
+    body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by, objective)
+    labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else [])
     if a.dry_run:
         print(f"{a.title}\nlabels: {', '.join(labels)}\n\n{body}")
         return OK
@@ -391,6 +418,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--done-when", default="")
     p.add_argument("--why", default="")
     p.add_argument("--parent", type=int)
+    p.add_argument("--objective", default="", help="the founder/goals.json objective it serves, e.g. O1")
     p.add_argument("--blocked-by", type=int, nargs="*")
     p.add_argument("--by", default="")
     p.add_argument("--dry-run", action="store_true")

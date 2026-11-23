@@ -10,6 +10,7 @@ Fails if:
   4. a stage or slice is newly marked done (playbook "Passed", slices.json "done") without a HANDOFF.md change
   5. founder/roadmap.json, founder/team.json or founder/traceability.json is out of date with its sources
   6. AGENTS.md plus the root CLAUDE.md, or any other CLAUDE.md, is longer than `claude_md_max_lines`
+  7. founder/goals.json is malformed, or slices.json names an objective it doesn't define
 Warns (never fails) if:
   - founder/status.md "Last updated" is older than `status_stale_days`
   - the branch changes more than `pr_warn_lines` lines, not counting generated and lock files
@@ -30,6 +31,7 @@ import _s2s as s  # noqa: E402
 import build_roadmap  # noqa: E402
 import build_team  # noqa: E402
 import build_traceability  # noqa: E402
+import goals  # noqa: E402
 
 PROTOCOL = "founder/operating-protocol.md"
 # Built from parts, so this file doesn't contain the lifecycle line itself.
@@ -99,6 +101,7 @@ def check(root: Path, base_ref: str, today: dt.date) -> tuple[list[str], list[st
             errors.append(f"{name}: restates the protocol ('{PROTOCOL_MARKER}'); point to {PROTOCOL} instead")
 
     errors += instruction_size(root, cfg, tracked)
+    errors += goals.problems(root)
 
     for rel, mod in VIEW_DATA.items():
         if (root / rel).exists() and s.read(root / rel) != s.dump(mod.build(root)):

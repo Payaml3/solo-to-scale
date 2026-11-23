@@ -83,6 +83,8 @@ def test_init_empty_repo(tmp_path):
     assert (repo / ".github/workflows/dashboard.yml").exists() and (repo / "tools/dashboard.html").exists()
     assert json.loads((repo / "founder/portfolio.json").read_text())["ventures"] == [], "no portfolio until set"
     assert "founder/portfolio.json" in json.loads((repo / "founder/gates.json").read_text())["gates"]["deploy"]["paths"]
+    assert json.loads((repo / "founder/goals.json").read_text())["objectives"] == [], "no objectives until the founder sets them"
+    assert "founder/goals.json" in json.loads((repo / "founder/gates.json").read_text())["gates"]["decision"]["paths"]
     assert (repo / ".github/workflows/portfolio.yml").exists() and (repo / "tools/portfolio.html").exists()
     knowledge = (repo / "founder/claude-project/knowledge.md").read_text()
     assert sum(1 for ln in knowledge.splitlines() if ln[:2].rstrip(".").isdigit()) == 8
