@@ -3,7 +3,8 @@
 The startup dashboard: one page with tabs (Overview, Needs you, Goals, Documents, Progress trace, Roadmap, Scope and
 journey, Team and board, Agent activity, Decisions, Approvals inbox, Costs), built from the repo and GitHub.
 The dashboard workflow rebuilds it on every merge to main and every hour, and serves it at the host in
-founder/dashboard.json behind a Cloudflare Access login. The Claude page from publish-views is the backup.
+founder/dashboard.json behind a login: Cloudflare Pages behind Cloudflare Access (the default), or a Vercel
+project behind Vercel Authentication on all deployments. The Claude page from publish-views is the backup.
 
   python tools/build_dashboard.py build [--out DIR] [--offline] [--summary FILE]
                                        # DIR/index.html (default .dashboard/); FILE: the portfolio summary
@@ -11,11 +12,14 @@ founder/dashboard.json behind a Cloudflare Access login. The Claude page from pu
   python tools/build_dashboard.py verify                          # after a deploy: is it behind the login? (CI)
 
 `build` never fails because GitHub is unreachable: the repo tabs are still built and the page says which
-GitHub data is missing. `guard` fails closed: it allows a deploy only when founder/dashboard.json names a
-host and a Pages project, the Cloudflare secrets are set, and a Cloudflare Access application with a login
-policy (not `everyone`, not `bypass`) covers both the host and <project>.pages.dev. It exits 0 with
+GitHub data is missing. `guard` fails closed. With provider "cloudflare" (the default) it allows a deploy
+only when founder/dashboard.json names a host and a Pages project, the Cloudflare secrets are set, and a
+Cloudflare Access application with a login policy (not `everyone`, not `bypass`) covers both the host and
+<project>.pages.dev. With provider "vercel" it allows one only when VERCEL_TOKEN is set and the named Vercel
+project has the host as a domain, no Git repository connected (it serves only the dashboard), and Vercel
+Authentication on "All Deployments", so production custom domains need a login too. It exits 0 with
 deploy=no when hosting isn't set up, and 1 when it is set up but the login isn't. `verify` exits 1 if an
-anonymous visitor gets the dashboard. Every text on the page is shown as text, never as HTML.
+anonymous visitor gets the dashboard at any of its addresses. Every text on the page is shown as text, never as HTML.
 `--summary` also writes the small, document-free summary that a portfolio reads (tools/build_portfolio.py);
 the dashboard workflow uploads it as the `dashboard-data` workflow artifact.
 Python 3 standard library plus the gh CLI.
@@ -67,6 +71,11 @@ NEED_ORDER = ("approval", "escalation", "budget", "stuck", "decision", "founder 
 HOST = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 PAGES_PROJECT = re.compile(r"^[a-z0-9]([a-z0-9-]{0,56}[a-z0-9])?$")
 CF_API = "https://api.cloudflare.com/client/v4"
+VC_API = "https://api.vercel.com"
+PROVIDERS = ("cloudflare", "vercel")
+VERCEL_PROJECT = re.compile(r"^[a-z0-9]([a-z0-9._-]{0,98}[a-z0-9])?$")
+VERCEL_TEAM = re.compile(r"^[a-z0-9][a-z0-9_-]{0,99}$")
+VERCEL_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 SUMMARY_SCHEMA = 1
 
 
@@ -514,7 +523,7 @@ def cmd_build(a: argparse.Namespace) -> int:
     return 0
 
 
-# --- hosting: Cloudflare Pages behind Cloudflare Access ---------------------------------------------------
+# --- hosting: Cloudflare Pages behind Cloudflare Access, or Vercel behind Vercel Authentication ---------------------------------------------------
 
 def http(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], str]:
     """One GET without following redirects: (status, headers, body). Raises OSError if unreachable."""
@@ -586,10 +595,58 @@ def protection(apps: list[dict[str, Any]], host: str) -> str:
     return "; ".join(reasons) or "no Cloudflare Access application covers it"
 
 
+def provider(cfg: dict[str, Any]) -> str:
+    """'cloudflare' (the default) or 'vercel'; anything else is returned as is, and guard refuses it."""
+    return str(cfg.get("provider") or "cloudflare").strip().lower()
+
+
 def targets(cfg: dict[str, Any]) -> tuple[str, str]:
     host = str(cfg.get("host") or "").strip().lower()
-    proj = str(cfg.get("cloudflare_pages_project") or "").strip().lower()
+    key = "vercel_project" if provider(cfg) == "vercel" else "cloudflare_pages_project"
+    proj = str(cfg.get(key) or "").strip().lower()
     return host, proj
+
+
+def project_ok(cfg: dict[str, Any]) -> bool:
+    """Is the project name well formed for the provider (and the optional Vercel team)?"""
+    proj = targets(cfg)[1]
+    if provider(cfg) == "vercel":
+        team = str(cfg.get("vercel_team") or "").strip().lower()
+        return bool(VERCEL_PROJECT.match(proj)) and (not team or bool(VERCEL_TEAM.match(team)))
+    return bool(PAGES_PROJECT.match(proj))
+
+
+def vercel_get(path: str, cfg: dict[str, Any], token: str) -> dict[str, Any]:
+    team = str(cfg.get("vercel_team") or "").strip().lower()
+    scope = ("&" if "?" in path else "?") + (f"teamId={team}" if team.startswith("team_") else f"slug={team}") if team else ""
+    status, _, body = http(f"{VC_API}{path}{scope}", {"Authorization": f"Bearer {token}"})
+    if status != 200:
+        raise ValueError(f"Vercel API answered {status}")
+    data = json.loads(body or "{}")
+    if not isinstance(data, dict):
+        raise ValueError("Vercel API answered something unexpected")
+    return data
+
+
+def vercel_domains(cfg: dict[str, Any], token: str) -> list[str]:
+    proj = targets(cfg)[1]
+    data = vercel_get(f"/v9/projects/{proj}/domains?limit=100", cfg, token)
+    return [str(d.get("name") or "").lower() for d in data.get("domains") or [] if isinstance(d, dict)]
+
+
+def vercel_protection(project: dict[str, Any], domains: list[str], host: str) -> str:
+    """'' if the Vercel project serves host and needs a login on every deployment, else why not."""
+    if project.get("link"):
+        return ("is connected to a Git repository; the dashboard needs its own Vercel project, or a deploy would "
+                "replace that app")
+    if host not in domains:
+        return f"doesn't have {host} as a domain"
+    sso = project.get("ssoProtection")
+    kind = str((sso or {}).get("deploymentType") or "") if isinstance(sso, dict) else ""
+    if kind != "all":
+        return ("has Vercel Authentication " + (f"on '{kind}' only" if kind else "off")
+                + "; it must be on 'All Deployments', or the production domain stays public")
+    return ""
 
 
 def cmd_guard(a: argparse.Namespace) -> int:
@@ -598,17 +655,25 @@ def cmd_guard(a: argparse.Namespace) -> int:
 
 def guard(cfg: dict[str, Any], github_output: str, file: str = "founder/dashboard.json", what: str = "dashboard",
           section: str = "The startup dashboard") -> int:
-    """Shared by the dashboard and the portfolio: deploy only behind a Cloudflare Access login."""
-    def out(deploy: bool, project: str = "") -> None:
+    """Shared by the dashboard and the portfolio: deploy only behind a login (Cloudflare Access or Vercel)."""
+    def out(deploy: bool, project: str = "", **extra: str) -> None:
         if github_output:
             with open(github_output, "a", encoding="utf-8") as f:
-                f.write(f"deploy={'yes' if deploy else 'no'}\nproject={project}\n")
+                f.write(f"deploy={'yes' if deploy else 'no'}\nproject={project}\n"
+                        + "".join(f"{k}={v}\n" for k, v in extra.items()))
     host, proj = targets(cfg)
+    via = provider(cfg)
     if not host and not proj:
         print(f"hosting not set up ({file} has no host): built only, not deployed")
         out(False)
         return 0
-    if not HOST.match(host) or not PAGES_PROJECT.match(proj):
+    if via not in PROVIDERS:
+        print(f"{file}: provider must be one of {', '.join(PROVIDERS)}, not {via!r}: not deployed")
+        out(False)
+        return 1
+    if via == "vercel":
+        return guard_vercel(cfg, out, file, what, section)
+    if not HOST.match(host) or not project_ok(cfg):
         print(f"{file}: host must be a domain like pm.example.com and cloudflare_pages_project a "
               "Pages project name (lower-case letters, digits, hyphens): not deployed")
         out(False)
@@ -638,6 +703,40 @@ def guard(cfg: dict[str, Any], github_output: str, file: str = "founder/dashboar
     return 0
 
 
+def guard_vercel(cfg: dict[str, Any], out: Any, file: str, what: str, section: str) -> int:
+    host, proj = targets(cfg)
+    if not HOST.match(host) or not project_ok(cfg):
+        print(f"{file}: host must be a domain like pm.example.com, vercel_project a Vercel project name (lower-case "
+              "letters, digits, '.', '_', '-') and vercel_team empty, a team slug or a team_ id: not deployed")
+        out(False)
+        return 1
+    token = os.environ.get("VERCEL_TOKEN", "")
+    if not token:
+        print(f"VERCEL_TOKEN isn't set as a repository secret: built only, not deployed. The founder adds it "
+              f"(handbook: '{section}').")
+        out(False)
+        return 0
+    try:
+        project = vercel_get(f"/v9/projects/{proj}", cfg, token)
+        domains = vercel_domains(cfg, token)
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        print(f"can't read the Vercel project {proj!r} ({exc}); check the token's scope and vercel_team: not deployed")
+        out(False)
+        return 1
+    why = vercel_protection(project, domains, host)
+    org, pid = str(project.get("accountId") or ""), str(project.get("id") or "")
+    if not why and not (VERCEL_ID.match(org) and VERCEL_ID.match(pid)):
+        why = "has no readable project or account id"
+    if why:
+        print(f"not deployed: the {what} must sit behind a login.\n  Vercel project {proj!r} {why}."
+              "\nIn the project's Settings, Deployment Protection, turn on Vercel Authentication for All Deployments.")
+        out(False)
+        return 1
+    print(f"{host} and every deployment of the Vercel project {proj!r} need a Vercel login: deploy")
+    out(True, proj, provider="vercel", vercel_org=org, vercel_project_id=pid)
+    return 0
+
+
 def exposed(url: str, marker: str = MARKER) -> str:
     """'' when an anonymous request doesn't get the page, 'unreachable' or 'EXPOSED' otherwise."""
     try:
@@ -651,17 +750,33 @@ def cmd_verify(a: argparse.Namespace) -> int:
     return verify(settings(a.root))
 
 
+def addresses(cfg: dict[str, Any]) -> list[str]:
+    """Every address the site answers at, for the anonymous-visitor check."""
+    host, proj = targets(cfg)
+    if provider(cfg) != "vercel":
+        return [host, f"{proj}.pages.dev"]
+    names = [host, f"{proj}.vercel.app"]
+    token = os.environ.get("VERCEL_TOKEN", "")
+    if token:
+        try:
+            names += vercel_domains(cfg, token)
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            print(f"can't list the Vercel project's domains ({exc}); checking {host} and {proj}.vercel.app")
+    return [n for i, n in enumerate(names) if n and HOST.match(n) and n not in names[:i]]
+
+
 def verify(cfg: dict[str, Any], marker: str = MARKER, what: str = "dashboard") -> int:
     host, proj = targets(cfg)
-    if not HOST.match(host) or not PAGES_PROJECT.match(proj):
+    if not HOST.match(host) or not project_ok(cfg) or provider(cfg) not in PROVIDERS:
         print("hosting not set up: nothing to verify")
         return 0
+    fix = "Turn on Vercel Authentication for All Deployments" if provider(cfg) == "vercel" else "Turn on Cloudflare Access"
     bad = 0
-    for url in (f"https://{host}/", f"https://{proj}.pages.dev/"):
+    for url in (f"https://{name}/" for name in addresses(cfg)):
         state = exposed(url, marker)
         if state == "EXPOSED":
             bad = 1
-            print(f"EXPOSED: {url} serves the {what} without a login. Turn on Cloudflare Access for it now.")
+            print(f"EXPOSED: {url} serves the {what} without a login. {fix} for it now.")
         elif state:
             print(f"{url}: unreachable (DNS or the custom domain may not be set up yet)")
         else:

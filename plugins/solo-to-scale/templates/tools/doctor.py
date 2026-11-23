@@ -149,23 +149,33 @@ def hosting_checks(root: Path, hub: tickets.Hub | None, cache: dict[str, Any]) -
     out = []
     dash = bd.settings(root)
     host, proj = bd.targets(dash)
+    via = bd.provider(dash)
+    field = "vercel_project" if via == "vercel" else "cloudflare_pages_project"
     if not host and not proj:
         out.append(item("hosting", "Dashboard hosting", "info", "built every hour but not served yet; the Claude page "
-                        "is the backup", "Set host and cloudflare_pages_project in founder/dashboard.json",
+                        "is the backup", "Set host and cloudflare_pages_project (or provider \"vercel\" and "
+                        "vercel_project) in founder/dashboard.json", "The startup dashboard"))
+    elif via not in bd.PROVIDERS:
+        out.append(item("hosting", "Dashboard hosting", "broken", f"provider {via!r} isn't one of "
+                        + ", ".join(bd.PROVIDERS), "Set provider to cloudflare or vercel in founder/dashboard.json",
                         "The startup dashboard"))
-    elif not bd.HOST.match(host) or not bd.PAGES_PROJECT.match(proj):
-        out.append(item("hosting", "Dashboard hosting", "broken", "host or cloudflare_pages_project is malformed",
-                        "Use a domain like pm.example.com and a Pages project name", "The startup dashboard"))
+    elif not bd.HOST.match(host) or not bd.project_ok(dash):
+        out.append(item("hosting", "Dashboard hosting", "broken", f"host or {field} is malformed",
+                        "Use a domain like pm.example.com and a " + ("Vercel" if via == "vercel" else "Pages")
+                        + " project name", "The startup dashboard"))
     else:
-        flags = {n: has_secret(n, hub, cache) for n in ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")}
+        names = ("VERCEL_TOKEN",) if via == "vercel" else ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
+        flags = {n: has_secret(n, hub, cache) for n in names}
         unset = [n for n, v in flags.items() if v is False]
         unknown = [n for n, v in flags.items() if v is None]
+        where = "Vercel" if via == "vercel" else "Cloudflare"
         out.append(item("hosting", "Dashboard hosting",
                         "broken" if unset else "unknown" if unknown else "ok",
-                        f"{host}: " + ("secrets not set: " + ", ".join(unset) if unset else
-                                       "couldn't check the secrets from here" if unknown else "secrets set"),
-                        "Add the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID" if unset or unknown
-                        else "", "The startup dashboard"))
+                        f"{host} on {where}: " + ("secrets not set: " + ", ".join(unset) if unset else
+                                                  "couldn't check the secrets from here" if unknown else "secrets set"),
+                        "Add the repository secret" + ("s " if len(names) > 1 else " ") + " and ".join(names)
+                        + (" (the deploy also needs Vercel Authentication on All Deployments)" if via == "vercel" else "")
+                        if unset or unknown else "", "The startup dashboard"))
     port = load_json(root, "founder/portfolio.json")
     ventures = (port or {}).get("ventures") if isinstance(port, dict) else None
     if ventures:

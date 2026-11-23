@@ -356,3 +356,104 @@ def test_money_and_the_company_budget(root, fake):
     assert d["github"]["costs"]["company"] == {"cap": 5.0, "base": 5.0, "used": 6.0}
     assert any(x["kind"] == "budget" and "company AI budget" in x["title"] for x in d["needs"]["items"])
     assert bd.summary(d)["money"]["runway_months"] == m["runway_months"]
+
+
+# --- Vercel ------------------------------------------------------------------------------------------------
+
+def vercel_settings(root: Path, **extra) -> None:
+    cfg = {"host": "pm.example.com", "provider": "vercel", "vercel_project": "example-pm", **extra}
+    (root / "founder/dashboard.json").write_text(json.dumps(cfg), encoding="utf-8")
+
+
+def vercel_project(kind: str | None = "all", **extra) -> dict:
+    return {"id": "prj_abc123", "accountId": "team_xyz789", "name": "example-pm",
+            "ssoProtection": {"deploymentType": kind} if kind else None, **extra}
+
+
+def vguard(root: Path, monkeypatch, tmp_path: Path, project: dict | None, domains=("pm.example.com",),
+           token: bool = True, seen: list | None = None) -> tuple[int, str]:
+    if token:
+        monkeypatch.setenv("VERCEL_TOKEN", "vt")
+    else:
+        monkeypatch.delenv("VERCEL_TOKEN", raising=False)
+
+    def http(url, headers=None):
+        assert url.startswith(f"{bd.VC_API}/v9/projects/example-pm") and headers["Authorization"] == "Bearer vt"
+        if seen is not None:
+            seen.append(url)
+        if project is None:
+            return 403, {}, json.dumps({"error": {"code": "forbidden"}})
+        if "/domains" in url:
+            return 200, {}, json.dumps({"domains": [{"name": d} for d in domains]})
+        return 200, {}, json.dumps(project)
+    monkeypatch.setattr(bd, "http", http)
+    out = tmp_path / "gh-out"
+    out.write_text("", encoding="utf-8")
+    code = bd.main(["guard", "--root", str(root), "--github-output", str(out)])
+    return code, out.read_text(encoding="utf-8")
+
+
+def test_vercel_without_a_token_builds_only_and_a_bad_provider_is_refused(root, monkeypatch, tmp_path):
+    vercel_settings(root)
+    assert vguard(root, monkeypatch, tmp_path, vercel_project(), token=False) == (0, "deploy=no\nproject=\n")
+    vercel_settings(root, provider="netlify")
+    assert vguard(root, monkeypatch, tmp_path, vercel_project())[0] == 1
+    vercel_settings(root, vercel_project="Example PM; rm -rf /")
+    assert vguard(root, monkeypatch, tmp_path, vercel_project())[0] == 1
+    vercel_settings(root, vercel_team="a team")
+    assert vguard(root, monkeypatch, tmp_path, vercel_project())[0] == 1
+
+
+@pytest.mark.parametrize("project,domains", [
+    (vercel_project(None), ("pm.example.com",)),                                    # no Vercel Authentication
+    (vercel_project("preview"), ("pm.example.com",)),                               # previews only
+    (vercel_project("all_except_custom_domains"), ("pm.example.com",)),             # Standard: production is public
+    (vercel_project("prod_deployment_urls_and_all_previews"), ("pm.example.com",)),
+    (vercel_project("all"), ("example-pm.vercel.app",)),                            # the host isn't on this project
+    (vercel_project("all", link={"type": "github", "repo": "app"}), ("pm.example.com",)),  # it's the app's project
+    (vercel_project("all", id="bad id\ndeploy=yes"), ("pm.example.com",)),          # no injection into the outputs
+    (None, ()),                                                                     # the API refuses
+])
+def test_vercel_guard_fails_closed_without_a_login_on_every_deployment(root, monkeypatch, tmp_path, project, domains):
+    vercel_settings(root)
+    assert vguard(root, monkeypatch, tmp_path, project, domains) == (1, "deploy=no\nproject=\n")
+
+
+def test_vercel_guard_allows_a_deploy_behind_vercel_authentication(root, monkeypatch, tmp_path):
+    vercel_settings(root, vercel_team="acme")
+    seen: list = []
+    code, out = vguard(root, monkeypatch, tmp_path, vercel_project(), seen=seen)
+    assert (code, out) == (0, "deploy=yes\nproject=example-pm\nprovider=vercel\nvercel_org=team_xyz789\n"
+                              "vercel_project_id=prj_abc123\n")
+    assert seen and all("slug=acme" in u for u in seen)
+    vercel_settings(root, vercel_team="team_xyz789")
+    seen.clear()
+    vguard(root, monkeypatch, tmp_path, vercel_project(), seen=seen)
+    assert all("teamId=team_xyz789" in u for u in seen)
+
+
+def test_vercel_verify_checks_every_domain_of_the_project(root, monkeypatch, capsys):
+    vercel_settings(root)
+    monkeypatch.setenv("VERCEL_TOKEN", "vt")
+    replies = {"https://pm.example.com/": (401, {}, "Authentication Required"),
+               "https://example-pm.vercel.app/": (302, {"Location": "https://vercel.com/sso-api"}, ""),
+               "https://www.pm.example.com/": (200, {}, f"<meta {bd.MARKER} content=\"1\">")}
+
+    def http(url, headers=None):
+        if url.startswith(bd.VC_API):
+            return 200, {}, json.dumps({"domains": [{"name": "pm.example.com"}, {"name": "www.pm.example.com"}]})
+        return replies[url]
+    monkeypatch.setattr(bd, "http", http)
+    assert bd.main(["verify", "--root", str(root)]) == 1
+    assert "EXPOSED: https://www.pm.example.com/" in capsys.readouterr().out
+    replies["https://www.pm.example.com/"] = (401, {}, "")
+    assert bd.main(["verify", "--root", str(root)]) == 0
+
+
+def test_both_workflows_deploy_to_vercel_only_after_the_guard():
+    import re
+    for name in ("dashboard.yml", "portfolio.yml"):
+        wf = (TOOLS.parent / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert re.search(r"if: steps\.guard\.outputs\.deploy == 'yes' && steps\.guard\.outputs\.provider == 'vercel'\n"
+                         r"(?:.*\n){0,5}?\s+run: npx --yes vercel@\d+\.\d+\.\d+ deploy ", wf), name
+        assert "provider != 'vercel'" in wf and "VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}" in wf
