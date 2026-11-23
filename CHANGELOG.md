@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.12.0 (2026-11-23)
+
+Slice 9 of `ROADMAP-V2.md`: one "Needs you" inbox, stuck work, charts and a fresher page.
+
+- **Needs you, in one list.** Approvals waiting, budget stops (unless a budget request is already waiting), stuck work, decisions still Proposed or Open, and the founder items from `status.md`. Overdue at 7 days, escalated at 30. The order is escalated, then overdue, then what only the founder can unblock, oldest first. The Overview shows the top eight. A new **Needs you** tab has them all, with counts by kind, a filter, Approve and Reject, and a count on the tab. The Approvals inbox stays.
+- **Stuck work.** A claimed ticket with no update for 48 hours (`stale_hours` in `founder/dashboard.json`) or a role whose last run failed. Each links to the agent's record.
+- **Metric cards and 14-day charts** on the Overview: needs you and overdue, stuck, then agent runs per day (worked and the rest), success rate per day, agent actions and merged pull requests. They are inline SVG with each day's numbers in a tooltip and the label. The run history reads last month's cost log too, so the chart spans a month change.
+- **Freshness.** The header says how long ago the page was built (red after two hours) and links **Rebuild now** to the workflow page.
+- **Faster refresh.** The `dashboard` workflow also runs on issue events and new comments, after a one-minute wait, and a newer event cancels a build still waiting. An approval you just sent shows within a few minutes, not an hour.
+- **The portfolio summary** gains the counts by kind, the overdue count and the stuck count.
+- **Tests:** 2 new: the inbox's order, escalation, budget stops, stuck tickets and failed runs, the threshold setting and the 14-day trend. The second checks the page and the workflow triggers.
+
 ## v1.11.0 (2026-11-23)
 
 Slice 8 of `ROADMAP-V2.md`: the run log and a page per agent.

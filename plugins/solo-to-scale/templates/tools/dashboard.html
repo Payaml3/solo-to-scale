@@ -163,6 +163,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .spark { display: block; width: 96px; height: 24px; }
 .spark polyline { fill: none; stroke: var(--link); stroke-width: 1.5; }
 .spark circle { fill: var(--link); }
+.chart { display: block; width: 100%; height: 64px; }
+.chart rect.a { fill: var(--done); } .chart rect.b { fill: var(--line); } .chart rect.c { fill: var(--progress); }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.charts .k { font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+.lvl-escalated { color: var(--waiting); font-weight: 700; } .lvl-overdue { color: var(--progress); font-weight: 600; }
+.meta .stale { color: var(--waiting); font-weight: 600; }
 .bars { display: block; width: 100%; max-width: 560px; height: 72px; }
 .bars rect { fill: var(--progress); } .bars line { stroke: var(--waiting); stroke-dasharray: 4 3; stroke-width: 1; }
 .agent a.open { align-self: flex-start; font-size: .85rem; font-weight: 600; }
@@ -310,6 +316,27 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   }
   function tile(k, v, sub) { return el("div", { cls: "tile" }, el("div", { cls: "k", text: k }), el("div", { cls: "v", text: v }), sub ? el("div", { cls: "s", text: sub }) : null); }
   function usd(x) { return "$" + (Number(x) || 0).toFixed(2); }
+  // A 14-day bar chart: one bar per day, stacked from parts [{v, cls}], with every value in the label.
+  function dayChart(title, rows, parts, fmt) {
+    var NS = "http://www.w3.org/2000/svg", W = 280, H = 64, n = rows.length || 1, bw = W / n, hi = 0;
+    rows.forEach(function (r) { var s = 0; parts.forEach(function (p) { s += Number(p(r).v) || 0; }); hi = Math.max(hi, s); });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("class", "chart"); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", title + ", last " + n + " days: " + rows.map(function (r) { return String(r.date).slice(5) + " " + fmt(r); }).join(", "));
+    rows.forEach(function (r, i) {
+      var y = H;
+      parts.forEach(function (p) {
+        var part = p(r), v = Number(part.v) || 0; if (!v || !hi) return;
+        var h = Math.max(1, v / hi * (H - 2)), rect = document.createElementNS(NS, "rect");
+        y -= h; rect.setAttribute("x", (i * bw + 1).toFixed(1)); rect.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
+        rect.setAttribute("y", y.toFixed(1)); rect.setAttribute("height", h.toFixed(1)); rect.setAttribute("class", part.cls);
+        var tip = document.createElementNS(NS, "title"); tip.textContent = r.date + ": " + fmt(r); rect.appendChild(tip);
+        svg.appendChild(rect);
+      });
+    });
+    return el("div", null, el("div", { cls: "k", text: title }), svg);
+  }
+  function minutesAgo(iso) { var t = Date.parse(iso || ""); return isNaN(t) ? null : Math.max(0, Math.round((Date.now() - t) / 60000)); }
   function days(iso) {
     var t = Date.parse(iso || ""); if (isNaN(t)) return "";
     var d = Math.floor((Date.now() - t) / 86400000); return d <= 0 ? "today" : d + "d";
@@ -593,9 +620,56 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         team.board.map(function (b) { return node(avatar(b.id), b.name + " advisor", b.lens + " lens"); })) : null);
   }
 
+  // --- needs you: everything waiting on the founder, one list, oldest and most blocking first ----------------
+  var NEED = D.needs || {}, NEEDS = NEED.items || [];
+  var NEED_WORDS = { approval: "approval", budget: "budget stop", stuck: "stuck", decision: "decision", "founder item": "founder item" };
+  var NEED_TILES = { approval: "Approvals", budget: "Budget stops", stuck: "Stuck work", decision: "Decisions", "founder item": "Founder items" };
+  var NEED_STATE = { approval: "waiting", budget: "stopped", stuck: "blocked", decision: "proposed", "founder item": "todo" };
+  function needAge(x) {
+    if (x.age_days === null || x.age_days === undefined) return "";
+    var d = Math.floor(x.age_days); return d < 1 ? "today" : d + (d === 1 ? " day" : " days");
+  }
+  function needItem(x) {
+    var head = x.url ? link(x.title, x.url) : el("span", { text: x.title });
+    var a = x.kind === "approval" && x.url ? actions({ url: x.url }) : null;
+    return el("li", null, pill(NEED_WORDS[x.kind] || x.kind, NEED_STATE[x.kind] || "todo"), " ", head,
+      x.level !== "new" ? [" ", el("span", { cls: "lvl-" + x.level, text: x.level })] : null,
+      el("div", { cls: "why", text: [x.detail, needAge(x) ? "waiting " + needAge(x) : ""].filter(Boolean).join(" · ") }),
+      a ? el("div", { style: "margin-top:6px" }, a) : null);
+  }
+  function needsTab() {
+    var counts = NEED.counts || {};
+    return [
+      el("div", { cls: "grid" }, Object.keys(NEED_TILES).map(function (k) { return tile(NEED_TILES[k], String(counts[k] || 0)); })),
+      panel("Needs you", "Everything waiting on you, in one list: escalated (30 days or more) first, then overdue (7 days or more), then what only you can unblock, oldest first. Approvals are also in the Approvals inbox.",
+        table([
+          { h: "Kind", k: function (r) { return r.kind; }, f: function (r) { return pill(NEED_WORDS[r.kind] || r.kind, NEED_STATE[r.kind] || "todo"); } },
+          { h: "What", f: function (r) { return [r.url ? link(r.title, r.url) : r.title, r.detail ? el("div", { cls: "why", text: r.detail }) : null]; } },
+          { h: "Waiting", num: true, k: function (r) { return r.age_days; }, f: function (r) { return needAge(r); } },
+          { h: "", k: function (r) { return { escalated: 0, overdue: 1, "new": 2 }[r.level]; }, f: function (r) { return r.level === "new" ? "" : el("span", { cls: "lvl-" + r.level, text: r.level }); } },
+          { h: "", f: function (r) { return r.kind === "approval" && r.url ? actions({ url: r.url }) : ""; } }], NEEDS, "Nothing waiting on you.",
+          { search: "Search", filters: [{ label: "Kinds", f: function (r) { return NEED_WORDS[r.kind] || r.kind; } }] })),
+      (NEED.stuck || []).length ? panel("Stuck work", "Claimed tickets with no update for " + (NEED.stale_hours || 48) + " hours (set stale_hours in founder/dashboard.json), and agents whose last run failed.",
+        el("ul", { cls: "list" }, NEED.stuck.map(function (x) {
+          return el("li", null, avatar(x.role, null, true), x.url ? link(x.title, x.url) : el("span", { text: x.title }),
+            el("div", { cls: "why", text: x.kind === "ticket" ? "#" + x.number + ", role:" + x.role + ", " + x.hours + "h without an update" : "failed run " + when(x.at) }),
+            el("a", { href: "#agent/" + encodeURIComponent(x.role), text: "Open " + roleName(x.role) + "'s record" }));
+        }))) : null];
+  }
+  function trendPanel() {
+    var rows = (G.ok && G.trends && G.trends.days) || [];
+    if (!rows.length) return null;
+    var any = rows.some(function (r) { return r.worked || r.other || r.actions || r.merged; });
+    return panel("Last 14 days", any ? "One bar per day, oldest on the left. Hover or tap a bar for its numbers." : "No runs, agent actions or merges in the last 14 days.", any ? el("div", { cls: "charts" },
+      dayChart("Agent runs (green: worked)", rows, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }], function (r) { return r.worked + " worked of " + (r.worked + r.other); }),
+      dayChart("Runs that worked, of those with work", rows, [function (r) { return { v: r.success === null ? 0 : r.success, cls: "a" }; }], function (r) { return r.success === null ? "no runs with work" : Math.round(100 * r.success) + "%"; }),
+      dayChart("Agent actions", rows, [function (r) { return { v: r.actions, cls: "c" }; }], function (r) { return r.actions + " actions"; }),
+      dayChart("Pull requests merged", rows, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; })) : null);
+  }
+
   // --- tabs ---------------------------------------------------------------------------------------------
   var TABS = [
-    ["overview", "Overview", overview], ["goals", "Goals", goalsTab], ["documents", "Documents", documentsTab], ["trace", "Progress trace", traceTab],
+    ["overview", "Overview", overview], ["needs", "Needs you", needsTab], ["goals", "Goals", goalsTab], ["documents", "Documents", documentsTab], ["trace", "Progress trace", traceTab],
     ["roadmap", "Roadmap", roadmapTab], ["scope", "Scope and journey", scopeTab], ["team", "Team and board", teamTab],
     ["activity", "Agent activity", activityTab], ["decisions", "Decisions", decisionsTab],
     ["approvals", "Approvals inbox", approvalsTab], ["costs", "Costs", costsTab]
@@ -644,16 +718,10 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       tile("Approvals waiting", G.ok ? String(waiting.length) : "?", G.ok ? "only your own /approve counts" : "GitHub data missing"),
       tile("Open tickets", G.ok ? String(openTickets.length) : "?", G.ok ? openTickets.filter(function (t) { return t.claimed; }).length + " claimed, " + openTickets.filter(function (t) { return t.blocked; }).length + " blocked" : ""),
       tile("AI spend " + (costs.month || D.month), G.ok ? usd(costs.total) : "?", G.ok && cap ? "of " + usd(cap) + " budgeted" : "budgets in founder/heartbeats.json"),
-      tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"));
-    var needs = [];
-    waiting.forEach(function (a) {
-      var d = days(a.created);
-      needs.push(el("li", null, pill(a.gate || "gate", "waiting"), " ", link("#" + a.number + " " + a.title, a.url),
-        el("div", { cls: "why", text: "Approval requested by " + (a.by || "an agent") + (d ? (d === "today" ? ", today" : ", " + d + " ago") : "") }),
-        actions(a) ? el("div", { style: "margin-top:6px" }, actions(a)) : null));
-    });
-    (road.blockers || []).forEach(function (b) { needs.push(el("li", null, pill("founder item", "todo"), " ", b.item, b.needed_by ? el("div", { cls: "why", text: "Needed by " + b.needed_by }) : null)); });
-    (road.decisions_waiting || []).slice(0, 6).forEach(function (d) { needs.push(el("li", null, pill(d.status, d.status), " ", d.id + ": " + d.decision, el("div", { cls: "why", text: d.register + (d.date ? ", since " + d.date : "") }))); });
+      tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"),
+      tile("Needs you", String(NEEDS.length), NEED.overdue ? NEED.overdue + " overdue" : "nothing overdue"),
+      tile("Stuck", G.ok ? String((NEED.stuck || []).length) : "?", "no update in " + (NEED.stale_hours || 48) + "h, or the last run failed"));
+    var needs = NEEDS.slice(0, 8).map(needItem);
     var recent = activity.slice(0, 8).map(activityItem);
     var merged = (G.merged || []).slice(0, 8).map(function (p) { return el("li", null, link("#" + p.number + " " + p.title, p.url), el("div", { cls: "why", text: "merged " + when(p.merged) + (p.by ? " · " + p.by : "") })); });
     var crew = agents().map(function (a) {
@@ -662,11 +730,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     });
     return [tiles, G.ok ? null : ghMissing(),
       setupPanel(),
+      panel("Needs you", "Oldest and most blocking first." + (NEEDS.length > 8 ? " " + (NEEDS.length - 8) + " more in the Needs you tab." : ""), needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }), NEEDS.length > 8 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
       stagePanel(),
       goalStrip(),
+      trendPanel(),
       crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
       el("div", { cls: "cols" },
-        panel("Needs you", "Approvals, founder items and decisions waiting.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." })),
         panel("Latest agent activity", null, recent.length ? el("ul", { cls: "list" }, recent) : el("p", { cls: "empty", text: G.ok ? "No activity yet." : "GitHub data missing." })),
         panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: G.ok ? "Nothing merged recently." : "GitHub data missing." })))];
   }
@@ -979,12 +1048,20 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   if (back) { var bk = document.getElementById("back"); bk.appendChild(el("a", { href: back, text: "← " + (D.links.portfolio_name || "Portfolio") })); bk.hidden = false; }
   document.getElementById("title").textContent = (D.project.name || "Startup") + " dashboard";
   document.getElementById("oneline").textContent = D.project.one_line || "";
-  document.getElementById("meta").textContent = "Built " + when(D.built) + " UTC from " + (D.commit ? "commit " + D.commit : "the repo") +
-    (G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on every merge and every hour.";
+  (function freshness() {
+    var meta = document.getElementById("meta"), m = minutesAgo(D.built);
+    var ageText = m === null ? "" : m < 1 ? "just now" : m < 120 ? m + " minutes ago" : Math.round(m / 60) + " hours ago";
+    meta.appendChild(el("span", { cls: m !== null && m > 120 ? "stale" : "", text: "Built " + (ageText || when(D.built) + " UTC") }));
+    meta.appendChild(document.createTextNode(" (" + when(D.built) + " UTC) from " + (D.commit ? "commit " + D.commit : "the repo") +
+      (G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every hour."));
+    var rb = safeHref(D.rebuild_url);
+    if (rb) { meta.appendChild(document.createTextNode(" ")); meta.appendChild(el("a", { href: rb, target: "_blank", rel: "noopener noreferrer", text: "Rebuild now" })); }
+  })();
   var tabs = document.getElementById("tabs"), main = document.getElementById("main"), sections = {}, buttons = {};
   TABS.forEach(function (t) {
     var b = el("button", { type: "button", role: "tab", id: "tab-" + t[0], "aria-controls": "panel-" + t[0], on: { click: function () { select(t[0], true); } } }, t[1],
-      t[0] === "approvals" && waiting.length ? el("span", { cls: "count", text: waiting.length }) : null);
+      t[0] === "approvals" && waiting.length ? el("span", { cls: "count", text: waiting.length }) :
+      t[0] === "needs" && NEEDS.length ? el("span", { cls: "count", text: NEEDS.length }) : null);
     buttons[t[0]] = b; tabs.appendChild(b);
   });
   function select(id, push) {
