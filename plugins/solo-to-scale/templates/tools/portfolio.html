@@ -368,6 +368,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   }
 
   // --- shell ----------------------------------------------------------------------------------------------
+  document.getElementById("title").textContent = D.name || "Portfolio";
   document.getElementById("meta").textContent = "Built " + when(D.built) + " UTC from " + V.length + " venture summaries. Rebuilt every hour; a summary older than " + D.stale_hours + " hours is marked stale.";
   var tabs = document.getElementById("tabs"), main = document.getElementById("main"), sections = {}, buttons = {};
   TABS.forEach(function (t) {

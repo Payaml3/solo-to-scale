@@ -130,7 +130,7 @@ def test_github_down_still_builds_the_repo_tabs(root, fake, monkeypatch, tmp_pat
 
 
 def test_a_link_back_to_the_portfolio_only_when_it_is_https(root):
-    assert bd.build(root, offline=True, now=NOW)["links"] == {"portfolio": ""}
+    assert bd.build(root, offline=True, now=NOW)["links"] == {"portfolio": "", "portfolio_name": ""}
     for url, want in [("https://portfolio.example.com/", "https://portfolio.example.com/"),
                       ("javascript:alert(1)", ""), ("http://portfolio.example.com", ""), ('https://x.com/"><b>', "")]:
         (root / "founder/dashboard.json").write_text(json.dumps({"portfolio_url": url}), encoding="utf-8")

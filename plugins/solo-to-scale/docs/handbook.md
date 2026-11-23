@@ -419,9 +419,9 @@ When you run several ventures, each keeps its own repo, its own team, its own ga
 
 1. Upgrade every venture to solo-to-scale 1.5.0 or later, and let each one's `dashboard` workflow run once.
 2. Create a fine-grained GitHub token with read-only **Actions** access to the venture repos, and add it to the portfolio repo as the secret `PORTFOLIO_TOKEN`.
-3. In the portfolio repo, list the ventures in `founder/portfolio.json` (`{"repo": "owner/name", "dashboard": "https://pm.<their domain>"}`), in a pull request (the `deploy` gate), and merge it. The overview is now built every hour.
+3. In the portfolio repo, name the portfolio (`name`, for example your holding company) and list the ventures in `founder/portfolio.json` (`{"repo": "owner/name", "dashboard": "https://pm.<their domain>"}`), in a pull request (the `deploy` gate), and merge it. The overview is now built every hour.
 4. To serve it, for example at `portfolio.<domain>`, follow the dashboard's steps 1 to 3 with a second Pages project and an Access application covering both addresses, then set `host` and `cloudflare_pages_project` in `founder/portfolio.json`. Until then, `publish-views` shows it as a Claude page.
-5. To switch both ways: each venture's name on the portfolio links to the `dashboard` address you gave it, and setting `portfolio_url` in a venture's `founder/dashboard.json` puts a "← Portfolio" link at the top of its dashboard. If one Cloudflare Access team covers both, you sign in once for all of them.
+5. To switch both ways: each venture's name on the portfolio links to the `dashboard` address you gave it, and setting `portfolio_url` (and `portfolio_name`, to show the portfolio's name) in a venture's `founder/dashboard.json` puts a "← Portfolio" link at the top of its dashboard. To rename the portfolio, change `name` in `founder/portfolio.json`; to rename a venture, change `name` in its `founder/project.json` and run `upgrade`. If one Cloudflare Access team covers both, you sign in once for all of them.
 
 ## Skills and plugins
 
