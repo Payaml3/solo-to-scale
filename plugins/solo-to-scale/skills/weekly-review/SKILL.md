@@ -31,6 +31,7 @@ If GitHub can't be reached, say so and use the local git log only.
 - **Merged branches not yet deleted**
 - **Founder items** blocking the next stage
 - **Approvals waiting** for the founder: `python3 tools/approval.py inbox`, oldest first
+- **Team activity:** from `python3 tools/tickets.py log --limit 100`, tickets finished and handed off per role, and tickets blocked or claimed for over a week
 - **One recommended focus** for the week
 
 ## Then

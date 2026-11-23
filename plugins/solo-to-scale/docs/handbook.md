@@ -389,7 +389,7 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
-| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
+| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, coordinate, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
 | founder | Account plugin | validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy, product-brief, mvp-scope, go-to-market, landing-page, email-sequence, metrics-dashboard, pitch-deck, fundraise-prep | A, B, E, F |
 | brand-skills | Account marketplace, plus repo via `npx skills add` | naming, brand-architecture, brand-identity, brand-guidelines, brand-audit | B, C |
 | marketing | Account plugin | brand-review, competitive-brief, content-creation, campaign-plan, email-sequence, seo-audit, performance-report | B, E, F |
@@ -438,7 +438,9 @@ A solo founder runs the company as CEO and board. Claude sits at the centre as t
 
 - **One role per session.** Each role has one source in the plugin, `roles/<role>.yaml`, holding its charter, skills, tools and model tier; it is generated into a Claude Code agent and a Codex agent. A session runs as one role.
 - **Roles talk through the repo, not through chat.** Their channels are GitHub Issues, pull requests, the registers and `HANDOFF.md`.
-- **Tickets with a claim step.** Each story group is one GitHub Issue. A session claims it, by assigning it and adding a label, before starting, so two sessions never work on the same thing.
+- **Tickets with an atomic claim.** Each story group or ticket is one GitHub Issue. A session claims it before starting. The claim creates a `refs/claims/<n>` ref through the GitHub API, which fails if one exists, so two sessions racing for the same ticket can't both win.
+- **Roles delegate through tickets (`coordinate`).** A role splits a goal into sub-tickets, one per role and outcome, each linked to its parent and ordered with "Blocked by". It hands a ticket to another role, marks blockers, and finishes with `done`, which closes it and unblocks every ticket that waited only on it. When the last sub-ticket closes, the parent gets a comment. The `tickets` workflow does the same when an issue closes any other way. Hand-offs name `role:<name>`, never `@<name>`, which would notify a real GitHub user.
+- **One activity log.** Every claim, hand-off, blocker and finish is a comment on the ticket and an entry in one issue labelled `activity-log`: who did what, and why. `python tools/tickets.py log` reads it; the weekly review summarises it. The log is a record, never an approval: agents' notes are quoted, so they can't read as your `/approve`.
 - **The goal chain comes first.** Every issue and every session's first message starts with the chain: company goal → initiative → story → acceptance criteria. Each role knows why it's doing the work.
 - **Each role runs on its own schedule.** Scheduled tasks wake a role: Claude on Mondays, QA nightly through CI, Growth weekly.
 - **A monthly Claude budget per role.** The weekly review warns at 80% of the budget, and at 100% proposes pausing that role. The founder decides, because nothing enforces a Claude budget automatically.

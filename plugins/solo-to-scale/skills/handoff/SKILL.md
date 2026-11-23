@@ -31,6 +31,7 @@ When unsure, use the full handoff. A handoff happens at a slice end or when the 
 1. Summary of at most 15 lines (the protocol's closing summary):
    `Outcome / Approved (the founder's words only) / Pending (IDs) / Files changed / Risks / Next`.
    Pending includes any approval requests this session opened (`python3 tools/approval.py inbox`).
+   Close out the claimed ticket with `python3 tools/tickets.py done`, `handoff` or `release` (`coordinate` skill), and list the tickets this session opened.
 2. Write it into the files with line-level edits, never whole-file rewrites:
    - `HANDOFF.md`: build state, what was built, known gaps, next story groups
    - `founder/status.md`: risks, founder items, "Last updated"
