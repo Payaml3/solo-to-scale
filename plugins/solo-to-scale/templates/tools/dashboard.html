@@ -108,6 +108,31 @@ a.act.no { color: var(--waiting); }
 a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: .88rem; z-index: 5; }
 .toast[hidden] { display: none; }
+.avatar { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; font: 700 .85rem/1 var(--body); letter-spacing: .02em; position: relative; }
+.avatar.sm { width: 22px; height: 22px; font-size: .6rem; vertical-align: middle; margin-right: 6px; }
+.avatar .dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); background: var(--todo); }
+.avatar.sm .dot { display: none; }
+.dot.working { background: var(--done); } .dot.blocked { background: var(--waiting); } .dot.off { background: var(--line); }
+.badge { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+.agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+.agent { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.agent .top { display: flex; gap: 10px; align-items: center; }
+.agent .top b { display: block; font-size: 1rem; }
+.agent .slug { font-family: var(--mono); font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.agent .owns { font-size: .85rem; color: var(--muted); margin: 0; }
+.agent dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; margin: 0; font-size: .85rem; }
+.agent dt { color: var(--muted); } .agent dd { margin: 0; overflow-wrap: anywhere; }
+.org { display: flex; flex-direction: column; align-items: center; gap: 0; overflow-x: auto; padding: 4px 0; }
+.org .node { display: inline-flex; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: .85rem; white-space: nowrap; }
+.org .node small { display: block; color: var(--muted); font-size: .72rem; }
+.org .node.you { border-color: var(--accent); }
+.org .stem { width: 2px; height: 18px; background: var(--line); }
+.org .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding-top: 14px; border-top: 2px solid var(--line); max-width: 100%; }
+.org .board { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+.org .board > .k { width: 100%; text-align: center; font-size: .75rem; color: var(--muted); }
+.strip { display: flex; flex-wrap: wrap; gap: 14px; }
+.strip .who2 { display: flex; gap: 8px; align-items: center; font-size: .85rem; }
+.strip .who2 small { display: block; color: var(--muted); font-size: .75rem; }
 .empty { color: var(--muted); font-style: italic; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 </style>
@@ -347,6 +372,120 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   var current = stages.filter(function (s) { return s.stage === road.current_stage; })[0];
   var resolvedWords = (R.approved_words || ["Approved"]);
 
+
+  // --- the AI team as agents ------------------------------------------------------------------------------
+  // The roster in founder/team.md: one seat per role. An unknown role still gets a card, named from its slug.
+  var ROLE_INFO = {
+    "chief-of-staff": ["Chief of staff", "AI core", "The operating system: briefs, memory, weekly review, views"],
+    research: ["Research", "01", "Evidence and business work outside software"],
+    product: ["Product", "02", "Requirements, stories, screen specs; prepares decisions"],
+    architect: ["Architect", "03", "Stack, architecture, threat model"],
+    engineer: ["Engineer", "04", "Product build, one story group per session"],
+    qa: ["QA", "05", "Evaluation, release check, accessibility review"],
+    growth: ["Growth", "06", "Brand, website, docs, content, launch"]
+  };
+  var ROLE_ORDER = ["chief-of-staff", "research", "product", "architect", "engineer", "qa", "growth"];
+  function roleName(role) {
+    var r = String(role || "").replace(/^role:/, "");
+    return ROLE_INFO[r] ? ROLE_INFO[r][0] : r.split(/[-_]/).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
+  }
+  function hue(text) { var h = 0; String(text).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; }); return h; }
+  function initials(name) {
+    var w = String(name).split(/\s+/).filter(Boolean);
+    return (w.length > 1 ? w[0].charAt(0) + w[1].charAt(0) : String(name).slice(0, 2)).toUpperCase();
+  }
+  function avatar(role, state, small) {
+    var r = String(role || "").replace(/^role:/, ""), name = r === "chief-of-staff" ? "Chief Staff" : roleName(r);
+    return el("span", { cls: "avatar" + (small ? " sm" : ""), style: "background:hsl(" + hue(r) + ",45%,42%)", "aria-hidden": "true", title: name + " (AI agent)" },
+      initials(name), state ? el("span", { cls: "dot " + state }) : null);
+  }
+  function ago(iso) {
+    var t = Date.parse(iso || ""); if (isNaN(t)) return "";
+    var m = Math.max(0, Math.floor((Date.now() - t) / 60000));
+    return m < 1 ? "just now" : m < 60 ? m + "m ago" : m < 1440 ? Math.floor(m / 60) + "h ago" : Math.floor(m / 1440) + "d ago";
+  }
+  // Cron in UTC: "M H * * *", "M H * * 1-5" and day lists read as words; anything else stays as written.
+  function cronParts(cron) {
+    var f = String(cron || "").trim().split(/\s+/);
+    if (f.length !== 5 || !/^\d+$/.test(f[0]) || !/^\d+$/.test(f[1]) || f[2] !== "*" || f[3] !== "*") return null;
+    var days = [];
+    if (f[4] === "*") days = [0, 1, 2, 3, 4, 5, 6];
+    else f[4].split(",").forEach(function (part) {
+      var m = /^(\d)(?:-(\d))?$/.exec(part); if (!m) { days = null; return; }
+      for (var d = +m[1]; d <= +(m[2] || m[1]); d++) if (days) days.push(d % 7);
+    });
+    return days && days.length ? { min: +f[0], hour: +f[1], days: days } : null;
+  }
+  function cronText(cron) {
+    var c = cronParts(cron); if (!c) return cron || "no schedule";
+    var hm = ("0" + c.hour).slice(-2) + ":" + ("0" + c.min).slice(-2) + " UTC", key = c.days.slice().sort().join("");
+    var names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return (key === "0123456" ? "daily" : key === "12345" ? "weekdays" : c.days.map(function (d) { return names[d]; }).join(", ")) + " at " + hm;
+  }
+  function nextRun(cron) {
+    var c = cronParts(cron); if (!c) return "";
+    var now = new Date();
+    for (var i = 0; i < 8; i++) {
+      var t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + i, c.hour, c.min));
+      if (t > now && c.days.indexOf(t.getUTCDay()) >= 0) {
+        var h = Math.round((t - now) / 3600000);
+        return h < 1 ? "within the hour" : h < 24 ? "in " + h + "h" : "in " + Math.round(h / 24) + "d";
+      }
+    }
+    return "";
+  }
+  // One record per role: heartbeat, tickets, latest activity, spend and stories. State: working, blocked, idle or off.
+  function agents() {
+    var beats = R.heartbeats || {}, spend = {}, keys = {};
+    (costs.roles || []).forEach(function (r) { spend[r.role] = r; });
+    // "board" in heartbeats.json is the advisory board's budget, not an agent: the advisors appear on their own.
+    Object.keys(beats).forEach(function (k) { if (k !== "board") keys[k] = 1; });
+    openTickets.forEach(function (t) { if (t.role && t.role !== "board") keys[t.role] = 1; });
+    return Object.keys(keys).sort(function (a, b) {
+      var i = ROLE_ORDER.indexOf(a), j = ROLE_ORDER.indexOf(b);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || a.localeCompare(b);
+    }).map(function (k) {
+      var b = beats[k] || {}, mine = openTickets.filter(function (t) { return t.role === k; });
+      var claimed = mine.filter(function (t) { return t.claimed && !t.blocked; }), blocked = mine.filter(function (t) { return t.blocked; });
+      var last = activity.filter(function (a) { return a.role === k; })[0];
+      var stories = (team.tasks || []).filter(function (t) { return t.kind === "story" && t.role === k; });
+      var state = blocked.length ? "blocked" : claimed.length ? "working" : b.enabled ? "idle" : "off";
+      return { role: k, b: b, mine: mine, claimed: claimed, blocked: blocked, last: last, c: spend[k] || {}, state: state,
+        stories: stories, storiesDone: stories.filter(function (t) { return t.status === "done"; }).length };
+    });
+  }
+  var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off" };
+  function statePill(state) { return pill(STATE_WORDS[state], state === "working" ? "done" : state === "blocked" ? "blocked" : "todo"); }
+  function agentCard(a) {
+    var info = ROLE_INFO[a.role], cap = a.c.cap || a.b.monthly_budget_usd || 0, used = a.c.used || 0, p = cap ? used / cap : 0;
+    var work = a.claimed.concat(a.blocked).slice(0, 3).map(function (t) { return el("div", null, link("#" + t.number + " " + t.title, t.url), t.blocked ? [" ", pill("blocked", "blocked")] : null); });
+    return el("div", { cls: "agent" },
+      el("div", { cls: "top" }, avatar(a.role, a.state),
+        el("div", { style: "min-width:0" }, el("b", { text: roleName(a.role) }),
+          el("span", { cls: "badge", text: "AI agent" }), " ", statePill(a.state),
+          el("div", { cls: "slug", text: "solo-to-scale:" + a.role }))),
+      info ? el("p", { cls: "owns", text: info[2] }) : null,
+      el("dl", null,
+        el("dt", { text: "Working on" }), el("dd", null, !G.ok ? "?" : work.length ? work : el("span", { cls: "empty", text: "no claimed ticket" })),
+        el("dt", { text: "Heartbeat" }), el("dd", { text: a.b.enabled ? cronText(a.b.cron) + (nextRun(a.b.cron) ? ", next " + nextRun(a.b.cron) : "") : "off" }),
+        el("dt", { text: "Last active" }), el("dd", { text: !G.ok ? "?" : a.last ? a.last.action + " #" + a.last.ticket + (ago(a.last.at) ? ", " + ago(a.last.at) : "") : "no activity yet" }),
+        a.stories.length ? [el("dt", { text: "Stories" }), el("dd", null, a.storiesDone + " of " + a.stories.length + " done", bar(a.storiesDone, a.stories.length))] : null,
+        el("dt", { text: "Spend" }), el("dd", null, G.ok ? usd(used) + (cap ? " of " + usd(cap) : ", no budget") : "?", G.ok && cap ? bar(used, cap, p >= 1 ? "x" : p >= 0.8 ? "w" : "") : null)));
+  }
+  function node(av, name, sub, cls) { return el("div", { cls: "node" + (cls ? " " + cls : "") }, av, el("div", null, name, sub ? el("small", { text: sub }) : null)); }
+  function orgChart(list) {
+    var cos = list.filter(function (a) { return a.role === "chief-of-staff"; })[0];
+    var rest = list.filter(function (a) { return a.role !== "chief-of-staff"; });
+    return el("div", { cls: "org", role: "img", "aria-label": "Org chart: you, then the chief of staff, then " + rest.length + " AI roles; the board advises" },
+      node(el("span", { cls: "avatar", style: "background:var(--accent)" }, "You"), "Founder", "CEO and chair: approvals, money, go-live", "you"),
+      el("div", { cls: "stem" }),
+      node(avatar("chief-of-staff", cos ? cos.state : null), "Claude, chief of staff", "AI core · " + (cos ? STATE_WORDS[cos.state] : "not scheduled")),
+      el("div", { cls: "stem" }),
+      el("div", { cls: "row" }, rest.map(function (a) { return node(avatar(a.role, a.state), roleName(a.role), (ROLE_INFO[a.role] ? ROLE_INFO[a.role][1] + " · " : "") + STATE_WORDS[a.state]); })),
+      (team.board || []).length ? el("div", { cls: "board" }, el("div", { cls: "k", text: "The advisory board: AI advisors, advice only, no vote" }),
+        team.board.map(function (b) { return node(avatar(b.id), b.name + " advisor", b.lens + " lens"); })) : null);
+  }
+
   // --- tabs ---------------------------------------------------------------------------------------------
   var TABS = [
     ["overview", "Overview", overview], ["documents", "Business documents", documentsTab], ["trace", "Progress trace", traceTab],
@@ -376,7 +515,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     (road.decisions_waiting || []).slice(0, 6).forEach(function (d) { needs.push(el("li", null, pill(d.status, d.status), " ", d.id + ": " + d.decision, el("div", { cls: "why", text: d.register + (d.date ? ", since " + d.date : "") }))); });
     var recent = activity.slice(0, 8).map(activityItem);
     var merged = (G.merged || []).slice(0, 8).map(function (p) { return el("li", null, link("#" + p.number + " " + p.title, p.url), el("div", { cls: "why", text: "merged " + when(p.merged) + (p.by ? " · " + p.by : "") })); });
+    var crew = agents().map(function (a) {
+      return el("div", { cls: "who2" }, avatar(a.role, a.state), el("div", null, roleName(a.role),
+        el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
+    });
     return [tiles, G.ok ? null : ghMissing(),
+      crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
       el("div", { cls: "cols" },
         panel("Needs you", "Approvals, founder items and decisions waiting.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." })),
         panel("Latest agent activity", null, recent.length ? el("ul", { cls: "list" }, recent) : el("p", { cls: "empty", text: G.ok ? "No activity yet." : "GitHub data missing." })),
@@ -439,23 +583,28 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     openTickets.forEach(function (t) { var r = byRole[t.role] = byRole[t.role] || { open: 0, claimed: 0, blocked: 0 }; r.open++; if (t.claimed) r.claimed++; if (t.blocked) r.blocked++; });
     var spend = {}; (costs.roles || []).forEach(function (r) { spend[r.role] = r; });
     var roles = Object.keys(beats).map(function (k) { return { role: k, b: beats[k] || {}, t: byRole[k] || { open: 0, claimed: 0, blocked: 0 }, c: spend[k] || {} }; });
+    var list = agents();
     return [
-      panel("The team", "Heartbeats and budgets come from founder/heartbeats.json; tickets from GitHub.", table([
-        { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } },
+      panel("Org chart", "You chair the company. Claude runs the operating system as chief of staff; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
+      panel("AI agents", "One card per agent: what it's working on, when it next wakes, what it last did, and its spend this month.", list.length ? el("div", { cls: "agents" }, list.map(agentCard)) : el("p", { cls: "empty", text: "No roles in founder/heartbeats.json yet." })),
+      panel("The team in a table", "Heartbeats and budgets come from founder/heartbeats.json; tickets from GitHub.", table([
+        { h: "Role", k: function (r) { return r.role; }, f: function (r) { return [avatar(r.role, null, true), el("span", { cls: "who", text: r.role })]; } },
         { h: "Heartbeat", f: function (r) { return pill(r.b.enabled ? "on" : "off", r.b.enabled ? "done" : "todo"); } },
-        { h: "Schedule (UTC)", f: function (r) { return el("span", { cls: "who", text: r.b.cron || "-" }); } },
+        { h: "Schedule (UTC)", f: function (r) { return el("span", { cls: "who", title: cronText(r.b.cron), text: r.b.cron || "-" }); } },
         { h: "Budget", num: true, f: function (r) { return r.b.monthly_budget_usd ? usd(r.b.monthly_budget_usd) : "not set"; } },
         { h: "Spent", num: true, f: function (r) { return G.ok ? usd(r.c.used) : "?"; } },
         { h: "Open tickets", num: true, f: function (r) { return G.ok ? r.t.open + (r.t.claimed ? " (" + r.t.claimed + " claimed)" : "") + (r.t.blocked ? ", " + r.t.blocked + " blocked" : "") : "?"; } }], roles)),
       panel("The advisory board", "Advisors advise and have no vote; you decide.", el("div", { cls: "grid" }, (team.board || []).map(function (b) {
-        return el("div", { cls: "tile" }, el("div", { cls: "k", text: b.lens + " lens" }), el("div", { style: "font-weight:600", text: b.name + " advisor" }), el("div", { cls: "s", text: "Asks: " + b.asks }));
+        return el("div", { cls: "tile" }, el("div", { cls: "top", style: "display:flex;gap:8px;align-items:center" }, avatar(b.id),
+          el("div", null, el("div", { style: "font-weight:600", text: b.name + " advisor" }), el("span", { cls: "badge", text: "AI advisor" }))),
+          el("div", { cls: "k", style: "margin-top:6px", text: b.lens + " lens" }), el("div", { cls: "s", text: "Asks: " + b.asks }));
       }))),
       panel("Board memos", null, docViewer(R.memos || [], "No memos in founder/board/ yet.")),
       panel("founder/team.md", null, R.team_doc ? markdown(R.team_doc) : el("p", { cls: "empty", text: "founder/team.md is missing." }))];
   }
 
   function activityItem(r) {
-    var head = [el("span", { cls: "who", text: r.role }), " " + r.action + " #" + r.ticket];
+    var head = [avatar(r.role, null, true), el("span", { cls: "who", text: r.role }), " " + r.action + " #" + r.ticket];
     if (r.to) head.push(" → ", el("span", { cls: "who", text: r.to }));
     if (r.on) head.push(" (on #" + r.on + ")");
     return el("li", null, el("div", null, head, el("span", { cls: "note", text: "  " + when(r.at) })), r.why ? el("div", { cls: "why", text: r.why }) : null);
