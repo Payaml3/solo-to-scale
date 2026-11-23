@@ -1,9 +1,12 @@
 {
-  "about": "The portfolio: several ventures side by side, each in its own repo, on one overview page, rebuilt every hour by the portfolio workflow. Only the founder edits this file (the deploy gate). name: what the portfolio is called on its page, for example your holding company; empty means 'Portfolio'. ventures: the other ventures, each {\"repo\": \"owner/name\", \"dashboard\": \"https://pm.their-domain\"} (dashboard is optional); each must run solo-to-scale 1.5.0 or later, whose dashboard workflow keeps a short summary (no business documents) for the portfolio to read. No ventures means no portfolio. include_this_repo: show this repo's venture too. stale_hours: flag a venture whose summary is older. Reading other repos needs the PORTFOLIO_TOKEN repository secret: a fine-grained token with read-only Actions access to those repos. host and cloudflare_pages_project: where the overview is served, behind a Cloudflare Access login, exactly like the dashboard; empty means built but never deployed. Setup: the handbook, 'The portfolio'.",
+  "about": "The portfolio: several ventures side by side, each in its own repo, on one overview page, rebuilt every hour by the portfolio workflow. Only the founder edits this file (the deploy gate). name: what the portfolio is called on its page, for example your holding company; empty means 'Portfolio'. ventures: the other ventures, each {\"repo\": \"owner/name\", \"dashboard\": \"https://pm.their-domain\"} (dashboard is optional); each must run solo-to-scale 1.5.0 or later, whose dashboard workflow keeps a short summary (no business documents) for the portfolio to read. No ventures means no portfolio. include_this_repo: show this repo's venture too. stale_hours: flag a venture whose summary is older. Reading other repos needs the PORTFOLIO_TOKEN repository secret: a fine-grained token with read-only Actions access to those repos. host, provider, and cloudflare_pages_project or vercel_project and vercel_team: where the overview is served, behind a login, exactly like the dashboard; empty means built but never deployed. Setup: the handbook, 'The portfolio'.",
   "name": "",
   "ventures": [],
   "include_this_repo": true,
   "stale_hours": 3,
   "host": "",
-  "cloudflare_pages_project": ""
+  "provider": "cloudflare",
+  "cloudflare_pages_project": "",
+  "vercel_project": "",
+  "vercel_team": ""
 }

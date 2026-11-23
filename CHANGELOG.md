@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.1.0 (2026-11-23)
+
+Vercel as a second home for the dashboard and the portfolio. Cloudflare stays the default.
+
+- **`provider` in `founder/dashboard.json`** (and `founder/portfolio.json`): `"cloudflare"` (the default) or `"vercel"`, with `vercel_project` and `vercel_team` (a team slug or `team_` id; empty for a personal account). The only new secret is `VERCEL_TOKEN`.
+- **Still behind a login, or not at all.** On Vercel, `guard` deploys only when the project has the host as a domain, has no Git repository connected (so a deploy can never replace the app itself), and has Vercel Authentication on All Deployments. Standard Protection leaves the production domain public, so it doesn't count, and a shared password doesn't either. `verify` then checks every domain of the project, plus `<project>.vercel.app`, as an anonymous visitor, and fails the run if any serves the page.
+- **The workflows** deploy with the Vercel CLI (pinned) when the guard says so, using the project and account ids the guard read, and keep the Cloudflare step for everyone else.
+- **The doctor** checks the Vercel setup: a known provider, a well-formed project and team, and `VERCEL_TOKEN` set.
+- **Cost:** Vercel Authentication on All Deployments is free on every plan since Vercel's 2026 change; a company dashboard belongs on Pro ($20 a month per member) because Hobby is for non-commercial use. The handbook has the details.
+- **Docs:** the handbook ("The startup dashboard": the Vercel setup steps and cost; "The portfolio") and the README.
+- **Tests:** 6 new: Vercel without a token or with a bad provider, the guard failing closed (no login, previews only, Standard Protection, wrong domain, the app's own project, injected ids, the API refusing), a deploy allowed with team scope, verify across every domain, both workflows gated on the guard, and the doctor's Vercel check.
+
 ## v2.0.0 (2026-11-23)
 
 Slice 12 of `ROADMAP-V2.md`: money. This completes v2.0 (slices 6 to 12).

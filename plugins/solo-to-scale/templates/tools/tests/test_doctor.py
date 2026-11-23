@@ -161,3 +161,20 @@ def test_the_setup_card_survives_a_broken_check(root, monkeypatch):
         raise RuntimeError("bug")
     monkeypatch.setattr(doctor, "run", boom)
     assert bd.build(root, offline=True, now=NOW)["setup"][0]["status"] == "unknown"
+
+
+def test_vercel_hosting_needs_only_the_vercel_token(root, monkeypatch):
+    (root / "founder" / "dashboard.json").write_text(json.dumps({"host": "pm.example.com", "provider": "vercel",
+                                                                 "vercel_project": "example-pm"}), encoding="utf-8")
+    monkeypatch.setenv("S2S_HAS_VERCEL_TOKEN", "false")
+    h = by_key(doctor.run(root, offline=True, now=NOW))["hosting"]
+    assert h["status"] == "broken" and "VERCEL_TOKEN" in h["detail"] and "CLOUDFLARE" not in h["detail"]
+    monkeypatch.setenv("S2S_HAS_VERCEL_TOKEN", "true")
+    h = by_key(doctor.run(root, offline=True, now=NOW))["hosting"]
+    assert h["status"] == "ok" and "Vercel" in h["detail"]
+    (root / "founder" / "dashboard.json").write_text(json.dumps({"host": "pm.example.com", "provider": "vercel",
+                                                                 "cloudflare_pages_project": "example-pm"}), encoding="utf-8")
+    assert by_key(doctor.run(root, offline=True, now=NOW))["hosting"]["status"] == "broken", "no vercel_project"
+    (root / "founder" / "dashboard.json").write_text(json.dumps({"host": "pm.example.com", "provider": "netlify",
+                                                                 "cloudflare_pages_project": "example-pm"}), encoding="utf-8")
+    assert by_key(doctor.run(root, offline=True, now=NOW))["hosting"]["status"] == "broken"
