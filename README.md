@@ -7,7 +7,7 @@
 - **Nothing becomes Approved without your words.** Merging a pull request is approval.
 - **It works in Claude Code and Codex,** from one source.
 
-**Status: v1.4.0.** Fourteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
+**Status: v1.5.0.** Fourteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
 
 ---
 
@@ -78,6 +78,7 @@ Add this repository as a plugin marketplace in your Claude account's plugin sett
 - **Budgets cover AI usage only.** Heartbeat runs and handoffs record their cost, measured from the Claude Code transcript where they can be; Codex runs are recorded at the flat estimate.
 - **Live views need artifact tools.** `publish-views` stops cleanly in sessions without them, which includes Codex. The startup dashboard doesn't: GitHub Actions builds it.
 - **The dashboard's login is Cloudflare Access.** Serving it at `pm.<domain>` needs that domain on Cloudflare (the free plan is enough). Without it the dashboard is still built on every run, and the Claude page is the way to see it.
+- **The portfolio reads other repos with a token you add.** `PORTFOLIO_TOKEN` needs read-only Actions access to each venture's repo, and each venture must run 1.5.0 or later.
 
 ## Private repository
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.5.0 (2026-11-23)
+
+Slice 5 of `ROADMAP.md`: the portfolio. The roadmap is complete.
+
+- **One overview of several ventures,** each in its own repo, with four tabs: Overview (a card per venture: stage, slices, approvals waiting, decisions and founder items, tickets, spend against budget, and whether its data is current), Needs you (every approval waiting across the ventures, oldest first, linked to its repo), Activity (what each team did, and recent merges) and Costs (per venture and per role).
+- **`founder/portfolio.json` (founder-owned, the `deploy` gate):** the other ventures and where the overview is served. No ventures means no portfolio. `upgrade` adds it to existing repos; add it to the `deploy` gate's paths yourself.
+- **Summaries, never documents:** the `dashboard` workflow now also keeps a short summary (`build_dashboard.py build --summary`) as the `dashboard-data` artifact. `tools/build_portfolio.py build` reads the newest one from each venture with `PORTFOLIO_TOKEN` (read-only Actions access), never runs a venture's code, checks repo names before calling GitHub, caps the download size, lists a venture it can't read with the reason, and marks an old summary stale.
+- **`portfolio` workflow:** every hour and on changes to `founder/portfolio.json`; deploys to Cloudflare Pages only behind a Cloudflare Access login, with the dashboard's `guard` and `verify`, now shared. On the page, every text is shown as text and links from a venture's summary may only point to GitHub.
+- **The Claude page stays as the backup:** `publish-views` publishes the overview when a portfolio is set up.
+- **Docs:** the handbook explains the portfolio and its 10-minute setup.
+- **Tests:** 6 new: the summary carries no business documents; the overview reads the newest unexpired summary, drops duplicates and lists unreadable, not-upgraded and malformed ventures; bad, oversized and old summaries are flagged; `PORTFOLIO_TOKEN` is used when set; no ventures means no portfolio; hosting is behind a login.
+- **Roadmap:** slices 4 and 5 are done.
+
 ## v1.4.0 (2026-11-23)
 
 Slice 4 of `ROADMAP.md`: the startup dashboard.

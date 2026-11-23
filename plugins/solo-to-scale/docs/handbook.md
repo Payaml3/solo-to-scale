@@ -56,6 +56,7 @@ Each kind of information has exactly one home. If something seems to belong in t
 | `founder/playbook.md` | This journey's stage-gate table with the current stage marked | `weekly-review` |
 | `founder/artifacts.md` | Registry of live views: ID, type, sources, last published commit | `publish-views` |
 | `founder/dashboard.json` | Where the startup dashboard is served (`pm.<domain>`) and which documents it shows | Founder (the `deploy` gate) |
+| `founder/portfolio.json` | The other ventures on the portfolio overview, and where it is served | Founder (the `deploy` gate) |
 | `founder/sources/` | Original source documents | Founder |
 | `founder/claude-project/` | Project instructions, knowledge list, scheduled-task prompts | Bootstrap |
 | `specs/<NNN-feature>/` | Spec Kit: `spec.md`, requirements, plan, data model, contracts, tasks, product register (`D-`), `ux/<screen>.md` | Spec Kit, `product-design` |
@@ -402,6 +403,22 @@ One page shows the whole company, with ten tabs: **Overview** (what needs you, t
 4. Set `host` and `cloudflare_pages_project` in `founder/dashboard.json`, in a pull request (the `deploy` gate), and merge it. The next run deploys.
 
 GitHub pauses scheduled workflows in a repo with no activity for 60 days; any push turns the hourly rebuild back on.
+
+### The portfolio
+
+When you run several ventures, each keeps its own repo, its own team, its own gates and its own dashboard. The portfolio puts them side by side on one page, with four tabs: **Overview** (a card per venture: stage, slices, approvals waiting, decisions and founder items, tickets, spend against budget, and whether its data is current), **Needs you** (every approval waiting across the ventures, oldest first, with a link to reply in its repo, plus decisions and founder items), **Activity** (what each team did, and recent merges) and **Costs** (spend per venture and per role).
+
+- **One repo holds it.** Pick one venture's repo, or a separate repo initialised with solo-to-scale, and list the others in its `founder/portfolio.json`. No ventures listed means no portfolio, and the `portfolio` workflow does nothing.
+- **It reads summaries, never documents.** Each venture's `dashboard` workflow keeps a short summary as its `dashboard-data` artifact: counts, approvals waiting, the latest activity and spend. Business documents and memos never leave their repo. The portfolio reads the newest summary from each repo every hour and runs none of the ventures' code. A venture it can't read is still listed, with the reason, and a summary older than `stale_hours` is marked stale.
+- **Approvals stay where they are.** The portfolio only links to each request. You still reply `/approve` in that venture's repo, and only your own words there count.
+- **Behind a login, like the dashboard.** The same `guard` and `verify` steps deploy it only when a Cloudflare Access login covers both its host and its `pages.dev` address.
+
+**Setting it up (once, about 10 minutes, by you):**
+
+1. Upgrade every venture to solo-to-scale 1.5.0 or later, and let each one's `dashboard` workflow run once.
+2. Create a fine-grained GitHub token with read-only **Actions** access to the venture repos, and add it to the portfolio repo as the secret `PORTFOLIO_TOKEN`.
+3. In the portfolio repo, list the ventures in `founder/portfolio.json` (`{"repo": "owner/name", "dashboard": "https://pm.<their domain>"}`), in a pull request (the `deploy` gate), and merge it. The overview is now built every hour.
+4. To serve it, for example at `portfolio.<domain>`, follow the dashboard's steps 1 to 3 with a second Pages project and an Access application covering both addresses, then set `host` and `cloudflare_pages_project` in `founder/portfolio.json`. Until then, `publish-views` shows it as a Claude page.
 
 ## Skills and plugins
 
