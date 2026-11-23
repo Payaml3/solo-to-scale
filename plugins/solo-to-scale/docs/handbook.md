@@ -194,6 +194,17 @@ Every decision has one row, one status and a trace to everything it touches.
 
 **The chain every decision is traced through:** Business objectives → product capabilities → MVP requirements → architecture → tasks → tests → release.
 
+**Approval gates (`gate`):** `founder/gates.json` lists the critical actions only the founder approves:
+- hiring or changing a role, raising a budget, deploying, sending or publishing anything outside the repo
+- spending money, marking a decision Approved, pricing, and anything legal
+
+Each gate is `ask`, `allow` or `off`. Before a gated action, an agent checks for an approval and, if there isn't one, opens an approval request as a GitHub issue, then stops that action. You answer on the issue, from anywhere, including the GitHub phone app:
+- `/approve` for this action only
+- `/approve always` for a standing rule, until `/revoke`
+- `/reject <reason>`
+
+Only your own GitHub account's words count. A pull request that changes a gated file needs you to add the `founder-approved` label; the `founder-gates` check blocks it until you do. Anything unclear fails closed.
+
 **Recording a decision (`record-decision`):**
 
 1. Add a row with the next ID, the status, the date and the founder's exact words.
@@ -378,7 +389,7 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
-| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
+| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, handoff, claim, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
 | founder | Account plugin | validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy, product-brief, mvp-scope, go-to-market, landing-page, email-sequence, metrics-dashboard, pitch-deck, fundraise-prep | A, B, E, F |
 | brand-skills | Account marketplace, plus repo via `npx skills add` | naming, brand-architecture, brand-identity, brand-guidelines, brand-audit | B, C |
 | marketing | Account plugin | brand-review, competitive-brief, content-creation, campaign-plan, email-sequence, seo-audit, performance-report | B, E, F |
@@ -414,7 +425,7 @@ A solo founder runs the company as CEO and board. Claude sits at the centre as t
 
 | Role | Owns | Main skills | Runs | Model | Needs the founder's approval for |
 | --- | --- | --- | --- | --- | --- |
-| **Founder** (CEO and board) | Goal, approvals, secrets, money, go-live | record-decision; merging pull requests | Daily approvals; Monday review; quarterly objectives | Not an agent | Is the approval gate |
+| **Founder** (CEO and board) | Goal, approvals, secrets, money, go-live | record-decision; merging pull requests; `/approve` on approval requests (`gate`) | Daily approvals; Monday review; quarterly objectives | Not an agent | Is the approval gate |
 | **Claude** (AI core and chief of staff) | The operating system: briefs each role, keeps memory in the repo, weekly review, live views | weekly-review, handoff, publish-views, release-check | Every session start and end; Mondays | Mid-tier | Nothing; it proposes |
 | **Research and strategy** (01) | Evidence: interviews, competitors, pricing, positioning, business work outside software | founder: validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy | Each discovery sprint; monthly evidence review | Strongest for synthesis | Every `B-` decision |
 | **Product manager** (02) | Models into specs: requirements, stories, screen specs; prepares decisions | Spec Kit: specify, clarify, checklist, analyze; product-design | Each stage; whenever a decision waits | Mid-tier | Scope and requirements |

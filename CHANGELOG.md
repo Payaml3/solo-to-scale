@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.0 (2026-11-23)
+
+Slice 1 of `ROADMAP.md`: founder approval gates.
+
+- **`founder/gates.json` (founder-owned):** the critical actions only the founder approves: hire, budget, deploy, external, spend, decision, pricing, legal (`ask`), and secrets (`off`, founder only). Each gate can list file `paths`.
+- **`tools/approval.py`:** `request` opens an approval issue (`needs-founder`, `gate:<name>`); `check` answers approved, waiting or no; plus `status`, `inbox` and `pr`. Only the founder's own `/approve`, `/approve always`, `/reject` or `/revoke` comment counts, and the latest wins. Everything unclear fails closed.
+- **`gate` skill:** agents check before any gated action, request approval, stop that action and carry on with other work.
+- **`founder-gates` workflow:** a pull request that changes a gated file passes only after a founder adds the `founder-approved` label.
+- **Review and handoff:** the weekly review lists approvals waiting; handoffs list the requests a session opened.
+- **Docs:** `ROADMAP.md` with the five slices toward an always-on AI team; the handbook explains the gates.
+- **Tests:** 9 new, against a fake GitHub: non-founder comments, bots and labels never approve; one gate never covers another; standing rules respect scope and `/revoke`; GitHub errors and a missing policy fail closed.
+
 ## v1.0.2 (2026-11-23)
 
 - Fix: the governance check no longer fails on register tables that have no status column, such as an approvals log of D- rows. Their IDs are still read, so citing them stays valid. A row in a table that has a status column still fails when its status is empty. Before, `upgrade` to 1.0.1 replaced a repo's own check and then reported every log row as "has no status".
