@@ -14,6 +14,8 @@ written to the ticket and to one activity log (an issue labelled `activity-log`)
   python tools/tickets.py block <n> --on M --why "..." --by <role>   |   unblock <n> --on M --by <role>
   python tools/tickets.py done <n> --role <role> --note "..."         # closes it and wakes what it blocked
   python tools/tickets.py plan <parent> --by <role> [--note "..."]   # ask the founder to approve the sub-ticket plan
+  python tools/tickets.py review <n> --verdict approved|changes --by <reviewer role> --note "..."
+  python tools/tickets.py escalate <n> --by <role> --why "..."   # to the role's manager; the chief of staff's is you
   python tools/tickets.py queue <role>     # open, unclaimed, unblocked tickets for a role, oldest first
   python tools/tickets.py tree <n>         # a parent and its sub-tickets
   python tools/tickets.py log [--role R] [--ticket N] [--limit 30]
@@ -23,6 +25,10 @@ The claim is a git ref, `refs/claims/<n>`, created through the GitHub API. Creat
 two agents racing for one ticket can't both win. Anything unclear refuses the claim.
 With the `plan` gate set to ask in founder/gates.json, a sub-ticket can be claimed only when the founder has
 approved its parent's latest plan, and only if it is in that plan: a changed plan needs approval again.
+Review before done: a ticket labelled `needs-review:<role>` (from `new --review`, or founder/gates.json `review`,
+e.g. engineer work reviewed by qa) can't be finished until that role's latest verdict is `approved`. The
+reviewer is never the ticket's own role. Chain of command: every role reports to the chief of staff, and the
+chief of staff to the founder; `escalate` labels the ticket `escalated-to:<manager>`.
 Text an agent writes is quoted, so it can never read as a founder's /approve.
 Python 3 standard library plus the gh CLI.
 """
@@ -44,9 +50,15 @@ import approval  # noqa: E402
 from approval import repo_name  # noqa: E402
 
 OK, REFUSED, ERROR = 0, 1, 5
+NEEDS_REVIEW, ESCALATED = "needs-review:", "escalated-to:"
+VERDICTS = ("approved", "changes")
+REVIEW = re.compile(r"<!-- s2s:review (\{.*?\}) -->")
 TICKET, CLAIMED, BLOCKED, LOG = "ticket", "claimed", "blocked", "activity-log"
 CLAIM_REF = "refs/claims/"
 ROLES = ("chief-of-staff", *s.ROLES)
+# Chain of command (roles/*.yaml `reports_to`): blockers go to the manager first; only the chief of staff
+# escalates to the founder.
+REPORTS_TO = {**{r: "chief-of-staff" for r in s.ROLES}, "chief-of-staff": "founder"}
 MARK = re.compile(r"<!-- s2s:activity (\{.*?\}) -->")
 REF_LINE = re.compile(r"^\*\*(Parent|Blocked by):\*\*(.*)$", re.MULTILINE)
 
@@ -249,7 +261,9 @@ def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     blockers = sorted(set(a.blocked_by or []))
     objective = which_objective(a, hub)
     body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by, objective)
-    labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else [])
+    reviewer = review_for(a, hub)
+    labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else []) \
+        + ([NEEDS_REVIEW + reviewer] if reviewer else [])
     if a.dry_run:
         print(f"{a.title}\nlabels: {', '.join(labels)}\n\n{body}")
         return OK
@@ -263,6 +277,73 @@ def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
             print(f"note: couldn't link #{n} as a GitHub sub-issue of #{a.parent}; its Parent line still links them")
     hub.record(n, a.by or "founder", "opened", a.why or a.goal, to=a.role,
                **({"parent": a.parent} if a.parent else {}))
+    return OK
+
+
+def review_for(a: argparse.Namespace, hub: Hub) -> str:
+    """Who reviews a new ticket: --review, else founder/gates.json `review` for its role; never the role itself."""
+    if getattr(a, "review", "") == "none":
+        return ""
+    raw = s.read(hub_root(hub) / "founder" / "gates.json") or "{}"
+    try:
+        pol = json.loads(raw).get("review") or {}
+    except (ValueError, AttributeError):
+        pol = {}
+    who = getattr(a, "review", "") or (pol.get(a.role) if isinstance(pol, dict) else "") or ""
+    if who:
+        need_role(who)
+        if who == a.role:
+            raise SystemExit(f"role:{a.role} can't review its own work: name another role with --review")
+    return who
+
+
+def reviewer_of(t: dict[str, Any]) -> str:
+    return next((lb[len(NEEDS_REVIEW):] for lb in labels_of(t) if lb.startswith(NEEDS_REVIEW)), "")
+
+
+def verdict(hub: Hub, n: int, reviewer: str) -> dict[str, Any] | None:
+    """The reviewer's latest verdict on a ticket, from its review comments."""
+    last = None
+    for c in hub.api(f"issues/{n}/comments?per_page=100") or []:
+        m = REVIEW.search(c.get("body") or "")
+        try:
+            data = json.loads(m.group(1)) if m else None
+        except ValueError:
+            data = None
+        if isinstance(data, dict) and data.get("by") == reviewer and data.get("verdict") in VERDICTS:
+            last = data
+    return last
+
+
+def cmd_review(a: argparse.Namespace, hub: Hub) -> int:
+    need_role(a.by)
+    t = hub.issue(a.n)
+    want = reviewer_of(t)
+    if a.by == role_of(t):
+        print(f"refused: role:{a.by} owns #{a.n}; a review must come from another role")
+        return REFUSED
+    if want and want != a.by:
+        print(f"refused: #{a.n} is waiting on role:{want}'s review, not role:{a.by}'s")
+        return REFUSED
+    data = {"by": a.by, "verdict": a.verdict}
+    hub.comment(a.n, f"<!-- s2s:review {json.dumps(data)} -->\n**Review by role:{a.by}: {a.verdict}**\n\n{quote(a.note)}")
+    if not want:
+        hub.label(a.n, NEEDS_REVIEW + a.by)
+    hub.record(a.n, a.by, "reviewed", f"{a.verdict}: {a.note}")
+    print(f"#{a.n}: role:{a.by} {a.verdict}" + ("; the owner may finish it" if a.verdict == "approved" else
+                                                 "; the owner changes it and asks again"))
+    return OK
+
+
+def cmd_escalate(a: argparse.Namespace, hub: Hub) -> int:
+    need_role(a.by)
+    boss = REPORTS_TO.get(a.by, "chief-of-staff")
+    hub.label(a.n, ESCALATED + boss)
+    who = "the founder" if boss == "founder" else f"role:{boss}"
+    hub.comment(a.n, f"**Escalated by role:{a.by} to {who}**\n\n{quote(a.why)}")
+    hub.record(a.n, a.by, "escalated", a.why, to=boss)
+    print(f"#{a.n} escalated to {who}" + ("; it is in the founder's Needs you list" if boss == "founder" else
+                                         f"; it is in `queue {boss}`"))
     return OK
 
 
@@ -418,6 +499,14 @@ def cmd_done(a: argparse.Namespace, hub: Hub) -> int:
     if not owns(hub, a.n, a.role):
         return REFUSED
     t = hub.issue(a.n)
+    want = reviewer_of(t)
+    if want:
+        v = verdict(hub, a.n, want)
+        if not v or v["verdict"] != "approved":
+            state = "asked for changes" if v else "not reviewed it yet"
+            print(f"refused: #{a.n} needs role:{want}'s review, and role:{want} has {state}. "
+                  f"Hand it over with `handoff {a.n} --to {want}` or ask on the ticket.")
+            return REFUSED
     hub.record(a.n, a.role, "done", a.note)
     hub.api(f"issues/{a.n}", "-X", "PATCH", payload={"state": "closed", "state_reason": "completed"})
     return after_close(hub, t, a.role)
@@ -453,6 +542,12 @@ def cmd_queue(a: argparse.Namespace, hub: Hub) -> int:
         print(f"#{t['number']} {t.get('title', '')}")
     rest = len(mine) - len(ready)
     print(f"{len(ready)} ready for role:{a.role}" + (f"; {rest} claimed or blocked" if rest else ""))
+    everything = hub.tickets("open")
+    for t in everything:
+        if reviewer_of(t) == a.role and role_of(t) != a.role:
+            print(f"review: #{t['number']} {t.get('title', '')} (role:{role_of(t)})")
+        if ESCALATED + a.role in labels_of(t):
+            print(f"escalated to you: #{t['number']} {t.get('title', '')} (role:{role_of(t)})")
     return OK
 
 
@@ -494,6 +589,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--objective", default="", help="the founder/goals.json objective it serves, e.g. O1")
     p.add_argument("--blocked-by", type=int, nargs="*")
     p.add_argument("--by", default="")
+    p.add_argument("--review", default="", help="the role that reviews it before done; 'none' for no review")
     p.add_argument("--dry-run", action="store_true")
     for name in ("claim", "release", "done"):
         p = sub.add_parser(name, parents=[common])
@@ -514,6 +610,15 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--on", type=int, required=True)
         p.add_argument("--why", default="")
         p.add_argument("--by", required=True)
+    p = sub.add_parser("review", parents=[common])
+    p.add_argument("n", type=int)
+    p.add_argument("--verdict", required=True, choices=VERDICTS)
+    p.add_argument("--by", required=True)
+    p.add_argument("--note", required=True)
+    p = sub.add_parser("escalate", parents=[common])
+    p.add_argument("n", type=int)
+    p.add_argument("--by", required=True)
+    p.add_argument("--why", required=True)
     p = sub.add_parser("plan", parents=[common])
     p.add_argument("n", type=int)
     p.add_argument("--by", required=True)
@@ -532,7 +637,7 @@ def main(argv: list[str] | None = None) -> int:
         return ERROR
     hub = Hub(repo)
     hub.root = a.root
-    run = {"plan": cmd_plan, "new": cmd_new, "claim": cmd_claim, "release": cmd_release, "handoff": cmd_handoff, "done": cmd_done,
+    run = {"plan": cmd_plan, "review": cmd_review, "escalate": cmd_escalate, "new": cmd_new, "claim": cmd_claim, "release": cmd_release, "handoff": cmd_handoff, "done": cmd_done,
            "block": lambda a, h: cmd_block(a, h, True), "unblock": lambda a, h: cmd_block(a, h, False),
            "queue": cmd_queue, "tree": cmd_tree, "log": cmd_log, "closed": cmd_closed}[a.cmd]
     try:

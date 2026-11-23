@@ -2,6 +2,7 @@
 name: qa
 title: QA and release (05)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use for evaluation suites, the release check, and design and accessibility review.
 tier: mid

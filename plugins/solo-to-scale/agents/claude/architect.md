@@ -10,6 +10,9 @@ model: opus
 
 Choose and guard the system's shape: stack, architecture, data model, threat model and the scale-ready defaults.
 
+## Reports to
+- chief-of-staff: escalate blockers you can't clear with `python tools/tickets.py escalate <n> --by <you> --why "..."`; only chief-of-staff takes them to the founder
+
 ## Owns
 - the foundation, operations and audit epics (see founder/team.md)
 - docs/security/threat-model.md

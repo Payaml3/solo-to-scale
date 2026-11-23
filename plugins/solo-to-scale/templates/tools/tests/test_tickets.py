@@ -271,3 +271,50 @@ def test_story_group_claim_takes_the_same_lock(root, fake, capsys):
     fresh = fake.make("S1 G2: receipts", body)
     assert claim.main([str(fresh), "--root", str(root)]) == 0
     assert "claimed" in fake.names(fresh) and f"refs/claims/{fresh}" in fake.refs
+
+
+def test_review_must_approve_before_done(root, fake, capsys):
+    (root / "founder/gates.json").write_text(json.dumps({"gates": {}, "review": {"engineer": "qa"}}), encoding="utf-8")
+    assert run(root, "new", "engineer", "--title", "Build login", "--goal", "log in", "--by", "product") == tickets.OK
+    n = max(i for i in fake.issues if "role:engineer" in fake.names(i))
+    assert "needs-review:qa" in fake.names(n)
+    assert run(root, "claim", str(n), "--role", "engineer") == tickets.OK
+    assert run(root, "done", str(n), "--role", "engineer", "--note", "x") == tickets.REFUSED
+    assert "not reviewed it yet" in capsys.readouterr().out
+    assert run(root, "review", str(n), "--verdict", "approved", "--by", "engineer", "--note", "mine") == tickets.REFUSED
+    assert run(root, "review", str(n), "--verdict", "approved", "--by", "growth", "--note", "x") == tickets.REFUSED
+    assert run(root, "review", str(n), "--verdict", "changes", "--by", "qa", "--note", "fails on empty email") == tickets.OK
+    assert run(root, "done", str(n), "--role", "engineer", "--note", "x") == tickets.REFUSED
+    assert "asked for changes" in capsys.readouterr().out
+    assert run(root, "review", str(n), "--verdict", "approved", "--by", "qa", "--note", "passes now") == tickets.OK
+    assert run(root, "done", str(n), "--role", "engineer", "--note", "shipped") == tickets.OK
+    assert fake.issues[n]["state"] == "closed"
+    assert [r["action"] for r in log_rows(fake)].count("reviewed") == 2
+
+
+def test_new_refuses_self_review_and_none_skips_it(root, fake):
+    (root / "founder/gates.json").write_text(json.dumps({"gates": {}, "review": {"engineer": "qa"}}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        run(root, "new", "qa", "--title", "x", "--goal", "g", "--review", "qa")
+    assert run(root, "new", "engineer", "--title", "Fix typo", "--goal", "g", "--review", "none") == tickets.OK
+    n = max(i for i in fake.issues if "role:engineer" in fake.names(i))
+    assert not any(lb.startswith("needs-review:") for lb in fake.names(n))
+
+
+def test_escalation_follows_the_chain_of_command(root, fake, capsys):
+    n = ticket(fake, "engineer")
+    assert run(root, "escalate", str(n), "--by", "engineer", "--why", "spec contradicts ADR-2") == tickets.OK
+    assert "escalated-to:chief-of-staff" in fake.names(n)
+    capsys.readouterr()
+    assert run(root, "queue", "chief-of-staff") == tickets.OK
+    assert f"escalated to you: #{n}" in capsys.readouterr().out
+    assert run(root, "escalate", str(n), "--by", "chief-of-staff", "--why", "needs a founder call") == tickets.OK
+    assert "escalated-to:founder" in fake.names(n)
+    assert log_rows(fake)[-1]["action"] == "escalated" and log_rows(fake)[-1]["to"] == "founder"
+
+
+def test_queue_lists_reviews_waiting_for_the_role(root, fake, capsys):
+    n = fake.make("Build", tickets.ticket_body("engineer", "g", "", "", None, [], "product"),
+                  ["ticket", "role:engineer", "needs-review:qa"])
+    assert run(root, "queue", "qa") == tickets.OK
+    assert f"review: #{n} Build (role:engineer)" in capsys.readouterr().out

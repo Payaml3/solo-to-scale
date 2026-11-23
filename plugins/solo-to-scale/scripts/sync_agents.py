@@ -43,7 +43,11 @@ def bullets(items: list[str] | None) -> list[str]:
 def body(r: dict) -> str:
     out = [f"# {r['title']}", ""]
     if r["kind"] == "team":
-        out += [r["mission"], ""]
+        boss = r.get("reports_to") or "chief-of-staff"
+        out += [r["mission"], "", "## Reports to",
+                "- the founder: escalate blockers you can't clear to the founder" if boss == "founder" else
+                f"- {boss}: escalate blockers you can't clear with `python tools/tickets.py escalate <n> --by <you> --why \"...\"`; "
+                f"only {boss} takes them to the founder", ""]
         for key, head in (("owns", "Owns"), ("skills", "Skills"), ("model", "Model"),
                           ("inputs", "Reads"), ("outputs", "Writes"), ("approval", "Needs the founder's approval for")):
             out += [f"## {head}", *bullets(r.get(key)), ""]

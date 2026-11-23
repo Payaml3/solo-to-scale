@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.14.0 (2026-11-23)
+
+Slice 11 of `ROADMAP-V2.md`: review before approval and a chain of command.
+
+- **Review before done.** A ticket can need a review by another role, shown by the label `needs-review:<role>`. `tickets.py new --review <role>` sets it, or the new `review` map in `founder/gates.json` does it per role (new repos: QA reviews the engineer, product reviews growth; `--review none` skips it). `tickets.py review <n> --verdict approved|changes --by <role> --note "..."` records a verdict on the ticket and in the activity log. `done` is refused until the reviewer's latest verdict is approved, and a role can never review its own ticket. `queue` lists the reviews waiting for a role.
+- **Chain of command.** Every team role has `reports_to` in `roles/*.yaml` (the six roles report to the chief of staff, and the chief of staff to the founder), and each agent file gains a "Reports to" section. `tickets.py escalate <n> --by <role> --why "..."` labels the ticket `escalated-to:<manager>`, comments and logs it; the manager's `queue` shows it. Only the chief of staff escalates to the founder.
+- **The dashboard:** escalations to you join the Needs you list, right after approvals, with their own tile. Agent cards show who each role reports to, and an agent's tickets show review and escalation state.
+- **Not yet:** the CI gate check doesn't read review verdicts on gated pull requests; the founder's `founder-approved` label stays the only gate there.
+- **Docs:** the handbook and the `coordinate` skill.
+- **Tests:** 6 new: the review flow with changes then approval, no self-review and `--review none`, escalation up the chain, reviews in the queue, escalations and review state on the page, and `reports_to` agreeing with the tickets tool.
+
 ## v1.13.0 (2026-11-23)
 
 Slice 10 of `ROADMAP-V2.md`: governance 2, control from the phone.

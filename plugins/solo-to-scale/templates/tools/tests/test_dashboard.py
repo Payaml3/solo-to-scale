@@ -324,3 +324,14 @@ def test_paused_roles_revise_and_approval_reminders_reach_the_page(root, fake):
     assert item["level"] == "overdue" and "expires in 4 days" in item["detail"]
     html = bd.PAGE.read_text(encoding="utf-8")
     assert 'reply("Revise", "/revise "' in html and '"/pause " + a.role' in html and '"/resume " + a.role' in html
+
+
+def test_escalations_to_the_founder_and_reviews_show(root, fake):
+    up = fake.make("Refund rules", "", ["ticket", "role:chief-of-staff", "escalated-to:founder"])
+    mid = fake.make("Spec clash", "", ["ticket", "role:engineer", "escalated-to:chief-of-staff", "needs-review:qa"])
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    esc = [x for x in d["needs"]["items"] if x["kind"] == "escalation"]
+    assert [x["number"] for x in esc] == [up] and d["needs"]["counts"]["escalation"] == 1
+    tk = {t["number"]: t for t in d["github"]["tickets"]}
+    assert tk[mid]["review"] == "qa" and tk[mid]["escalated_to"] == "chief-of-staff"
+    assert d["repo"]["reports_to"]["engineer"] == "chief-of-staff" and d["repo"]["reports_to"]["chief-of-staff"] == "founder"

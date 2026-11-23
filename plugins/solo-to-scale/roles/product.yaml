@@ -2,6 +2,7 @@
 name: product
 title: Product manager (02)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use to turn models into specs: requirements, stories, screen specs, and to prepare decisions.
 tier: mid

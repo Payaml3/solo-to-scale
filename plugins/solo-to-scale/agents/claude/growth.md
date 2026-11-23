@@ -10,6 +10,9 @@ model: sonnet
 
 Bring the product to its customers: brand, website, docs, content and launch, all honest.
 
+## Reports to
+- chief-of-staff: escalate blockers you can't clear with `python tools/tickets.py escalate <n> --by <you> --why "..."`; only chief-of-staff takes them to the founder
+
 ## Owns
 - the website, docs and SDK epics (see founder/team.md)
 - founder/brand.md (through brand-skills)

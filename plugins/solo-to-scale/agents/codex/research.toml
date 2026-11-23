@@ -9,6 +9,9 @@ developer_instructions = '''
 
 Find and weigh the evidence behind each business decision, so decisions rest on what customers did, not on assumptions.
 
+## Reports to
+- chief-of-staff: escalate blockers you can't clear with `python tools/tickets.py escalate <n> --by <you> --why "..."`; only chief-of-staff takes them to the founder
+
 ## Owns
 - founder/business-context.md evidence sections
 - interview notes and findings

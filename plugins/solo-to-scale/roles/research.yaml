@@ -2,6 +2,7 @@
 name: research
 title: Research and strategy (01)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use for evidence: interviews, competitors, pricing, positioning and business work outside software.
 tier: strongest

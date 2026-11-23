@@ -2,6 +2,7 @@
 name: chief-of-staff
 title: Claude, AI core and chief of staff
 kind: team
+reports_to: founder
 enabled: true
 description: Use to run the operating system: session start and end, handoffs, the weekly review and refreshing the views.
 tier: mid

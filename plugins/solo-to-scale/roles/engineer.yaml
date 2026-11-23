@@ -2,6 +2,7 @@
 name: engineer
 title: Engineers (04)
 kind: team
+reports_to: chief-of-staff
 enabled: true
 description: Use to build one claimed story group per session: tests first, then code, then checks.
 tier: mid

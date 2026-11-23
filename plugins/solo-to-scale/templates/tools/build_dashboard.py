@@ -62,7 +62,7 @@ OVERDUE_DAYS, ESCALATE_DAYS = 7, 30   # anything waiting on the founder: overdue
 APPROVAL_OVERDUE_DAYS = 3             # an approval blocks an agent: overdue after 3 days; it expires after 14
 TREND_DAYS = 14
 # Order inside one urgency level: what only the founder can unblock first.
-NEED_ORDER = ("approval", "budget", "stuck", "decision", "founder item")
+NEED_ORDER = ("approval", "escalation", "budget", "stuck", "decision", "founder item")
 HOST = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 PAGES_PROJECT = re.compile(r"^[a-z0-9]([a-z0-9-]{0,56}[a-z0-9])?$")
 CF_API = "https://api.cloudflare.com/client/v4"
@@ -154,6 +154,7 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "epics": epics,
         "decisions": s.decisions(root, cfg),
         "approved_words": cfg.get("approved_words") or ["Approved"],
+        "reports_to": dict(tickets.REPORTS_TO),
     }
 
 
@@ -294,6 +295,10 @@ def needs_you(data: dict[str, Any], now: dt.datetime, stale_hours: float = STALE
                 add("budget", f"role:{r['role']} stopped: budget spent", "", "",
                     f"${r['used']:.2f} of ${r['cap']:.2f} for {month}", role=r["role"])
         for tk in gh_.get("tickets") or []:
+            if tk.get("escalated_to") == "founder":
+                add("escalation", f"#{tk.get('number')} {tk.get('title', '')}", tk.get("url", ""), tk.get("updated"),
+                    f"escalated to you by role:{tk.get('role') or '?'}", role=tk.get("role", ""), number=tk.get("number"))
+        for tk in gh_.get("tickets") or []:
             d = when_of(tk.get("updated"))
             if tk.get("claimed") and not tk.get("blocked") and d and (now - d).total_seconds() >= stale_hours * 3600:
                 hours = (now - d).total_seconds() / 3600
@@ -337,6 +342,9 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.dateti
                          "role": tickets.role_of(t), "claimed": tickets.CLAIMED in tickets.labels_of(t),
                          "blocked": tickets.BLOCKED in tickets.labels_of(t),
                          "goal": goals.objective_of(tickets.labels_of(t)),
+                         "review": tickets.reviewer_of(t),
+                         "escalated_to": next((lb[len(tickets.ESCALATED):] for lb in tickets.labels_of(t)
+                                               if lb.startswith(tickets.ESCALATED)), ""),
                          "created": t.get("created_at", ""), "updated": t.get("updated_at", "")} for t in hub.tickets("open")]
         pulls = hub.api("pulls?state=closed&sort=updated&direction=desc&per_page=20") or []
         merged = [{"number": p["number"], "title": p.get("title", ""), "url": p.get("html_url", ""),
