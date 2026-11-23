@@ -2,7 +2,8 @@
 
 Injects the "Where we are" rows and the next step from HANDOFF.md, the top 3 open founder items
 from founder/status.md, the claimed issue's goal chain (if claim.py recorded one) and one line naming
-the protocol and the context-guard limits. After a compaction it adds a re-read note.
+the protocol and the context-guard limits, and how many setup items need the founder (the repo's
+tools/doctor.py, offline). After a compaction it adds a re-read note.
 Any error exits 0 with no output.
 """
 from __future__ import annotations
@@ -62,6 +63,26 @@ def claimed(root: Path) -> list[str]:
     return lines
 
 
+def setup(root: Path) -> list[str]:
+    """One line when the repo's own doctor (offline: files only) finds setup items for the founder."""
+    tools = root / "tools"
+    if not (tools / "doctor.py").exists():
+        return []
+    try:
+        sys.path.insert(0, str(tools))
+        import doctor  # type: ignore[import-not-found]  # noqa: PLC0415
+        todo = doctor.needs_you(doctor.run(root, offline=True))
+    except Exception:  # noqa: BLE001 - an old or broken doctor never blocks a session
+        return []
+    finally:
+        if sys.path and sys.path[0] == str(tools):
+            sys.path.pop(0)
+    if not todo:
+        return []
+    return [f"Setup: {len(todo)} item{'s' if len(todo) != 1 else ''} to finish ({', '.join(x['title'] for x in todo[:3])}"
+            f"{', ...' if len(todo) > 3 else ''}). The doctor skill lists them and fixes what it can."]
+
+
 def summary(root: Path, source: str, agent: str, session_id: str) -> list[str]:
     cfg = c.load_config(root)
     handoff = read(root / "HANDOFF.md")
@@ -78,6 +99,7 @@ def summary(root: Path, source: str, agent: str, session_id: str) -> list[str]:
     guard = (f"warn at {cfg['warn_pct']}% or {cfg['warn_tokens']:,} tokens, handoff at "
              f"{cfg['handoff_pct']}% or {cfg['handoff_tokens']:,} tokens" if agent == "claude"
              else "handoff requested after each compaction")
+    lines += setup(root)
     lines.append(f"Protocol: founder/operating-protocol.md. Context guard: {guard}.")
     if source == "compact":
         note = [COMPACT_NOTE]

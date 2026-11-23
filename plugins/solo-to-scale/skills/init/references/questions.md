@@ -2,7 +2,7 @@
 
 | # | Question | Default | Notes |
 | --- | --- | --- | --- |
-| 1 | Name, working name?, repo, one line, stage | none: always ask | Saved once in `founder/project.json`; every file and hook reads it from there. Stage hints: idea 1, validating 2, building the MVP 13, launched 22 |
+| 1 | Name, working name?, repo, one line, stage, company goal | none: always ask (the goal may be blank) | Saved once in `founder/project.json`; every file and hook reads it from there. Stage hints: idea 1, validating 2, building the MVP 13, launched 22 |
 | 2 | Context-guard limits | warn 60% or 100,000 tokens; handoff 75% or 140,000 tokens | Each level fires at whichever comes first. `context_window_tokens` stays null unless the founder sets it |
 | 3 | Monthly AI budget per role (USD) | Open | Written to `founder/heartbeats.json`. Enforced for heartbeats: a warning at 80%, a stop at 100%. A role without a budget never runs a heartbeat; heartbeats start off |
 | 4 | Plugins to enable | the ones the project needs | Enabled plugins' skill descriptions load into every session: recommend disabling unrelated ones (social media, for example). Use the exact identifiers this session shows (`name@marketplace`) |

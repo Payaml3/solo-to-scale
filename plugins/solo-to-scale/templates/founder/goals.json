@@ -1,6 +1,6 @@
 {
   "about": "The company goal, this quarter's objectives and their key results. Only the founder edits this file (the decision gate); agents propose new values with `python tools/goals.py update <key result> --value N` in a pull request. Objective ids look like O1, key result ids like O1.1. status: planned, active, achieved or cancelled. Progress is how far current has moved from baseline (0 if unset) to target. Slices and epics in slices.json name an objective with \"objective\": \"O1\"; tickets carry the label goal:O1.",
-  "goal": "",
+  "goal": "{{goal}}",
   "horizon": "",
   "objectives": []
 }

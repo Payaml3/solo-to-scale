@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.10.0 (2026-11-23)
+
+Slice 7 of `ROADMAP-V2.md`: quick start and the doctor.
+
+- **The doctor (`tools/doctor.py` and the `doctor` skill):** one list of what's broken, what's still to do, what it couldn't check and what's fine, each with its fix and handbook section. It checks `project.json`, the workflows, that each founder file sits behind its gate, the company goal and objectives, a budget for every role whose heartbeat is on, the hosting secrets, the labels, a run in the last 72 hours from each enabled role, and the last dashboard build. `--offline` checks the repo only; `--json` for tools; exit 1 while anything is broken.
+- **`--repair`** fixes what's safe: an empty `goals.json`, gate paths for the founder files, missing labels. The skill does it on a branch and opens a PR for the founder to merge. Goals, budgets and secrets stay the founder's.
+- **Secrets are checked, never read.** The `dashboard` workflow passes only whether each secret is set; locally the doctor reads the secret names from the GitHub API. The workflow gains `actions: read`.
+- **The Setup card** at the top of the dashboard's Overview lists what's broken and left to do. A failing check shows as unknown and never breaks the build.
+- **Session start** adds one line while setup is unfinished, pointing to the doctor skill.
+- **Quick start in `init`:** the name and the company goal, then defaults for the rest, listed in the plan. The goal is written into `founder/goals.json`. Init then offers three starter tickets and opens them only on the founder's yes.
+- **Docs:** the handbook's Day 0 setup covers the quick start and the doctor; README counts fifteen skills.
+- **Tests:** 10 new: a fresh repo's findings, repair, roles without budgets, hosting secrets from the workflow and from the API, labels, runs and the dashboard build, GitHub down, the Setup card, a broken check, the session-start line and the goal written by init.
+
 ## v1.9.0 (2026-11-23)
 
 Slice 6 of `ROADMAP-V2.md`: goals and key results, as data.

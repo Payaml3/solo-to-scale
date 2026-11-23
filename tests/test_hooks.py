@@ -140,6 +140,15 @@ def test_session_start_without_files_still_answers(tmp_path):
     assert text.startswith("Project session context")
 
 
+def test_session_start_lists_unfinished_setup(project):
+    import shutil
+    from conftest import PLUGIN
+    shutil.copytree(PLUGIN / "templates" / "tools", project / "tools", ignore=shutil.ignore_patterns("tests"))
+    text = context_of(run_hook("session_start", {"source": "startup", "session_id": "s1"}, project))
+    setup = [ln for ln in text.splitlines() if ln.startswith("Setup:")]
+    assert setup and "doctor skill" in setup[0], text
+
+
 # ---- status line
 def test_statusline_writes_state_and_tags(project):
     out = run_hook("statusline", {"session_id": "s1", "model": {"display_name": "Opus"},

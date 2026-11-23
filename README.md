@@ -7,7 +7,7 @@
 - **Nothing becomes Approved without your words.** Merging a pull request is approval.
 - **It works in Claude Code and Codex,** from one source.
 
-**Status: v1.9.0.** Fourteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
+**Status: v1.10.0.** Fifteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
 
 ---
 
@@ -112,7 +112,7 @@ The plugin is generic. It contains no startup's name, repo, epics, slices, invar
 | `.claude-plugin/marketplace.json` | Claude Code marketplace (one plugin) |
 | `.agents/plugins/marketplace.json` | Codex marketplace (the same plugin) |
 | `plugins/solo-to-scale/.claude-plugin/`, `.codex-plugin/` | The two plugin manifests |
-| `plugins/solo-to-scale/skills/` | The 14 skills, in the shared `SKILL.md` format, with details in `references/` |
+| `plugins/solo-to-scale/skills/` | The 15 skills, in the shared `SKILL.md` format, with details in `references/` |
 | `plugins/solo-to-scale/roles/` | One source per role: 7 team roles, 4 advisors and the sales template |
 | `plugins/solo-to-scale/agents/` | Generated from `roles/` by `scripts/sync_agents.py`; never edit by hand |
 | `plugins/solo-to-scale/hooks/`, `scripts/hooks/` | Hook registrations for each tool, and the shared hook scripts (`--agent claude\|codex`) |

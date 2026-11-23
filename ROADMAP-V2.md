@@ -178,7 +178,7 @@ Each slice is one pull request with a version bump, tests and handbook text, pic
 | # | Slice | Items | Size | Why this order |
 |---|---|---|---|---|
 | 6 | **Goals and key results** (done in v1.9.0) | D1, D2, D3, E3 | M | Everything else reports against goals |
-| 7 | **Quick start and doctor** | H1, H2, H3, F1 | M | A new venture is running in minutes, and every later slice's setup is checked in one place |
+| 7 | **Quick start and doctor** (done in v1.10.0) | H1, H2, H3, F1 | M | A new venture is running in minutes, and every later slice's setup is checked in one place |
 | 8 | **Run log and agent pages** | C2, C1, C5, T2 | M | Outcomes are the data scorecards, charts and retries need |
 | 9 | **Needs you, stuck work and charts** | A3, A2, A1, A8, T1 | M | The founder's daily screen, now trustworthy and current |
 | 10 | **Governance 2** | B1, B4, A4, B3, B5 | M | Revise, pause and plan approval: control from the phone |
