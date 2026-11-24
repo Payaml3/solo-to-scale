@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.9.0 (2026-11-24)
+
+The Overview is rebuilt around what a founder checks every day: metrics, progress and goals first, and nothing that changes only weekly at the top.
+
+- **Six daily numbers**, each opening its tab: Needs you, North Star (value, target, progress), This cycle (objectives' progress against the time gone, how many are on track), Build completion (criteria done, stories done, share tested), Shipped in the last 7 days (merged PRs against the week before, agent run success, a 14-day sparkline) and Runway or AI spend (with the month-end forecast). A tile turns red only when it needs action.
+- **Needs you beside Goals this cycle.** Each objective's bar has a tick for the time gone in the cycle, so ahead or behind shows at a glance.
+- **Delivery,** a new panel: the slice being built, slices done, open, blocked and quiet tickets, agents working, and 14-day charts of merges and agent runs.
+- **The journey and the team move below**, because they change weekly. The separate Goals panel, the Agents working tile and the latest-actions list left the Overview; they remain in their tabs.
+- **Charts** draw a hairline for quiet days, so a 14-day chart always reads as 14 days.
+- The order and the reasoning are in `DESIGN-BRIEF.md` and `DESIGN.md`. Existing repos get the new Overview with `upgrade`.
+
 ## v2.8.0 (2026-11-24)
 
 A design pass on the dashboard and the portfolio with the design skills from v2.4.0: a scored review, layout and accessibility fixes, and motion with a job.
