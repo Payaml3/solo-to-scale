@@ -68,6 +68,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: role:${{ matrix.role }} works one ticket
+        id: claude
         uses: anthropics/claude-code-action@v1
         env:
           S2S_SESSION_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -79,7 +80,14 @@ jobs:
           prompt: ${{ matrix.prompt }}
           # Follow-on runs are started by this repo's own automation; the prompt never comes from the event.
           allowed_bots: "github-actions,claude"
-          claude_args: --model ${{ matrix.model }} --max-turns 80
+          claude_args: >-
+            --model ${{ matrix.model }} --max-turns 80
+            --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,Skill,Task,TodoWrite"
+      - name: list any tool the run was refused (names only)
+        if: always() && steps.claude.outputs.execution_file != ''
+        env:
+          LOG: ${{ steps.claude.outputs.execution_file }}
+        run: python -I -c "import json,os;d=json.load(open(os.environ['LOG']));r=[x for x in d if isinstance(x,dict) and x.get('type')=='result'];print('refused tools:',sorted({str(x.get('tool_name')) for e in r for x in e.get('permission_denials') or []}) or 'none')" || true
       - name: a run that stopped early is recorded as failed and frees its lock
         if: always()
         env:
