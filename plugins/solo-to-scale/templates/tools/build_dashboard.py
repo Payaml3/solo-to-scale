@@ -156,6 +156,7 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "goals": goals.build(root),
         "documents": grouped_documents(root, cfg_dash.get("documents") or DEFAULT_DOCS),
         "roadmap": build_roadmap.build(root),
+        "schedule": schedule(root, cfg),
         "trace": build_traceability.build(root),
         "team": build_team.build(root),
         "team_doc": s.read(root / "founder" / "team.md")[:DOC_LIMIT],
@@ -166,6 +167,92 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "approved_words": cfg.get("approved_words") or ["Approved"],
         "reports_to": dict(tickets.REPORTS_TO),
     }
+
+
+# --- the roadmap timeline (Gantt) -----------------------------------------------------------------------
+
+HISTORY_COMMITS = 200     # how far back the timeline reads a file's history for when a status changed
+
+
+def day(v: Any) -> str:
+    """A YYYY-MM-DD date, or "" when `v` isn't one."""
+    raw = str(v or "").strip()[:10]
+    try:
+        return dt.date.fromisoformat(raw).isoformat() if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw) else ""
+    except ValueError:
+        return ""
+
+
+def stage_state(status: Any) -> str:
+    st = str(status or "").lower()
+    return "done" if re.search(r"pass|defer|done", st) else "progress" if "current" in st else "todo"
+
+
+def slice_state(status: Any) -> str:
+    st = str(status or "").lower()
+    return "done" if st == "done" else "progress" if re.search(r"progress|build|review|current", st) else "todo"
+
+
+def stage_states(text: str) -> dict[str, str]:
+    return {str(x["stage"]): stage_state(x["status"]) for x in s.playbook_text(text)}
+
+
+def slice_states(text: str) -> dict[str, str]:
+    try:
+        data = json.loads(text or "{}")
+    except ValueError:
+        return {}
+    rows = data.get("slices") if isinstance(data, dict) else None
+    return {str(x.get("id")): slice_state(x.get("status")) for x in rows or [] if isinstance(x, dict) and x.get("id")}
+
+
+def history(root: Path, rel: str, states: Any) -> dict[str, dict[str, str]]:
+    """When each item's status in `rel` first moved to in progress (started) and to done (finished), from git.
+
+    Oldest commit first; an item that goes back to to do loses both dates, one reopened loses its finish date.
+    """
+    log = s.git(root, "log", f"-{HISTORY_COMMITS}", "--format=%H %cI", "--", rel) or ""
+    out: dict[str, dict[str, str]] = {}
+    for line in reversed(log.strip().splitlines()):
+        sha, _, when = line.partition(" ")
+        text = s.git(root, "show", f"{sha}:{rel}")
+        if text is None:
+            continue
+        date = day(when)
+        for key, state in states(text).items():
+            d = out.setdefault(key, {"started": "", "finished": ""})
+            if state == "todo":
+                d["started"] = d["finished"] = ""
+                continue
+            d["started"] = d["started"] or date
+            d["finished"] = (d["finished"] or date) if state == "done" else ""
+    return out
+
+
+def schedule(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """The roadmap timeline: stages (grouped by phase in the page) and slices, each with planned and actual dates.
+
+    Planned: optional `Start` and `Target` columns in founder/playbook.md, and `start` and `target` on each
+    slice in founder/slices.json. Actual: the commits that moved its status to in progress and to done.
+    """
+    slices_rel = str(cfg.get("slices_file") or "founder/slices.json")
+    stage_hist = history(root, "founder/playbook.md", stage_states)
+    slice_hist = history(root, slices_rel, slice_states)
+    rows: list[dict[str, Any]] = []
+    for x in s.playbook(root):
+        h = stage_hist.get(str(x["stage"])) or {}
+        rows.append({"kind": "stage", "id": str(x["stage"]), "name": x["name"], "phase": x["phase"],
+                     "status": x["status"], "state": stage_state(x["status"]), "start": day(x.get("start")),
+                     "target": day(x.get("target")), "started": h.get("started", ""), "finished": h.get("finished", "")})
+    for x in s.slices(root, cfg)["slices"]:
+        if not isinstance(x, dict) or not x.get("id"):
+            continue
+        h = slice_hist.get(str(x["id"])) or {}
+        rows.append({"kind": "slice", "id": str(x["id"]), "name": str(x.get("name", "")), "phase": "",
+                     "status": str(x.get("status", "todo")), "state": slice_state(x.get("status")),
+                     "start": day(x.get("start")), "target": day(x.get("target") or x.get("due")),
+                     "started": h.get("started", ""), "finished": h.get("finished", "")})
+    return {"rows": rows}
 
 
 # --- the GitHub half (best effort) -----------------------------------------------------------------------

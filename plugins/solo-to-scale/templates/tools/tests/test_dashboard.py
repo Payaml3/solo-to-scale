@@ -481,3 +481,44 @@ def test_both_workflows_deploy_to_vercel_only_after_the_guard():
         assert re.search(r"if: steps\.guard\.outputs\.deploy == 'yes' && steps\.guard\.outputs\.provider == 'vercel'\n"
                          r"(?:.*\n){0,5}?\s+run: npx --yes vercel@\d+\.\d+\.\d+ deploy ", wf), name
         assert "provider != 'vercel'" in wf and "VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}" in wf
+
+
+def test_the_roadmap_timeline_has_planned_dates_and_actual_dates_from_git(root, tmp_path):
+    import os
+    import subprocess
+
+    def commit(date: str) -> None:
+        env = dict(os.environ, GIT_AUTHOR_DATE=f"{date}T12:00:00Z", GIT_COMMITTER_DATE=f"{date}T12:00:00Z")
+        for args in (["add", "-A"], ["commit", "-qm", date]):
+            subprocess.run(["git", *args], cwd=root, check=True, env=env, capture_output=True)
+
+    def playbook(s1: str, s2: str) -> None:
+        (root / "founder" / "playbook.md").write_text(
+            "| # | Phase | Stage | Gate | Start | Target | Status |\n| --- | --- | --- | --- | --- | --- | --- |\n"
+            f"| 1 | A Discover | Problem | Pain | 2026-06-01 | 2026-06-20 | {s1} |\n"
+            f"| 2 | A Discover | Customers | Interviews | not a date | 2026-02-30 | {s2} |\n", encoding="utf-8")
+
+    def slices(status: str) -> None:
+        (root / "founder" / "slices.json").write_text(json.dumps({"slices": [
+            {"id": "S1", "name": "First invoice", "status": status, "start": "2026-10-01", "target": "2026-10-20"}]}),
+            encoding="utf-8")
+
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=root, check=True)
+    playbook("Current", "To do"); slices("todo"); commit("2026-06-02")
+    playbook("Passed", "Current"); slices("in progress"); commit("2026-06-25")
+    playbook("Passed", "Current"); slices("done"); commit("2026-10-18")
+    rows = {r["id"]: r for r in bd.build(root, offline=True, now=NOW)["repo"]["schedule"]["rows"]}
+    s1, s2, sl = rows["1"], rows["2"], rows["S1"]
+    assert (s1["start"], s1["target"], s1["started"], s1["finished"], s1["state"]) == \
+        ("2026-06-01", "2026-06-20", "2026-06-02", "2026-06-25", "done")
+    assert (s2["start"], s2["target"], s2["started"], s2["finished"], s2["state"]) == ("", "", "2026-06-25", "", "progress")
+    assert (sl["kind"], sl["start"], sl["target"], sl["started"], sl["finished"]) == \
+        ("slice", "2026-10-01", "2026-10-20", "2026-06-25", "2026-10-18")
+
+
+def test_the_timeline_without_git_still_builds(root):
+    rows = bd.build(root, offline=True, now=NOW)["repo"]["schedule"]["rows"]
+    assert rows == [{"kind": "slice", "id": "S1", "name": "First invoice", "phase": "", "status": "done", "state": "done",
+                     "start": "", "target": "", "started": "", "finished": ""}]
