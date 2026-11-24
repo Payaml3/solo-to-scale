@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.2.0 (2026-11-24)
+
+The venture stage, as a ladder on the Overview.
+
+- **Venture stage panel.** Every stage of `founder/playbook.md`, phase by phase (A to G), marked passed, current, deferred or not started, like a readiness ladder. A strip shows all stages at a glance; each phase opens to its stages with the gate and the evidence that it was met. Phases up to the current one start open. It sits right under Needs you, above This stage.
+- **Honest by construction.** A passed stage with no evidence says so. A stage before the current one that isn't Passed or Deferred shows as **Not passed** in red, so the page never shows more progress than the playbook records.
+- **An Evidence column in the playbook** (new repos): decision IDs, files or links. Decision IDs open Decisions and repo files open Documents. Existing repos keep their playbook (it is founder-owned); add the column by hand, between Gate and Status, and the ladder picks it up. Until then it says the evidence isn't recorded. `weekly-review` names the evidence when it proposes a stage as Passed or Deferred.
+- **Fixed:** This stage and Scope and journey only counted stages marked "done" as finished; they now count Passed and Deferred, the playbook's own words.
+- **Tests:** 1 new: the ladder's data with evidence, hostile evidence text staying text, and an older playbook without the column.
+
 ## v2.1.0 (2026-11-23)
 
 Vercel as a second home for the dashboard and the portfolio. Cloudflare stays the default.

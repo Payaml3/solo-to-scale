@@ -121,8 +121,11 @@ def playbook(root: Path) -> list[dict[str, Any]]:
     for table in tables(read(root / "founder" / "playbook.md")):
         for r in table:
             if r.get("#", "").isdigit() and "gate" in r:
-                stages.append({"stage": int(r["#"]), "phase": r.get("phase", ""), "name": r.get("stage", ""),
-                               "gate": r.get("gate", ""), "status": r.get("status", "")})
+                row = {"stage": int(r["#"]), "phase": r.get("phase", ""), "name": r.get("stage", ""),
+                       "gate": r.get("gate", ""), "status": r.get("status", "")}
+                if "evidence" in r:  # optional column: what shows the gate was met (decision IDs, files, links)
+                    row["evidence"] = r["evidence"]
+                stages.append(row)
     return stages
 
 
