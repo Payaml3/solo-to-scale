@@ -207,6 +207,53 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .rung .pill { margin-top: 2px; }
 .s-passed { color: var(--done); } .s-deferred { color: var(--progress); } .s-notpassed { color: var(--waiting); }
 .track .ph span em { font-style: normal; }
+a.tile { display: block; color: inherit; text-decoration: none; } a.tile:hover { border-color: var(--line-strong); }
+a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 760px) { .grid.g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.jhead { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
+.jhead .big { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.03em; }
+.jprog { min-width: 200px; flex: 0 1 280px; } .jprog .note { margin-bottom: 4px !important; font-variant-numeric: tabular-nums; }
+.jwarn { color: var(--waiting); font-size: .85rem; margin: 0 0 12px; }
+.jmap { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.jp a { display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; background: var(--surface); }
+.jp a:hover { border-color: var(--line-strong); } .jp a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.jp.on a { border: 2px solid var(--accent); padding: 9px; background: var(--sunk); }
+.jp.next a, .jp.part a { color: var(--muted); }
+.jp.gap a { border-color: var(--waiting); }
+.jtop { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.jword { font: 500 .68rem/1.2 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .02em; text-align: right; }
+.jp.done .jword { color: var(--done); } .jp.on .jword { color: var(--ink); } .jp.gap .jword { color: var(--waiting); }
+.jname { font-weight: 600; font-size: .9rem; line-height: 1.25; }
+.jp.on .jname, .jp.done .jname { color: var(--ink); }
+.jask { font-size: .76rem; color: var(--muted); line-height: 1.3; flex: 1; }
+.jp .cells { display: flex; gap: 2px; margin-top: 2px; }
+.jp .cells i { flex: 1; height: 8px; border-radius: 2px; background: var(--sunk); border: 1px solid var(--line); }
+.jp .cells i.passed { background: var(--done); border-color: var(--done); }
+.jp .cells i.current { background: var(--accent); border-color: var(--accent); }
+.jp .cells i.deferred { background: repeating-linear-gradient(135deg, var(--progress) 0 3px, transparent 3px 6px); border-color: var(--progress); }
+.jp .cells i.gap { border-color: var(--waiting); }
+.jcount { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.jsteps { list-style: none; margin: 12px 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.jsteps li { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border: 1px solid var(--line); border-radius: 999px; font-size: .84rem; }
+.jsteps li.current { border-color: var(--accent); background: var(--sunk); font-weight: 600; }
+.jsteps li.todo { color: var(--muted); }
+.jsteps .mark { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: .65rem; font-weight: 700; border: 2px solid var(--line); color: transparent; box-sizing: border-box; }
+.jsteps .passed .mark { background: var(--done); border-color: var(--done); color: var(--on-status); }
+.jsteps .current .mark { border-color: var(--accent); color: var(--accent); }
+.jsteps .deferred .mark { border-color: var(--progress); color: var(--progress); border-style: dashed; }
+.jsteps .gap .mark { border-color: var(--waiting); color: var(--waiting); }
+.jsteps .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.panel .stage { margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--line); }
+@media (max-width: 900px) { .jmap { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .jmap { grid-template-columns: 1fr; gap: 6px; }
+  .jp a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; }
+  .jp .jtop { display: contents; } .jp .badge { grid-row: 1 / span 2; } .jp .jword { grid-column: 3; grid-row: 1; }
+  .jp .jname { grid-column: 2; grid-row: 1; } .jp .jask { display: none; } .jp .jp-x { display: none; }
+  .jp .cells { grid-column: 2; grid-row: 2; } .jp .jcount { grid-column: 3; grid-row: 2; }
+  .jp.next .cells, .jp.done .cells { display: none; } .jp.next .jname, .jp.done .jname { grid-row: 1 / span 2; }
+}
 @media (max-width: 560px) { .track .ph span em { display: none; } .track .ph span { text-align: center; } }
 @media (max-width: 560px) { .rung { grid-template-columns: 24px minmax(0, 1fr) auto; } .rung .n { display: none; } }
 .empty { color: var(--muted); font-style: italic; }
@@ -744,40 +791,6 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     ["approvals", "Approvals inbox", approvalsTab], ["costs", "Costs", costsTab]
   ];
 
-  // This stage: where the venture is in the journey, who is on it, what blocks it and what was written lately.
-  function stagePanel() {
-    if (!current && !road.current_stage) return null;
-    var inPhase = current ? stages.filter(function (x) { return x.phase === current.phase; }) : [];
-    var next = stages.filter(function (x) { return x.stage > (current ? current.stage : road.current_stage); })[0];
-    var crew = agents(), busy = crew.filter(function (a) { return a.state === "working" || a.state === "blocked"; });
-    var blockers = [];
-    crew.forEach(function (a) { a.blocked.forEach(function (t) { blockers.push(el("li", null, avatar(a.role, null, true), roleName(a.role) + " is blocked on ", link("#" + t.number + " " + t.title, t.url))); }); });
-    (road.blockers || []).forEach(function (b) { blockers.push(el("li", null, pill("founder item", "todo"), " ", b.item)); });
-    if (waiting.length) blockers.push(el("li", null, pill("approval", "waiting"), " " + waiting.length + " approval" + (waiting.length > 1 ? "s" : "") + " waiting for you"));
-    if ((road.decisions_waiting || []).length) blockers.push(el("li", null, pill("decision", "proposed"), " " + road.decisions_waiting.length + " decision" + (road.decisions_waiting.length > 1 ? "s" : "") + " waiting"));
-    var docs = (R.documents || []).filter(function (d) { return d.updated; }).sort(function (a, b) { return String(b.updated).localeCompare(String(a.updated)); }).slice(0, 4);
-    return panel("This stage", null, el("div", { cls: "stage" },
-      el("div", null,
-        el("div", { cls: "note", style: "margin:0", text: current ? current.phase + " · stage " + current.stage + " of " + stages.length : "stage " + road.current_stage }),
-        el("div", { cls: "big", text: current ? current.name : "Stage " + road.current_stage }),
-        inPhase.length ? el("div", { cls: "steps", role: "img", "aria-label": "Stage " + (inPhase.map(function (x) { return x.stage; }).indexOf(current.stage) + 1) + " of " + inPhase.length + " in this phase" },
-          inPhase.map(function (x) { return el("i", { cls: x.stage === current.stage ? "cur" : /pass|done|defer/i.test(x.status) ? "done" : null, title: x.stage + ". " + x.name }); })) : null,
-        current && current.gate ? el("p", { style: "margin:6px 0" }, el("b", { text: "Done when: " }), current.gate) : null,
-        next ? el("p", { cls: "note", style: "margin:0", text: "Next: " + next.stage + ". " + next.name }) : null,
-        el("h3", { text: "Blockers" }), blockers.length ? el("ul", { cls: "list" }, blockers) : el("p", { cls: "empty", style: "margin:0", text: "Nothing is blocking this stage." })),
-      el("div", null,
-        el("h3", { text: "Agents working now" }),
-        busy.length ? el("ul", { cls: "list" }, busy.map(function (a) {
-          var t = a.claimed[0] || a.blocked[0];
-          return el("li", null, avatar(a.role, null, true), roleName(a.role) + " ", statePill(a.state), t ? el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)) : null);
-        })) : el("p", { cls: "empty", style: "margin:0", text: G.ok ? "No agent has a ticket right now." : "GitHub data missing." }),
-        el("h3", { text: "Latest documents" }),
-        docs.length ? el("ul", { cls: "list" }, docs.map(function (d) {
-          return el("li", null, el("span", { cls: "gtag g-" + d.group, text: (GROUPS.filter(function (g) { return g[0] === d.group; })[0] || [0, d.group])[1] }), " ",
-            el("a", { href: "#documents", text: d.title }), el("div", { cls: "why", text: d.path + ", changed " + ago(d.updated) }));
-        })) : el("p", { cls: "empty", style: "margin:0", text: "No documents yet." }))));
-  }
-
   // The stage ladder: every stage of founder/playbook.md as passed, current, deferred or not started, with its gate
   // and the evidence the founder recorded for it. A stage before the current one that isn't passed or deferred shows
   // as "Not passed", so the page never claims more progress than the playbook does.
@@ -857,6 +870,86 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       track, ladder);
   }
 
+  // The journey on the Overview: the 7 phases as a map, the stages of the current phase as steps, and where the
+  // venture is now: the gate that ends this stage, who leads it, what blocks it and what comes next. The full
+  // ladder with every gate and its evidence is in Scope and journey.
+  var PHASE_ASK = { A: "Is the problem real?", B: "What do we sell, and to whom?", C: "What exactly do we build, and how does it look?",
+    D: "Build it and prove it works", E: "From working to live", F: "Find product-market fit", G: "Grow the company" };
+  var LEAD_ROLE = { "01": "research", "02": "product", "03": "architect", "04": "engineer", "05": "qa", "06": "growth" };
+  // Who leads a stage, from the playbook's Where column: "P 02" or "Code 04" is that role; "P 00" is you with the chief of staff.
+  function leadOf(s) {
+    var w = String(s.where || ""), m = /\b(?:P|Code)\s*(0\d)\b/.exec(w);
+    if (m && m[1] === "00") return { text: "You, with the chief of staff", role: "chief-of-staff" };
+    if (m && LEAD_ROLE[m[1]]) return { text: roleName(LEAD_ROLE[m[1]]) + " (" + m[1] + ")", role: LEAD_ROLE[m[1]] };
+    if (/\bCode\b/.test(w)) return { text: "A Claude Code session" };
+    if (/\bCI\b/.test(w)) return { text: "CI, automatically" };
+    return w ? { text: w } : null;
+  }
+  function phaseGroups() {
+    var order = [], by = {};
+    stages.forEach(function (s) { if (!by[s.phase]) { by[s.phase] = []; order.push(s.phase); } by[s.phase].push(s); });
+    return order.map(function (p) {
+      var list = by[p], pp = phaseParts(p), st = list.map(stageState);
+      var passed = st.filter(function (x) { return x === "passed" || x === "deferred"; }).length;
+      var state = st.indexOf("current") >= 0 ? "on" : passed === list.length ? "done" : st.indexOf("gap") >= 0 ? "gap" : passed ? "part" : "next";
+      return { phase: p, letter: pp[0], name: pp[1], list: list, passed: passed, state: state };
+    });
+  }
+  function journeyPanel() {
+    if (!stages.length) return null;
+    var groups = phaseGroups(), cur = current || null;
+    var passed = stages.filter(function (s) { return stageState(s) === "passed"; }).length;
+    var deferred = stages.filter(function (s) { return stageState(s) === "deferred"; }).length;
+    var curGroup = groups.filter(function (g) { return g.state === "on"; })[0];
+    var map = el("ol", { cls: "jmap", "aria-label": "The 7 phases" }, groups.map(function (g, i) {
+      var word = g.state === "done" ? "Done" : g.state === "on" ? "You are here" : g.state === "gap" ? "Gates not passed" : g.state === "part" ? "Started" : "Ahead";
+      return el("li", { cls: "jp " + g.state, "aria-current": g.state === "on" ? "step" : null },
+        el("a", { href: "#scope", title: g.phase + ": " + g.passed + " of " + g.list.length + " stages passed or deferred. Open the full ladder." },
+          el("div", { cls: "jtop" }, el("span", { cls: "badge", text: g.letter || String(i + 1) }), el("span", { cls: "jword", text: word })),
+          el("div", { cls: "jname", text: g.name }),
+          g.letter && PHASE_ASK[g.letter] ? el("div", { cls: "jask", text: PHASE_ASK[g.letter] }) : null,
+          el("div", { cls: "cells", "aria-hidden": "true" }, g.list.map(function (s) { return el("i", { cls: stageState(s), title: s.stage + ". " + s.name }); })),
+          el("div", { cls: "jcount", text: "Stages " + g.list[0].stage + "–" + g.list[g.list.length - 1].stage + " · " + g.passed + " of " + g.list.length })));
+    }));
+    var steps = curGroup ? el("ol", { cls: "jsteps", "aria-label": "Stages in phase " + curGroup.phase }, curGroup.list.map(function (s) {
+      var x = stageState(s);
+      return el("li", { cls: x, "aria-current": x === "current" ? "step" : null, title: s.gate ? "Gate: " + s.gate : null },
+        el("span", { cls: "mark", "aria-hidden": "true", text: STATE_MARK[x] }), el("span", { cls: "n", text: String(s.stage) }), el("span", { cls: "sname", text: s.name }));
+    })) : null;
+    var next = stages.filter(function (x) { return x.stage > (cur ? cur.stage : road.current_stage || 0); })[0];
+    var lead = cur ? leadOf(cur) : null;
+    var crew = agents(), busy = crew.filter(function (a) { return a.state === "working" || a.state === "blocked"; });
+    var blockers = [];
+    crew.forEach(function (a) { a.blocked.forEach(function (t) { blockers.push(el("li", null, avatar(a.role, null, true), roleName(a.role) + " is blocked on ", link("#" + t.number + " " + t.title, t.url))); }); });
+    (road.blockers || []).forEach(function (b) { blockers.push(el("li", null, pill("founder item", "todo"), " ", b.item)); });
+    if (waiting.length) blockers.push(el("li", null, pill("approval", "waiting"), " ", el("a", { href: "#needs", text: waiting.length + " approval" + (waiting.length > 1 ? "s" : "") + " waiting for you" })));
+    if ((road.decisions_waiting || []).length) blockers.push(el("li", null, pill("decision", "proposed"), " ", el("a", { href: "#needs", text: road.decisions_waiting.length + " decision" + (road.decisions_waiting.length > 1 ? "s" : "") + " waiting" })));
+    var gaps = stages.filter(function (s) { return stageState(s) === "gap"; });
+    var here = el("div", { cls: "stage" },
+      el("div", null,
+        el("h3", { text: "Done when" }), el("p", { style: "margin:0" }, cur && cur.gate ? cur.gate : "No current stage in founder/playbook.md."),
+        lead ? [el("h3", { text: lead.role ? "Led by" : "Worked in" }), el("p", { style: "margin:0" }, lead.role ? avatar(lead.role, null, true) : null, lead.text)] : null,
+        next ? [el("h3", { text: "Next" }), el("p", { style: "margin:0" }, next.stage + ". " + next.name + (next.phase !== (cur && cur.phase) ? ", the start of " + next.phase : ""))] : null),
+      el("div", null,
+        el("h3", { text: "Blocking this stage" }), blockers.length ? el("ul", { cls: "list" }, blockers) : el("p", { cls: "empty", style: "margin:0", text: "Nothing is blocking it." }),
+        el("h3", { text: "Agents on it now" }),
+        busy.length ? el("ul", { cls: "list" }, busy.map(function (a) {
+          var t = a.claimed[0] || a.blocked[0];
+          return el("li", null, avatar(a.role, null, true), roleName(a.role) + " ", statePill(a.state), t ? el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)) : null);
+        })) : el("p", { cls: "empty", style: "margin:0", text: G.ok ? "No agent has a ticket right now." : "GitHub data missing." })));
+    return panel("Your journey", null,
+      el("div", { cls: "jhead" },
+        el("div", null,
+          el("div", { cls: "note", style: "margin:0", text: cur ? "Stage " + cur.stage + " of " + stages.length + " · phase " + (cur.phase || "") : "Stage " + (road.current_stage || "?") + " of " + stages.length }),
+          el("div", { cls: "big", text: cur ? cur.name : "No current stage" })),
+        el("div", { cls: "jprog" },
+          el("div", { cls: "note", style: "margin:0", text: passed + " of " + stages.length + " gates passed" + (deferred ? ", " + deferred + " deferred" : "") }),
+          bar(passed + deferred, stages.length))),
+      gaps.length ? el("p", { cls: "jwarn", text: gaps.length + " earlier stage" + (gaps.length > 1 ? "s are" : " is") + " not passed or deferred: " + gaps.map(function (s) { return s.stage + ". " + s.name; }).join(", ") + "." }) : null,
+      map, steps, here,
+      el("p", { cls: "note", style: "margin:12px 0 0" }, el("a", { href: "#scope", text: "All " + stages.length + " stages, their gates and evidence, in Scope and journey" })));
+  }
+
   // --- money: runway from founder/finance.json, AI spend from the cost log -------------------------------------
   function money(x, cur) { var n = Number(x) || 0; return (n < 0 ? "-" : "") + (cur === "USD" || !cur ? "$" : cur + " ") + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 }); }
   function moneyPanel() {
@@ -872,37 +965,37 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         el("div", { cls: "tile" + (low ? " alert" : "") }, el("div", { cls: "k", text: "Runway" }), el("div", { cls: "v", text: runway }), el("div", { cls: "s", text: m.cash_left === null || m.cash_left === undefined ? "cash not set" : money(m.cash_left, cur) + " cash" + (m.one_offs_total ? " after " + money(m.one_offs_total, cur) + " of one-offs" : "") })),
         tile("AI share of costs", m.ai_share === null || m.ai_share === undefined ? "n/a" : Math.round(100 * m.ai_share) + "%", co.cap ? "company AI budget " + usd(co.used) + " of " + usd(co.cap) : "no company AI budget set")));
   }
+  // The Overview keeps what a founder checks every day: what needs you, where the venture is in the journey, who is
+  // working on it, money left and the goals. Everything else has its own tab.
   function overview() {
-    var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0);
-    var sDone = slices.filter(function (x) { return String(x.status).toLowerCase() === "done"; }).length;
-    var tiles = el("div", { cls: "grid" },
-      tile("Current stage", current ? String(current.stage) : String(road.current_stage || "?"), current ? current.phase + " · " + current.name : ""),
-      tile("Slices done", sDone + " of " + slices.length, slices.filter(function (x) { return /progress|building/i.test(x.status); }).length + " in progress"),
-      tile("Approvals waiting", G.ok ? String(waiting.length) : "?", G.ok ? "only your own /approve counts" : "GitHub data missing"),
-      tile("Open tickets", G.ok ? String(openTickets.length) : "?", G.ok ? openTickets.filter(function (t) { return t.claimed; }).length + " claimed, " + openTickets.filter(function (t) { return t.blocked; }).length + " blocked" : ""),
-      tile("AI spend " + (costs.month || D.month), G.ok ? usd(costs.total) : "?", G.ok && cap ? "of " + usd(cap) + " budgeted" : "budgets in founder/heartbeats.json"),
-      tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"),
-      tile("Needs you", String(NEEDS.length), NEED.overdue ? NEED.overdue + " overdue" : "nothing overdue"),
-      tile("Stuck", G.ok ? String((NEED.stuck || []).length) : "?", "no update in " + (NEED.stale_hours || 48) + "h, or the last run failed"));
-    var needs = NEEDS.slice(0, 8).map(needItem);
-    var recent = activity.slice(0, 8).map(activityItem);
-    var merged = (G.merged || []).slice(0, 8).map(function (p) { return el("li", null, link("#" + p.number + " " + p.title, p.url), el("div", { cls: "why", text: "merged " + when(p.merged) + (p.by ? " · " + p.by : "") })); });
-    var crew = agents().map(function (a) {
+    var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0), m = D.money || {};
+    var crewAll = agents(), working = crewAll.filter(function (a) { return a.state === "working"; }).length, blocked = crewAll.filter(function (a) { return a.state === "blocked"; }).length;
+    var runway = !m.set ? "not set" : m.runway_months !== null && m.runway_months !== undefined ? m.runway_months + " months" : m.net_burn <= 0 ? "not burning" : "set cash";
+    var low = m.set && m.runway_months !== null && m.runway_months !== undefined && m.runway_months < 6;
+    var tiles = el("div", { cls: "grid g4" },
+      el("a", { cls: "tile" + (NEED.overdue ? " alert" : ""), href: "#needs" }, el("div", { cls: "k", text: "Needs you" }), el("div", { cls: "v", text: String(NEEDS.length) }),
+        el("div", { cls: "s", text: NEED.overdue ? NEED.overdue + " overdue" : NEEDS.length ? "nothing overdue" : "all clear" })),
+      el("a", { cls: "tile", href: "#team" }, el("div", { cls: "k", text: "Agents working" }), el("div", { cls: "v", text: G.ok ? working + " of " + crewAll.length : "?" }),
+        el("div", { cls: "s", text: G.ok ? (blocked ? blocked + " blocked" : "none blocked") : "GitHub data missing" })),
+      el("a", { cls: "tile" + (low ? " alert" : ""), href: "#costs" }, el("div", { cls: "k", text: "Runway" }), el("div", { cls: "v", text: runway }),
+        el("div", { cls: "s", text: m.set ? (m.cash_left === null || m.cash_left === undefined ? "cash not set" : money(m.cash_left, m.currency) + " cash") : "fill in founder/finance.json" })),
+      el("a", { cls: "tile", href: "#costs" }, el("div", { cls: "k", text: "AI spend " + (costs.month || D.month) }), el("div", { cls: "v", text: G.ok ? usd(costs.total) : "?" }),
+        el("div", { cls: "s", text: G.ok && cap ? "of " + usd(cap) + " budgeted" : "budgets in founder/heartbeats.json" })));
+    var needs = NEEDS.slice(0, 5).map(needItem);
+    var recent = activity.slice(0, 4).map(activityItem);
+    var crew = crewAll.map(function (a) {
       return el("a", { cls: "who2", href: "#agent/" + encodeURIComponent(a.role) }, avatar(a.role, a.state), el("div", null, el("b", { text: roleName(a.role) }),
         el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
     });
     return [tiles, G.ok ? null : ghMissing(),
       setupPanel(),
-      panel("Needs you", "Oldest and most blocking first." + (NEEDS.length > 8 ? " " + (NEEDS.length - 8) + " more in the Needs you tab." : ""), needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }), NEEDS.length > 8 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
-      ladderPanel(),
-      stagePanel(),
-      moneyPanel(),
-      goalStrip(),
-      trendPanel(),
-      crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
-      el("div", { cls: "cols" },
-        panel("Latest agent activity", null, recent.length ? el("ul", { cls: "list" }, recent) : el("p", { cls: "empty", text: G.ok ? "No activity yet." : "GitHub data missing." })),
-        panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: G.ok ? "Nothing merged recently." : "GitHub data missing." })))];
+      panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
+        NEEDS.length > 5 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
+      journeyPanel(),
+      crew.length ? panel("Your AI team", "Green: working on a ticket; red: blocked; grey: idle or heartbeat off.", el("div", { cls: "strip" }, crew),
+        recent.length ? [el("h3", { cls: "k", style: "margin:14px 0 4px", text: "Latest" }), el("ul", { cls: "list" }, recent)] : null,
+        el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#activity", text: "Everything the agents did, in Agent activity" }))) : null,
+      goalStrip()];
   }
 
   // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------
@@ -1065,7 +1158,13 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   }
 
   function roadmapTab() {
+    var sDone = slices.filter(function (x) { return String(x.status).toLowerCase() === "done"; }).length;
     return [
+      el("div", { cls: "grid" },
+        tile("Slices done", sDone + " of " + slices.length, slices.filter(function (x) { return /progress|building/i.test(x.status); }).length + " in progress"),
+        tile("Open tickets", G.ok ? String(openTickets.length) : "?", G.ok ? openTickets.filter(function (t) { return t.claimed; }).length + " claimed, " + openTickets.filter(function (t) { return t.blocked; }).length + " blocked" : "GitHub data missing"),
+        tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"),
+        tile("Stuck", G.ok ? String((NEED.stuck || []).length) : "?", "no update in " + (NEED.stale_hours || 48) + "h, or the last run failed")),
       panel("Slices", "Shippable increments, each with an exit check.", table([
         { h: "Slice", f: function (r) { return r.id; } }, { h: "Name", f: function (r) { return r.name; } },
         { h: "Status", f: function (r) { return pill(r.status, /done/i.test(r.status) ? "done" : /todo|planned/i.test(r.status) ? "todo" : "progress"); } },
@@ -1077,16 +1176,8 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   }
 
   function scopeTab() {
-    var byPhase = {};
-    stages.forEach(function (s) { (byPhase[s.phase] = byPhase[s.phase] || []).push(s); });
-    var phases = Object.keys(byPhase).map(function (p) {
-      return el("div", { cls: "panel phase" }, el("h3", { text: p }), el("ol", null, byPhase[p].map(function (s) {
-        var st = String(s.status).toLowerCase();
-        return el("li", { value: s.stage, cls: s.stage === road.current_stage ? "cur" : /pass|done|defer/.test(st) ? "done" : null, title: s.gate ? "Gate: " + s.gate : null, text: s.name + (s.stage === road.current_stage ? " (now)" : "") });
-      })));
-    });
     return [
-      panel("The journey", "Phases A to G, stages 1 to 30. Hover a stage for its gate.", phases.length ? el("div", { cls: "phases" }, phases) : el("p", { cls: "empty", text: "founder/playbook.md has no stages." })),
+      ladderPanel() || panel("The journey", null, el("p", { cls: "empty", text: "founder/playbook.md has no stages." })),
       panel("Scope: epics", "What is being built, who owns it, and which slices it lands in.", table([
         { h: "Epic", f: function (r) { return r.code; } }, { h: "Name", f: function (r) { return r.name; } }, { h: "Goal", f: function (r) { return r.goal; } },
         { h: "Owner", f: function (r) { return r.role; } }, { h: "Stories", num: true, f: function (r) { return r.stories; } }, { h: "Slices", f: function (r) { return r.slices.join(", "); } }], R.epics || [], "No epics in founder/slices.json yet.", { search: "Search epics" }))];
@@ -1147,13 +1238,15 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
       shown.slice(0, 300).forEach(function (r) { list.appendChild(activityItem(r)); });
     }
     sel.addEventListener("change", draw); q.addEventListener("input", draw); draw();
-    return [
+    var merged = (G.merged || []).slice(0, 8).map(function (p) { return el("li", null, link("#" + p.number + " " + p.title, p.url), el("div", { cls: "why", text: "merged " + when(p.merged) + (p.by ? " · " + p.by : "") })); });
+    return [trendPanel(),
       panel("What the roles did and said to each other", "From the activity-log issue, newest first. A record, never an approval.", el("div", { cls: "toolbar" }, sel, q), list),
       panel("Open tickets", null, table([
         { h: "#", num: true, f: function (r) { return link(String(r.number), r.url); } }, { h: "Ticket", f: function (r) { return r.title; } },
         { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role || "-" }); } },
         { h: "State", f: function (r) { return r.blocked ? pill("blocked", "blocked") : r.claimed ? pill("claimed", "progress") : pill("ready", "todo"); } }], openTickets, "No open tickets.",
-        { search: "Search tickets", filters: [{ label: "Roles", f: function (r) { return r.role; } }, { label: "States", f: function (r) { return r.blocked ? "blocked" : r.claimed ? "claimed" : "ready"; } }] }))];
+        { search: "Search tickets", filters: [{ label: "Roles", f: function (r) { return r.role; } }, { label: "States", f: function (r) { return r.blocked ? "blocked" : r.claimed ? "claimed" : "ready"; } }] })),
+      panel("Recently merged", null, merged.length ? el("ul", { cls: "list" }, merged) : el("p", { cls: "empty", text: "Nothing merged recently." }))];
   }
 
   function decisionsTab() {
@@ -1182,7 +1275,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
   }
 
   function costsTab() {
-    if (!G.ok) return ghMissing();
+    if (!G.ok) return [moneyPanel(), ghMissing()];
     var roles = (costs.roles || []).filter(function (r) { return r.cap || r.used; }), by = costs.by || {}, entries = costs.entries || [];
     var worked = entries.filter(function (e) { return e.outcome === "worked"; }).length, tried = entries.filter(function (e) { return e.outcome && e.outcome !== "no-work"; }).length;
     function groupTable(title, rows) {
@@ -1191,7 +1284,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         { h: "Spent", num: true, k: function (r) { return r.usd; }, f: function (r) { return usd(r.usd); } },
         { h: "", f: function (r) { return bar(r.usd, costs.total || 1); } }], rows || [], "Nothing yet."));
     }
-    return [
+    return [moneyPanel(),
       el("div", { cls: "grid" }, tile("Spent in " + costs.month, usd(costs.total), costs.cap_total ? "of " + usd(costs.cap_total) + " in budgets" : null),
         costs.forecast !== null && costs.forecast !== undefined ? tile("Month-end at this pace", usd(costs.forecast), costs.cap_total ? (costs.forecast > costs.cap_total ? "over" : "within") + " the budgets" : "from the daily burn so far") : null,
         tile("Runs", String(entries.length), tried ? Math.round(100 * worked / tried) + "% worked of the runs that had work" : "no outcomes recorded yet"),

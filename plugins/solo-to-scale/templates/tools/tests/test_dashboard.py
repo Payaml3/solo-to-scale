@@ -247,7 +247,7 @@ def test_documents_are_grouped_business_product_technical(root):
         "docs/engineering-standards.md": "technical"}
     assert docs["specs/001-pay/plan.md"]["feature"] == "001-pay" and docs["docs/product/vision.md"]["feature"] == ""
     page = bd.PAGE.read_text(encoding="utf-8")
-    assert "function stagePanel" in page and '"This stage"' in page and '["documents", "Documents", documentsTab]' in page
+    assert "function journeyPanel" in page and '"Agents on it now"' in page and '["documents", "Documents", documentsTab]' in page
 
 
 def test_the_run_log_feeds_costs_by_group_the_forecast_and_agent_pages(root, fake):
@@ -326,8 +326,7 @@ def test_the_stage_ladder_shows_every_gate_with_its_evidence(root, fake):
     assert [(x["stage"], x["status"]) for x in road["stages"]] == [(1, "Passed"), (2, "Deferred"), (3, "To do"), (4, "Current")]
     assert road["stages"][0]["evidence"].startswith("B-01, founder/sources/interviews.md")
     html = bd.PAGE.read_text(encoding="utf-8")
-    assert "ladderPanel()," in html and '"Venture stage"' in html and "Not passed" in html
-    assert html.index("ladderPanel(),") < html.index("stagePanel(),") < html.index("moneyPanel(),")
+    assert "ladderPanel()" in html and '"Venture stage"' in html and "Not passed" in html
     # an older playbook without the Evidence column still builds, and says evidence is missing
     (root / "founder" / "playbook.md").write_text(
         "| # | Phase | Stage | Where | Gate | Status |\n| --- | --- | --- | --- | --- | --- |\n"
@@ -481,3 +480,28 @@ def test_both_workflows_deploy_to_vercel_only_after_the_guard():
         assert re.search(r"if: steps\.guard\.outputs\.deploy == 'yes' && steps\.guard\.outputs\.provider == 'vercel'\n"
                          r"(?:.*\n){0,5}?\s+run: npx --yes vercel@\d+\.\d+\.\d+ deploy ", wf), name
         assert "provider != 'vercel'" in wf and "VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}" in wf
+
+
+def test_the_overview_shows_the_journey_simply_and_the_rest_moves_to_its_tabs(root, fake):
+    (root / "founder" / "playbook.md").write_text(
+        "| # | Phase | Stage | Where | Gate | Evidence | Status |\n| --- | --- | --- | --- | --- | --- | --- |\n"
+        "| 1 | A Discover | Problem validation | P 01 | Pain confirmed | B-01 | Passed |\n"
+        "| 2 | B Define | Product and operating model | P 02 | Founder approves |  | Current |\n"
+        "| 3 | C Specify and design | Specify | Code | Open items answered |  | To do |\n", encoding="utf-8")
+    road = data_of(bd.page(bd.build(root, now=NOW)))["repo"]["roadmap"]
+    assert [x.get("where") for x in road["stages"]] == ["P 01", "P 02", "Code"], "the lead role comes from the Where column"
+    html = bd.PAGE.read_text(encoding="utf-8")
+    body = html[html.index("  function overview() {"):html.index("  // --- setup: what tools/doctor.py found")]
+    # the Overview: what needs you, the journey, the team and the goals; four tiles, each opening its tab
+    assert body.index('panel("Needs you"') < body.index("journeyPanel(),") < body.index('"Your AI team"') < body.index("goalStrip()")
+    assert body.count('el("a", { cls: "tile') == 4 and '"grid g4"' in body
+    for gone in ("ladderPanel()", "moneyPanel()", "trendPanel()", '"Recently merged"', '"Slices done"', '"Stuck"'):
+        assert gone not in body, gone
+    # and where each went
+    tab = lambda name, nxt: html[html.index("  function " + name + "() {"):html.index("  function " + nxt)]
+    assert "ladderPanel()" in tab("scopeTab", "showAgent") and "moneyPanel()" in tab("costsTab", "groupTable")
+    assert "trendPanel()" in tab("activityTab", "decisionsTab") and '"Recently merged"' in tab("activityTab", "decisionsTab")
+    assert '"Slices done"' in tab("roadmapTab", "scopeTab") and '"Stuck"' in tab("roadmapTab", "scopeTab")
+    # the journey: 7 phases in plain words, the current phase's stages, the gate, who leads, what blocks it
+    assert '"Your journey"' in html and "You are here" in html and "Is the problem real?" in html
+    assert '"Done when"' in html and '"Led by"' in html and '"Blocking this stage"' in html and '"Next"' in html

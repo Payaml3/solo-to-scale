@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.5.0 (2026-11-24)
+
+The Overview shows the journey from zero to scale simply, and keeps only what a founder checks every day.
+
+- **Your journey, on the Overview.** The 7 phases as 7 cards, each with its question in plain words ("Is the problem real?", "What do we sell, and to whom?"), its stages as cells, how many are passed, and whether it is done, current (**You are here**) or ahead. Under them, the current phase's stages as steps, then the current stage: what "done" means, who leads it, what comes next, what blocks it and which agents are on it now. On a phone the phases stack as a list. Every card opens the full ladder.
+- **Who leads a stage** comes from the playbook's Where column: `P 02` or `Code 04` is that role, `P 00` is you with the chief of staff. The roadmap data now carries `where` for each stage.
+- **A shorter Overview.** Four tiles (needs you, agents working, runway, AI spend), each opening its tab; the top five of Needs you; your journey; your AI team with the latest four activities; the goals.
+- **Moved, not removed.** The full stage ladder with gates and evidence is now in Scope and journey (it replaces the plain phase list there). Money is at the top of Costs. The last 14 days and recent merges are in Agent activity. Slices done, open tickets, decisions waiting and stuck work are tiles on Roadmap. The "This stage" panel is folded into the journey.
+- **Tests:** 1 new: the Overview's order and contents, where each moved panel went, and the Where column reaching the page.
+
 ## v2.4.0 (2026-11-24)
 
 The design gate: product design is finished and approved before any code.
