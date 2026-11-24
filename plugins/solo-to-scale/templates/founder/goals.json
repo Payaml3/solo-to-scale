@@ -1,6 +1,9 @@
 {
-  "about": "The company goal, this quarter's objectives and their key results. Only the founder edits this file (the decision gate); agents propose new values with `python tools/goals.py update <key result> --value N` in a pull request. Objective ids look like O1, key result ids like O1.1. status: planned, active, achieved or cancelled. Progress is how far current has moved from baseline (0 if unset) to target. Slices and epics in slices.json name an objective with \"objective\": \"O1\"; tickets carry the label goal:O1.",
+  "about": "The goal tree. Only the founder edits this file (the decision gate); agents propose changes in a pull request. North Star: goal (one sentence) and north_star (metric, unit, baseline, target, current, by). cycles: C1, C2 with start and end (6 weeks before product-market fit). objectives: O1 with cycle, owner, status (planned, active, achieved or cancelled) and 2 to 4 key_results (O1.1: metric, baseline, target, current, optional stage it proves). initiatives: I1 with title, key_result, owner, status (planned, active, done or dropped), optional epic. Tickets carry initiative:I1 and goal:O1. The okr-plan skill drafts it once the business model (stage 3) is approved; `python tools/goals.py update O1.1 --value N` records values.",
   "goal": "{{goal}}",
   "horizon": "",
-  "objectives": []
+  "north_star": {},
+  "cycles": [],
+  "objectives": [],
+  "initiatives": []
 }

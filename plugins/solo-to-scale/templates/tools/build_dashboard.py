@@ -358,6 +358,7 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.dateti
                          "role": tickets.role_of(t), "claimed": tickets.CLAIMED in tickets.labels_of(t),
                          "blocked": tickets.BLOCKED in tickets.labels_of(t),
                          "goal": goals.objective_of(tickets.labels_of(t)),
+                         "initiative": goals.initiative_of(tickets.labels_of(t)),
                          "review": tickets.reviewer_of(t),
                          "escalated_to": next((lb[len(tickets.ESCALATED):] for lb in tickets.labels_of(t)
                                                if lb.startswith(tickets.ESCALATED)), ""),
@@ -459,7 +460,10 @@ def clip(text: Any, n: int = 300) -> str:
 def goal_summary(g: dict[str, Any]) -> dict[str, Any]:
     """The goal and each active objective's progress: titles and numbers, never the reasons or history."""
     objs = [o for o in g.get("objectives") or [] if o.get("status") == "active"]
+    ns = g.get("north_star") or {}
     return {"goal": clip(g.get("goal"), 200),
+            **({"north_star": {"metric": clip(ns.get("metric"), 80), "unit": ns.get("unit", ""), "current": ns.get("current"),
+                               "target": ns.get("target"), "progress": ns.get("progress")}} if ns else {}),
             "objectives": [{"id": o.get("id"), "title": clip(o.get("title"), 120), "quarter": o.get("quarter", ""),
                             "progress": o.get("progress")} for o in objs][:6]}
 

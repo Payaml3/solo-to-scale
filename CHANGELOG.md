@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.5.0 (2026-11-24)
+
+The goal tree: a North Star, short OKR cycles and initiatives, so every ticket traces back to one number.
+
+- **Four layers in `founder/goals.json`.** The **North Star** (`goal` plus a measurable `north_star`: metric, unit, baseline, target, current, by), **cycles** (`C1`, `C2` with start and end dates: 6 weeks before product-market fit, then quarters), **objectives** with 2 to 4 **key results** each (now with `"cycle": "C1"`, and an optional `"stage": N` for the playbook gate a key result proves before launch), and **initiatives** (`I1`: the key actions and epics, each linked to one key result, with an owner, a status and an optional epic). Existing files keep working: every new field is optional.
+- **Tickets link to initiatives.** `tickets.py new --initiative I1` adds the labels `initiative:I1` and its objective's `goal:O1`; sub-tickets inherit both. Once the active objectives have initiatives, a ticket that names none is refused.
+- **`okr-plan`, a new skill.** Once the business model (stage 3) is approved, the chief of staff drafts the whole tree from the business model, the investment case or plan and the playbook, scores it, and opens one PR. `goals.json` is behind the `decision` gate, so the founder approves it by merging. It's refined at stage 5, and at each cycle's end it scores the cycle and drafts the next. A worked example is in `references/goals-example.md`.
+- **`tools/goals.py`:** `show` prints the tree with `due:` (draft after stage 3, review at a cycle's end) and `advice:` lines (more than 3 objectives, a key result count outside 2 to 4, an objective with no initiatives). `cycle` adds the next 6-week cycle. `update north-star --value N` records the North Star. `check` covers the new layers.
+- **The Goals tab shows the whole tree:** North Star with progress, the current cycle, then each objective's key results with the stage gate they prove, the initiatives under each, and each initiative's open tickets. The Overview's Goals panel adds the North Star and what's due. Pace uses the cycle's dates. The portfolio summary carries the North Star.
+- **The playbook** (new repos) says when the goal tree is drafted, at stages 3 and 5. Existing repos keep their playbook (it is founder-owned); `okr-plan` works either way.
+- **Docs:** the handbook's goals section is rewritten as "Goals: North Star, OKRs and initiatives", with a diagram; the cadence adds the cycle review; the chief of staff owns `okr-plan`.
+- **Tests:** 6 new, covering the tree, the new checks, when drafting and reviews are due, the cycle and North Star commands, tickets naming initiatives, and the tree on the page.
+
 ## v2.4.0 (2026-11-24)
 
 The design gate: product design is finished and approved before any code.

@@ -1,6 +1,6 @@
 # Playbook: the journey from zero to scale
 
-30 stages in 7 phases (A to G). A stage starts only when the previous gate is passed or explicitly deferred. Inside stages 13 to 17, work ships in slices, built one story group per session. Status is one of To do, Current, Passed or Deferred. Evidence says what shows the gate was met: decision IDs from the registers, files (`founder/sources/interviews.md`) or links, and the dashboard's Venture stage ladder shows it next to each gate. `weekly-review` proposes status and evidence changes; the founder approves them. Engineering-standards gates point to `docs/engineering-standards.md`. **The design gate:** no build (stage 13) starts until stage 9 (Product design) and stage 11 (Design system) are Passed and `DESIGN.md` and `docs/design/brief.md` exist; `check_governance` fails a branch that starts the build without them.
+30 stages in 7 phases (A to G). A stage starts only when the previous gate is passed or explicitly deferred. Inside stages 13 to 17, work ships in slices, built one story group per session. Status is one of To do, Current, Passed or Deferred. Evidence says what shows the gate was met: decision IDs from the registers, files (`founder/sources/interviews.md`) or links, and the dashboard's Venture stage ladder shows it next to each gate. `weekly-review` proposes status and evidence changes; the founder approves them. Engineering-standards gates point to `docs/engineering-standards.md`. **The design gate:** no build (stage 13) starts until stage 9 (Product design) and stage 11 (Design system) are Passed and `DESIGN.md` and `docs/design/brief.md` exist; `check_governance` fails a branch that starts the build without them. **Goals:** once stage 3 is Passed, `okr-plan` drafts the goal tree in `founder/goals.json`: a North Star from the business model, 6-week cycles (quarters after product-market fit) of 2 or 3 objectives with 2 to 4 key results, initiatives under each key result, and tickets under each initiative. Before launch, key results prove the next gate here (`"stage": 2`). The founder approves the tree by merging; it is refined at stage 5.
 
 ## Stages
 
@@ -8,9 +8,9 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | A Discover | Problem validation | P 01 | Pain confirmed by evidence, not assumption |  | To do |
 | 2 | A Discover | Customer discovery | P 01 | 5 to 8 interviews show pain and willingness to pay |  | To do |
-| 3 | B Define | Business model and positioning | P 01 | Founder approves |  | To do |
+| 3 | B Define | Business model and positioning | P 01 | Founder approves; then `okr-plan` drafts the North Star and the first cycle's OKRs |  | To do |
 | 4 | B Define | Brand strategy | P 06 | Name, trademark and domain checked |  | To do |
-| 5 | B Define | Product and operating model | P 02 | Founder approves |  | To do |
+| 5 | B Define | Product and operating model | P 02 | Founder approves; OKRs and initiatives refined to match |  | To do |
 | 6 | B Define | UX prototype and test | P 02, Code | Tested with 3 to 5 target users |  | To do |
 | 7 | B Define | MVP scope and launch criteria | P 02 | Founder approves scope |  | To do |
 | 8 | C Specify and design | Specify | Code | Every open item answered or deferred |  | To do |

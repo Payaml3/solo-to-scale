@@ -234,6 +234,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .strip a.who2 { color: inherit; text-decoration: none; } .strip a.who2:hover b, .strip a.who2:focus-visible { text-decoration: underline; }
 .goalrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 160px) 3.5em; gap: 10px; align-items: center; padding: 4px 0; }
 .goalrow b { font-variant-numeric: tabular-nums; text-align: right; }
+.inits { list-style: none; margin: 6px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+.inits > li { padding: 6px 0; }
+.inits .tix { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; font-size: .88rem; }
+.krhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; font-weight: 600; }
+.krhead .bar { flex: 0 0 120px; }
+.muted { color: var(--muted); font-weight: 400; }
 .theme { position: fixed; right: 12px; bottom: 12px; font: inherit; font-size: .8rem; font-weight: 500; padding: 6px 12px; border-radius: 9999px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); color: var(--ink); cursor: pointer; }
 </style>
 </head>
@@ -926,17 +932,21 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     var n = Math.round(Number(v) * 100) / 100;
     return unit === "$" || unit === "£" || unit === "€" ? unit + n : unit === "%" ? n + "%" : n + (unit ? " " + unit : "");
   }
-  // How much of the objective's quarter (YYYY-Qn) has passed, 0..1, or null without one.
-  function elapsed(quarter) {
+  // How much of the objective's cycle (start and end dates) or quarter (YYYY-Qn) has passed, 0..1, or null.
+  function elapsed(quarter, o) {
+    if (o && o.start && o.end) {
+      var a = Date.parse(o.start + "T00:00:00Z"), b = Date.parse(o.end + "T00:00:00Z") + 864e5;
+      if (!isNaN(a) && !isNaN(b) && b > a) return Math.max(0, Math.min(1, (Date.now() - a) / (b - a)));
+    }
     var m = /^(\d{4})-Q([1-4])$/.exec(String(quarter || "")); if (!m) return null;
     var y = +m[1], q = +m[2], start = Date.UTC(y, (q - 1) * 3, 1), end = Date.UTC(q === 4 ? y + 1 : y, q === 4 ? 0 : q * 3, 1);
     return Math.max(0, Math.min(1, (Date.now() - start) / (end - start)));
   }
   // On track: progress no more than 10 points behind the share of the quarter gone.
-  function pace(progress, quarter) {
+  function pace(progress, quarter, o) {
     if (progress === null || progress === undefined) return pill("not measured", "notmeasured");
     if (progress >= 1) return pill("achieved", "achieved");
-    var e = elapsed(quarter);
+    var e = elapsed(quarter, o);
     if (e === null) return null;
     return progress + 0.1 >= e ? pill("on track", "ontrack") : pill("behind", "behind");
   }
@@ -956,52 +966,73 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     svg.appendChild(line); svg.appendChild(dot);
     return svg;
   }
+  function cycleText(o) { return o.cycle ? o.cycle + (o.start ? " (" + o.start + " to " + o.end + ")" : "") : o.quarter || ""; }
+  function northStar() {
+    var ns = GOALS.north_star;
+    if (!ns) return null;
+    return el("div", { cls: "goalrow" }, el("div", null, el("b", { text: "North Star: " }), ns.metric + ", " + num(ns.current, ns.unit) + " of " + num(ns.target, ns.unit) + (ns.by ? " by " + ns.by : "")),
+      bar(ns.progress || 0, 1, ns.progress >= 1 ? "" : "w"), el("b", { text: pctText(ns.progress) }));
+  }
+  function dueNote() { return GOALS.due ? el("p", { cls: "note", style: "margin:6px 0 0" }, pill("due", "waiting"), " ", GOALS.due) : null; }
   function goalStrip() {
     var live = OBJS.filter(function (o) { return o.status === "active"; });
-    if (!GOALS.goal && !live.length) return null;
-    return panel("Goals", GOALS.goal ? null : "No company goal yet: set it in founder/goals.json.",
+    if (!GOALS.goal && !live.length && !GOALS.due) return null;
+    return panel("Goals", GOALS.goal ? (GOALS.current_cycle ? "Cycle " + GOALS.current_cycle : null) : "No North Star yet: okr-plan drafts it once the business model is approved.",
       GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : null,
+      northStar(), dueNote(),
       live.map(function (o) {
-        return el("div", { cls: "goalrow" }, el("div", null, o.id + " " + o.title, " ", pace(o.progress, o.quarter)),
+        return el("div", { cls: "goalrow" }, el("div", null, o.id + " " + o.title, " ", pace(o.progress, o.quarter, o)),
           bar(o.progress || 0, 1, o.progress >= 1 ? "" : "w"), el("b", { text: pctText(o.progress) }));
       }),
-      live.length ? null : el("p", { cls: "empty", text: "No active objectives this quarter." }),
-      el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#goals", text: "Key results and linked work in Goals" })));
+      live.length ? null : el("p", { cls: "empty", text: "No active objectives this cycle." }),
+      el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#goals", text: "Key results, initiatives and tickets in Goals" })));
+  }
+  function ticketItem(t) {
+    return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : null, " ", el("span", { cls: "muted", text: roleName(t.role) }));
   }
   function goalsTab() {
     var out = [];
     if ((GOALS.problems || []).length) out.push(panel("founder/goals.json needs fixing", "tools/goals.py check lists the same.",
       el("ul", { cls: "list" }, GOALS.problems.map(function (p) { return el("li", { text: p }); }))));
-    out.push(panel("Company goal", GOALS.horizon ? "By " + GOALS.horizon : null,
-      GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : el("p", { cls: "empty", text: "Open: the founder sets the company goal in founder/goals.json." })));
+    var cyc = (GOALS.cycles || []).filter(function (c) { return c.id === GOALS.current_cycle; })[0];
+    out.push(panel("North Star", [GOALS.horizon ? "By " + GOALS.horizon : "", cyc ? "Cycle " + cyc.id + ": " + cyc.start + " to " + cyc.end : ""].filter(Boolean).join(" · ") || null,
+      GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : el("p", { cls: "empty", text: "Open: once the business model (stage 3) is approved, okr-plan drafts the North Star and the first cycle's OKRs for you to approve." }),
+      northStar(), dueNote(),
+      (GOALS.advice || []).length ? el("ul", { cls: "list" }, GOALS.advice.map(function (x) { return el("li", { cls: "why", text: x }); })) : null));
     if (!OBJS.length) {
-      out.push(panel("Objectives", null, el("p", { cls: "empty", text: "No objectives yet. Add this quarter's objectives and 2 to 4 key results each to founder/goals.json; tickets then carry the label goal:O1." })));
+      out.push(panel("Objectives", null, el("p", { cls: "empty", text: "No objectives yet. Each cycle has 2 or 3 objectives with 2 to 4 key results each; initiatives under each key result; tickets carry the labels initiative:I1 and goal:O1." })));
       return out;
     }
     var order = { active: 0, planned: 1, achieved: 2, cancelled: 3 };
     OBJS.slice().sort(function (a, b) { return (order[a.status] || 0) - (order[b.status] || 0) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }); }).forEach(function (o) {
       var tix = openTickets.filter(function (t) { return t.goal === o.id; });
-      var krs = table([
-        { h: "Key result", f: function (k) { return k.id + " " + k.metric; } },
-        { h: "Start", num: true, f: function (k) { return num(k.baseline, k.unit); }, k: function (k) { return k.baseline; } },
-        { h: "Now", num: true, f: function (k) { return num(k.current, k.unit); }, k: function (k) { return k.current; } },
-        { h: "Target", num: true, f: function (k) { return num(k.target, k.unit); }, k: function (k) { return k.target; } },
-        { h: "Progress", f: function (k) { return el("div", { style: "display:flex;gap:8px;align-items:center" }, bar(k.progress || 0, 1, k.progress >= 1 ? "" : "w"), pctText(k.progress)); }, k: function (k) { return k.progress; } },
-        { h: "Trend", f: function (k) { return spark(k.history); }, k: function (k) { return (k.history || []).length; } },
-        { h: "Owner", f: function (k) { return k.owner ? roleName(k.owner) : ""; } },
-        { h: "Updated", f: function (k) { return k.updated; } }
-      ], o.key_results || [], "No key results yet: add 2 to 4, each with a metric, a target and a current value.");
+      var inits = o.initiatives || [];
+      var krBlocks = (o.key_results || []).map(function (k) {
+        var mine = inits.filter(function (i) { return i.key_result === k.id; });
+        return el("div", null,
+          el("div", { cls: "krhead" }, k.id + " " + k.metric, el("span", { cls: "muted", text: num(k.current, k.unit) + " of " + num(k.target, k.unit) + (k.baseline === null || k.baseline === undefined ? "" : " (from " + num(k.baseline, k.unit) + ")") }),
+            bar(k.progress || 0, 1, k.progress >= 1 ? "" : "w"), pctText(k.progress), spark(k.history),
+            k.stage ? pill("stage " + k.stage.stage + (k.stage.status ? ": " + k.stage.status : ""), k.stage.status || "todo") : null),
+          el("div", { cls: "why", text: [k.owner ? "owner: " + roleName(k.owner) : "", k.updated ? "updated " + k.updated : "", k.stage && k.stage.name ? "proves the gate of " + k.stage.name : ""].filter(Boolean).join(" · ") }),
+          mine.length ? el("ul", { cls: "inits" }, mine.map(function (i) {
+            var it = openTickets.filter(function (t) { return t.initiative === i.id; });
+            return el("li", null, el("b", { text: i.id + " " + i.title }), " ", pill(i.status, i.status === "done" ? "done" : i.status === "dropped" ? "cancelled" : i.status),
+              el("span", { cls: "why", text: " " + [i.owner ? roleName(i.owner) : "", i.epic ? "epic " + i.epic : "", G.ok ? it.length + " open ticket" + (it.length === 1 ? "" : "s") : ""].filter(Boolean).join(" · ") }),
+              it.length ? el("ul", { cls: "tix" }, it.slice(0, 10).map(ticketItem)) : null);
+          })) : el("p", { cls: "why", text: "No initiatives for this key result yet." }));
+      });
+      var loose = tix.filter(function (t) { return !t.initiative; });
       out.push(el("div", { cls: "panel objective" },
-        el("h3", null, o.id + " " + o.title, pill(o.status, o.status), o.status === "active" ? pace(o.progress, o.quarter) : null),
-        el("p", { cls: "note", text: [o.quarter, o.owner ? "owner: " + roleName(o.owner) : ""].filter(Boolean).join(" · ") + (o.why ? (o.quarter || o.owner ? ". " : "") + o.why : "") }),
+        el("h3", null, o.id + " " + o.title, pill(o.status, o.status), o.status === "active" ? pace(o.progress, o.quarter, o) : null),
+        el("p", { cls: "note", text: [cycleText(o), o.owner ? "owner: " + roleName(o.owner) : ""].filter(Boolean).join(" · ") + (o.why ? (cycleText(o) || o.owner ? ". " : "") + o.why : "") }),
         el("div", { cls: "prog" }, bar(o.progress || 0, 1, o.progress >= 1 ? "" : "w"), el("b", { text: pctText(o.progress) })),
-        krs,
+        (o.key_results || []).length ? krBlocks : el("p", { cls: "empty", text: "No key results yet: add 2 to 4, each with a metric, a target and a current value." }),
         el("p", { cls: "note", style: "margin:10px 0 0", text: "Slices: " + (o.slices.total ? o.slices.done + " of " + o.slices.total + " done (" + o.slices.ids.join(", ") + ")" : "none linked") +
           (o.epics.length ? ". Epics: " + o.epics.join(", ") : "") + ". Open tickets: " + (G.ok ? String(tix.length) : "? (GitHub data missing)") + "." }),
-        tix.length ? el("ul", { cls: "list" }, tix.slice(0, 10).map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : null, el("div", { cls: "why", text: roleName(t.role) })); })) : null));
+        loose.length ? el("div", null, el("p", { cls: "why", text: "Tickets on this objective with no initiative:" }), el("ul", { cls: "list" }, loose.slice(0, 10).map(ticketItem))) : null));
     });
     var unlinked = openTickets.filter(function (t) { return !t.goal; });
-    if (G.ok && unlinked.length) out.push(panel("Open tickets with no objective", "Give each one an objective (label goal:O1), or close it if it serves none.",
+    if (G.ok && unlinked.length) out.push(panel("Open tickets with no objective", "Give each one an initiative (label initiative:I1) and its objective (goal:O1), or close it if it serves none.",
       el("ul", { cls: "list" }, unlinked.slice(0, 20).map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), el("div", { cls: "why", text: roleName(t.role) })); }))));
     return out;
   }

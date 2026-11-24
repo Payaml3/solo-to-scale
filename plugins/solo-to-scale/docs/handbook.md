@@ -62,7 +62,7 @@ Each kind of information has exactly one home. If something seems to belong in t
 | `HANDOFF.md` | Build state, next story groups, known gaps, where to start | `handoff` skill |
 | `founder/operating-protocol.md` | The protocol: the only copy | Founder approval only |
 | `founder/status.md` | Objectives in words, stage, risks, founder items, weekly focus | `handoff`, `weekly-review` |
-| `founder/goals.json` | The company goal, this quarter's objectives and their key results, as data (the `decision` gate) | Founder; agents propose values in a PR with `tools/goals.py update` |
+| `founder/goals.json` | The goal tree as data: North Star, cycles, objectives, key results and initiatives (the `decision` gate) | Founder; `okr-plan` drafts it, agents propose values in a PR with `tools/goals.py update` |
 | `founder/finance.json` | Cash, monthly revenue, fixed costs and one-off items, for runway on the dashboard (the `spend` gate) | Founder |
 | `founder/decisions.md` | Business register (`B-`): GTM, pricing, brand, legal, hiring | `record-decision` |
 | `founder/business-context.md` | Problem, customer, evidence, model, positioning, regulation | Discovery chats |
@@ -91,12 +91,12 @@ The journey runs through 7 phases and 30 stages, each ending in a gate. Inside t
 
 ```mermaid
 flowchart LR
-  A["A. Discover<br/>stages 1-2"] -->|"gate: pain confirmed"| B["B. Define<br/>stages 3-7"]
-  B -->|"gate: MVP scope approved"| C["C. Specify and design<br/>stages 8-12"]
-  C -->|"gate: no contradictions"| D["D. Build and prove<br/>stages 13-17, in slices"]
-  D -->|"gate: release check says go"| E["E. Launch<br/>stages 18-22"]
-  E -->|"gate: go-live decision"| F["F. Grow to product-market fit<br/>stages 23-25"]
-  F -->|"gate: retention and conversion targets"| G["G. Scale<br/>stages 26-30"]
+  A["A. Discover · stages 1-2"] -->|"gate: pain confirmed"| B["B. Define · stages 3-7"]
+  B -->|"gate: MVP scope approved"| C["C. Specify and design · stages 8-12"]
+  C -->|"gate: no contradictions"| D["D. Build and prove · stages 13-17, in slices"]
+  D -->|"gate: release check says go"| E["E. Launch · stages 18-22"]
+  E -->|"gate: go-live decision"| F["F. Grow to product-market fit · stages 23-25"]
+  F -->|"gate: retention and conversion targets"| G["G. Scale · stages 26-30"]
   G -->|"gate: governance cadence running"| H(("Scale"))
 ```
 
@@ -108,9 +108,9 @@ Each phase's gate must pass before the next phase starts. The stage table below 
 | 1 | Problem validation | P 01 | founder: validate-idea, competitor-matrix | `business-context.md`: problem, evidence | Pain confirmed by evidence, not assumption |
 | 2 | Customer discovery | P 01 | founder: user-interviews, persona-gen | Interview notes and findings, personas | 5 to 8 interviews show pain and willingness to pay |
 | **B** | **Define** |  |  |  |  |
-| 3 | Business model and positioning | P 01 | founder: pricing-strategy; marketing: competitive-brief | `B-` decisions | Founder approves |
+| 3 | Business model and positioning | P 01 | founder: pricing-strategy; marketing: competitive-brief; then okr-plan | `B-` decisions; the goal tree in `goals.json` | Founder approves |
 | 4 | Brand strategy | P 06 | brand-skills: naming, brand-architecture | `brand.md`, `B-` decisions | Name, trademark and domain checked |
-| 5 | Product and operating model | P 02 | founder: product-brief | Product definition, operating model | Founder approves |
+| 5 | Product and operating model | P 02 | founder: product-brief; okr-plan refines | Product definition, operating model; OKRs and initiatives refined | Founder approves |
 | 6 | UX prototype and test | P 02, Code | product-design, Claude Design; references from Mobbin or Refero | Key journeys, clickable prototype | Tested with 3 to 5 target users |
 | 7 | MVP scope and launch criteria | P 02 | founder: mvp-scope | Must / Should / Won't, launch criteria | Founder approves scope |
 | **C** | **Specify and design** |  |  |  |  |
@@ -151,7 +151,8 @@ Four loops keep the system current. Only the session loop needs you every day.
 | Session | Each story group or task | Start from `HANDOFF.md` → plan → tests first → build → checks → handoff → PR | Answer questions, merge the PR |
 | Weekly | Monday, scheduled task | Weekly review with the five DORA metrics (stops early if nothing changed) → status PR → refresh views | Merge the status PR, act on blockers |
 | Monthly | First Monday | Metrics, evidence, error budget and unit-cost review, stale Proposed or Open items, roadmap check, cost of Claude usage | Decide or close stale items |
-| Quarterly | Start of quarter | Objectives and key results in `goals.json`, strategy check against evidence, Well-Architected review, investor or board update from views | Set objectives, approve strategy changes |
+| Each cycle | Cycle end (6 weeks before product-market fit, then quarterly) | `okr-plan` scores the cycle and drafts the next one in `goals.json` | Approve the next cycle's OKRs |
+| Quarterly | Start of quarter | strategy check against evidence, Well-Architected review, investor or board update from views | Set objectives, approve strategy changes |
 
 ## Session rules
 
@@ -210,13 +211,26 @@ Every decision has one row, one status and a trace to everything it touches.
 
 **The chain every decision is traced through:** Business objectives → product capabilities → MVP requirements → architecture → tasks → tests → release.
 
-**Goals and key results (`founder/goals.json`).** The top of the chain, as data the dashboard can count:
-- **One company goal**, specific and measurable ("100 paying studios by June 2027"), with an optional `horizon`.
-- **Objectives** (`O1`, `O2`, ...) for the quarter, each with a title, `quarter` (`2027-Q1`), an owner role, a status (`planned`, `active`, `achieved`, `cancelled`) and 2 to 4 **key results** (`O1.1`, ...): a metric, an optional unit, a baseline, a target and the current value.
-- **Progress** is how far the current value has moved from the baseline (0 when unset) to the target, from 0 to 100%; a target below the baseline (cut churn from 8% to 3%) counts down. An objective's progress is the mean of its measured key results. It's **on track** when it's no more than 10 points behind the share of its quarter that has passed.
-- **Work names the objective it serves.** Epics and slices in `slices.json` take `"objective": "O1"`. Tickets carry the label `goal:O1`: `tools/tickets.py new --objective O1`, and a sub-ticket inherits its parent's. While any objective is active, a ticket that names none is refused.
-- **Values change through a PR.** The owner role runs `python tools/goals.py update O1.1 --value 7` (it keeps a dated history), and you merge. The file is behind the `decision` gate, so only you set the goal, the objectives and the targets.
-- **Checked in CI.** `python tools/goals.py check` (also part of `check_governance.py`) fails on a malformed file or a slice naming an objective that doesn't exist. `python tools/goals.py show` prints it all.
+**Goals: North Star, OKRs and initiatives (`founder/goals.json`).** The top of the chain, as data the dashboard can count. Four layers, each linked to the one above, so every piece of agent work traces back to one number:
+
+```mermaid
+flowchart LR
+  NS["North Star · goal + north_star"] --> O["Objectives O1 · 2 or 3 per cycle"]
+  O --> KR["Key results O1.1 · 2 to 4 each"]
+  KR --> I["Initiatives I1 · key actions, epics"]
+  I --> T["Tickets · initiative:I1, goal:O1"]
+```
+
+- **When.** Once the business model (stage 3) is approved, the `okr-plan` skill (run by the chief of staff) drafts the whole tree from the business model, the investment case or plan if there is one, and the playbook. You approve it by merging its PR; it's refined when the product and operating model (stage 5) is approved. `goals.py show` prints `due: draft` until then, and the dashboard shows it.
+- **North Star:** `goal`, one measurable sentence ("£10k MRR from independent studios by November 2027"), and `north_star`: its metric, unit, baseline, target, current value and `by` date.
+- **Cycles:** `cycles` (`C1`, `C2`, ... with start and end). Before product-market fit a cycle is **6 weeks**, because quarterly targets are mostly guesses that early; after it, a quarter. `python tools/goals.py cycle` adds the next one after the last (`--weeks` to change it). At a cycle's end `goals.py show` prints `due: review`, and `okr-plan` scores it and drafts the next.
+- **Objectives** (`O1`, ...): 2 or 3 per cycle, each with a title, `cycle` (or a `quarter` such as `2027-Q1`), an owner role, a status (`planned`, `active`, `achieved`, `cancelled`) and 2 to 4 **key results** (`O1.1`, ...): a metric, an optional unit, a baseline, a target and the current value. Outcomes, not tasks.
+- **Key results prove stage gates before launch.** A key result can carry `"stage": 2`, the playbook stage whose gate it proves; the Goals tab shows that stage's status beside it. Passing the stage still goes through `weekly-review` and you.
+- **Initiatives** (`I1`, ...): the key actions and epics that move one key result: a title, `key_result`, an owner, a status (`planned`, `active`, `done`, `dropped`) and an optional `epic`.
+- **Progress** is how far the current value has moved from the baseline (0 when unset) to the target, from 0 to 100%; a target below the baseline (cut churn from 8% to 3%) counts down. An objective's progress is the mean of its measured key results. It's **on track** when it's no more than 10 points behind the share of its cycle (or quarter) that has passed. A 70% cycle is a good one.
+- **Work names what it serves.** Tickets carry `initiative:I1` and `goal:O1`: `tools/tickets.py new --initiative I1` (it implies the objective), and a sub-ticket inherits both. While any objective is active, a ticket that names none is refused; once the active objectives have initiatives, a ticket must name one. Epics and slices in `slices.json` take `"objective": "O1"`.
+- **Values change through a PR.** The owner role runs `python tools/goals.py update O1.1 --value 7` (or `update north-star`), which keeps a dated history, and you merge. The file is behind the `decision` gate, so only you set the North Star, the objectives, the targets and the initiatives.
+- **Checked in CI.** `python tools/goals.py check` (also part of `check_governance.py`) fails on a malformed file, a cycle that ends before it starts, a key result naming a stage the playbook doesn't have, an initiative naming an unknown key result, or a slice naming an unknown objective. `python tools/goals.py show` prints the tree, with `advice:` lines when a cycle has more than 3 objectives, a key result count outside 2 to 4, or an objective with no initiatives.
 
 **Approval gates (`gate`):** `founder/gates.json` lists the critical actions only the founder approves:
 - hiring or changing a role, raising a budget, deploying, sending or publishing anything outside the repo
@@ -291,13 +305,13 @@ Every change goes through the same pipeline: checks on every push, automatic dep
 
 ```mermaid
 flowchart LR
-  P["Push"] --> CI["CI checks<br/>levels 1 to 4"]
-  CI --> PR["Pull request<br/>preview deploy"]
+  P["Push"] --> CI["CI checks · levels 1 to 4"]
+  CI --> PR["Pull request · preview deploy"]
   PR -->|"founder merges"| M["main"]
-  M --> S["Staging, demo or sandbox<br/>automatic"]
-  S --> G1{"Gate 1:<br/>release check says go"}
-  G1 --> G2{"Gate 2:<br/>founder approves"}
-  G2 --> PROD["Production<br/>tagged release"]
+  M --> S["Staging, demo or sandbox · automatic"]
+  S --> G1{"Gate 1: · release check says go"}
+  G1 --> G2{"Gate 2: · founder approves"}
+  G2 --> PROD["Production · tagged release"]
 ```
 
 Everything up to staging is automatic. Production needs both a go from the release check and your approval.
@@ -427,7 +441,7 @@ One page shows the whole company, with twelve tabs: **Overview** (what's left to
 - **The venture stage, as a ladder on the Overview.** Every stage of `founder/playbook.md`, phase by phase, marked passed, current, deferred or not started, like a readiness ladder. A strip shows all 30 at a glance; under it each phase opens to its stages, each with its gate and the evidence in the playbook's Evidence column. Decision IDs in the evidence open Decisions, and repo files open Documents; the governance check fails on a decision ID that no register defines. A passed stage without evidence says so, and a stage before the current one that isn't passed or deferred shows as **Not passed**, so the page never shows more progress than the playbook records. Phases up to the current one start open; later ones start closed.
 - **This stage, near the top of the Overview:** where the venture is in the journey (phase, stage, how far through the phase, what "done" means, what's next), the blockers (blocked agents, founder items, approvals and decisions waiting), the agents working now and the latest documents.
 - **Documents, grouped:** **Business** (the files listed in `founder/dashboard.json`), **Product** (`specs/*/spec.md`, `specs/*/ux/`, `docs/product/`) and **Technical** (plans, research, data models, contracts and tasks under `specs/`, `docs/`, the constitution). Product and technical documents are picked up automatically as the journey writes them. A tile per group shows how many there are and the latest; each document is a card with its feature, size and last change, and opens in place.
-- **Goals, on the Overview and in their own tab.** The Overview shows the company goal and each active objective's progress and pace. **Goals** shows every objective with its key results (start, now, target, progress, a trend line from the history, owner, last update), the slices and epics linked to it, its open tickets, and the open tickets that name no objective. The portfolio shows each venture's goal and active objectives too.
+- **Goals, on the Overview and in their own tab.** The Overview shows the North Star and its progress, the current cycle, what's due (drafting or a cycle review) and each active objective's progress and pace. **Goals** shows the whole tree: the North Star, then every objective with each key result (start, now, target, progress, a trend line, the stage gate it proves, owner, last update), the initiatives under each key result with their open tickets, the slices and epics linked to the objective, and the open tickets that name no objective or no initiative. The portfolio shows each venture's North Star and active objectives too.
 - **Your AI team, shown as agents.** The Overview has a strip with every role's avatar and status: green working on a ticket, red blocked, grey idle or heartbeat off. **Team and board** opens with an org chart (you, Claude as chief of staff, the six roles, the advisory board) and a card per agent: what it owns, the ticket it's working on, its heartbeat schedule and next run, what it last did, its stories and its spend against budget. Agent activity shows the same avatars.
 - **A record per agent.** Click an agent on the Overview, or **Open record** on its card, for this month's runs: how many, how many worked, failed or found nothing to do, the share that worked out of the runs that had work, the typical run time, spend per day against the budget's even pace, cost per worked run, every run with its outcome, ticket, objective, time, cost, model and a link to its session, and its tickets, activity and stories. The address (`#agent/engineer`) can be bookmarked.
 - **Costs, four ways.** Spend per role against budget with each role's runs and success rate; spend by objective (from the ticket's `goal:` label), by model and by outcome; and the month-end spend at this month's daily burn, against the budgets.
@@ -476,7 +490,7 @@ Eight sources of skills cover the whole journey. The operating-system skills com
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
-| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, doctor, handoff, claim, coordinate, heartbeat, gate, board-review, record-decision, weekly-review, release-check, publish-views, product-design, design-system | All |
+| Operating system | `solo-to-scale plugin, installed once per machine and account` | init, upgrade, doctor, handoff, claim, coordinate, heartbeat, gate, board-review, record-decision, weekly-review, okr-plan, release-check, publish-views, product-design, design-system | All |
 | founder | Account plugin | validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy, product-brief, mvp-scope, go-to-market, landing-page, email-sequence, metrics-dashboard, pitch-deck, fundraise-prep | A, B, E, F |
 | brand-skills | Account marketplace, plus repo via `npx skills add` | naming, brand-architecture, brand-identity, brand-guidelines, brand-audit | B, C |
 | marketing | Account plugin | brand-review, competitive-brief, content-creation, campaign-plan, email-sequence, seo-audit, performance-report | B, E, F |
@@ -505,7 +519,7 @@ A solo founder runs the company as CEO and board. Claude sits at the centre as t
 | Role | Owns | Main skills | Runs | Model | Needs the founder's approval for |
 | --- | --- | --- | --- | --- | --- |
 | **Founder** (CEO and board) | Goal, approvals, secrets, money, go-live | record-decision; merging pull requests; `/approve` on approval requests (`gate`) | Daily approvals; Monday review; quarterly objectives | Not an agent | Is the approval gate |
-| **Claude** (AI core and chief of staff) | The operating system: briefs each role, keeps memory in the repo, weekly review, live views | weekly-review, handoff, publish-views, release-check | Every session start and end; Mondays | Mid-tier | Nothing; it proposes |
+| **Claude** (AI core and chief of staff) | The operating system: briefs each role, keeps memory in the repo, weekly review, live views | weekly-review, okr-plan, handoff, publish-views, release-check | Every session start and end; Mondays; each cycle's end | Mid-tier | Nothing; it proposes |
 | **Research and strategy** (01) | Evidence: interviews, competitors, pricing, positioning, business work outside software | founder: validate-idea, user-interviews, persona-gen, competitor-matrix, pricing-strategy | Each discovery sprint; monthly evidence review | Strongest for synthesis | Every `B-` decision |
 | **Product manager** (02) | Models into specs: requirements, stories, screen specs; prepares decisions | Spec Kit: specify, clarify, checklist, analyze; product-design | Each stage; whenever a decision waits | Mid-tier | Scope and requirements |
 | **Architect and security** (03) | Stack, architecture, data model, threat model; foundation, operations and audit epics | Spec Kit: plan, constitution; Superpowers: brainstorming | Stage 10; quarterly review | Strongest | Stack, architecture, threat model |

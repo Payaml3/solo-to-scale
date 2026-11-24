@@ -140,3 +140,114 @@ def test_the_dashboard_and_summary_show_goals_as_text(root, fake):
 def test_the_label_round_trips():
     assert goals.objective_of(["ticket", goals.label("O3")]) == "O3" and goals.objective_of(["ticket"]) == ""
     assert REPO
+
+
+TREE = {
+    "goal": "£10k MRR within 12 months",
+    "horizon": "2027-11",
+    "north_star": {"metric": "MRR", "unit": "£", "baseline": 0, "target": 10000, "current": 2500, "by": "2027-11"},
+    "cycles": [{"id": "C1", "start": "2026-12-01", "end": "2027-01-11"}],
+    "objectives": [
+        {"id": "O1", "title": "Prove the pain", "cycle": "C1", "owner": "research", "status": "active",
+         "key_results": [
+             {"id": "O1.1", "metric": "Interviews confirming the pain", "target": 5, "current": 2, "stage": 2},
+             {"id": "O1.2", "metric": "Waitlist sign-ups", "target": 100, "current": 50}]}],
+    "initiatives": [
+        {"id": "I1", "title": "Run 8 customer interviews", "key_result": "O1.1", "owner": "research", "status": "active"},
+        {"id": "I2", "title": "Landing page with a waitlist", "key_result": "O1.2", "owner": "growth", "epic": "INV"}]}
+
+
+def set_stage(root: Path, stage: int, status: str) -> None:
+    p = root / "founder" / "playbook.md"
+    if not p.exists():
+        p.write_text("| # | Phase | Stage | Where | Gate | Evidence | Status |\n| --- | --- | --- | --- | --- | --- | --- |\n"
+                     + "".join(f"| {n} | A | Stage {n} | P | Gate {n} |  | To do |\n" for n in range(1, 6)), encoding="utf-8")
+    lines = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        cells = line.split("|")
+        if len(cells) > 3 and cells[1].strip() == str(stage):
+            cells[-2] = f" {status} "
+            line = "|".join(cells)
+        lines.append(line)
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_the_tree_runs_from_the_north_star_through_cycles_to_initiatives(root):
+    write(root, TREE)
+    g = goals.build(root, today=goals.dt.date(2026, 12, 20))
+    assert g["problems"] == [] and g["due"] == ""
+    assert g["north_star"]["progress"] == pytest.approx(0.25) and g["north_star"]["by"] == "2027-11"
+    assert g["current_cycle"] == "C1"
+    o1 = g["objectives"][0]
+    assert (o1["cycle"], o1["start"], o1["end"]) == ("C1", "2026-12-01", "2027-01-11")
+    assert [i["id"] for i in o1["initiatives"]] == ["I1", "I2"] and o1["initiatives"][1]["status"] == "active"
+    assert o1["key_results"][0]["stage"]["stage"] == 2 and o1["key_results"][1]["stage"] is None
+    assert any("1 key results" in x for x in goals.advice({"objectives": [{"id": "O1", "key_results": [{"id": "O1.1"}]}]}))
+
+
+@pytest.mark.parametrize("change, words", [
+    (lambda d: d["north_star"].pop("target"), "north_star has no target"),
+    (lambda d: d["cycles"].append({"id": "C2", "start": "2027-02-01", "end": "2027-01-01"}), "ends before it starts"),
+    (lambda d: d["objectives"][0].update(cycle="C9"), "cycle C9 isn't in cycles"),
+    (lambda d: d["objectives"][0]["key_results"][0].update(stage=99), "must be a stage number"),
+    (lambda d: d["initiatives"].append({"id": "I3", "title": "x", "key_result": "O7.1"}), "isn't a key result"),
+    (lambda d: d["initiatives"].append({"id": "I1", "title": "x", "key_result": "O1.1"}), "used twice"),
+    (lambda d: d["initiatives"][0].update(status="finished"), "status must be"),
+])
+def test_check_names_each_problem_in_the_new_layers(root, change, words):
+    set_stage(root, 1, "To do")
+    data = json.loads(json.dumps(TREE))
+    change(data)
+    write(root, data)
+    assert any(words in p for p in goals.problems(root)), goals.problems(root)
+
+
+def test_drafting_is_due_once_the_business_model_is_approved_and_a_review_when_the_cycle_ends(root):
+    write(root, {"goal": "", "objectives": []})
+    assert goals.build(root)["due"] == ""
+    set_stage(root, 3, "Passed")
+    assert goals.build(root)["due"].startswith("draft:") and "okr-plan" in goals.build(root)["due"]
+    write(root, TREE)
+    assert goals.build(root, today=goals.dt.date(2026, 12, 20))["due"] == ""
+    assert goals.build(root, today=goals.dt.date(2027, 1, 20))["due"].startswith("review: cycle C1 ended")
+
+
+def test_cycle_adds_the_next_six_weeks_and_the_north_star_takes_updates(root):
+    write(root, TREE)
+    assert goals.main(["cycle", "--root", str(root)]) == 0
+    assert goals.main(["update", "north-star", "--value", "3000", "--date", "2026-12-15", "--root", str(root)]) == 0
+    data = json.loads((root / "founder" / "goals.json").read_text(encoding="utf-8"))
+    assert data["cycles"][-1] == {"id": "C2", "start": "2027-01-12", "end": "2027-02-22"}
+    assert data["north_star"]["current"] == 3000 and "id" not in data["north_star"]
+    assert data["north_star"]["history"] == [{"date": "2026-12-15", "value": 3000.0}]
+    assert goals.problems(root) == []
+
+
+def test_tickets_name_an_initiative_once_there_are_some(root, fake):
+    write(root, TREE)
+    run = lambda *a: tickets.main([*a, "--root", str(root)])  # noqa: E731
+    with pytest.raises(SystemExit, match="--initiative I1 or I2"):
+        run("new", "research", "--title", "Interviews", "--goal", "x", "--objective", "O1", "--by", "product")
+    with pytest.raises(SystemExit, match="unknown initiative"):
+        run("new", "research", "--title", "Interviews", "--goal", "x", "--initiative", "I9")
+    with pytest.raises(SystemExit, match="serves O1"):
+        write(root, {**TREE, "objectives": TREE["objectives"] + [{"id": "O2", "title": "y", "status": "planned"}]})
+        run("new", "research", "--title", "Interviews", "--goal", "x", "--initiative", "I1", "--objective", "O2")
+    assert run("new", "research", "--title", "Interviews", "--goal", "x", "--initiative", "I1", "--by", "product") == 0
+    parent = max(n for n in fake.issues if "ticket" in fake.names(n))
+    assert {"goal:O1", "initiative:I1"} <= set(fake.names(parent)) and "**Initiative:** I1" in fake.issues[parent]["body"]
+    assert run("new", "research", "--title", "Book calls", "--goal", "y", "--parent", str(parent), "--by", "research") == 0
+    child = max(n for n in fake.issues if "ticket" in fake.names(n))
+    assert {"goal:O1", "initiative:I1"} <= set(fake.names(child)), "a sub-ticket inherits both"
+
+
+def test_the_goals_tab_shows_the_tree_and_the_summary_carries_the_north_star(root, fake):
+    write(root, TREE)
+    fake.make("Interviews", "", ["ticket", "role:research", "goal:O1", "initiative:I1"])
+    d = data_of(bd.page(bd.build(root, now=NOW)))
+    assert [t["initiative"] for t in d["github"]["tickets"]] == ["I1"]
+    assert d["repo"]["goals"]["objectives"][0]["initiatives"][0]["id"] == "I1"
+    summ = bd.summary(d)["goals"]
+    assert summ["north_star"] == {"metric": "MRR", "unit": "£", "current": 2500.0, "target": 10000.0, "progress": 0.25}
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert "function northStar" in html and 't.initiative === i.id' in html

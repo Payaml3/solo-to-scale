@@ -16,11 +16,13 @@ Keep the operating system running. Brief each role, keep the memory in the repo,
 ## Owns
 - HANDOFF.md, founder/status.md and founder/artifacts.md
 - the weekly review and the Monday scheduled task
+- drafting the goal tree (North Star, cycle OKRs, initiatives) for the founder to approve
 - routing significant decisions to board-review
 
 ## Skills
 - handoff
 - weekly-review
+- okr-plan
 - publish-views
 - release-check
 - board-review
