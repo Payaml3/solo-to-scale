@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.0 (2026-11-24)
+
+A Gantt chart on the dashboard's Roadmap tab.
+
+- **Timeline panel** on Roadmap, under the counts: phases A to G with their stages, then the slices, as bars over time. A dashed box is the plan, a solid bar is what happened (green done, amber in progress, red past its target), with a line for today. Each phase bar spans its stages. Hover a bar for its dates. It works in both themes; on a phone the labels stay put and the chart scrolls sideways, opening on today.
+- **Planned dates** come from optional `Start` and `Target` columns in `founder/playbook.md` and `start` and `target` on each slice in `founder/slices.json` (YYYY-MM-DD). Nothing is required: undated items are left out and the panel says how to add dates.
+- **Actual dates** come from git: the commit that first moved a stage or slice to in progress, and the one that moved it to done. The dashboard workflow now checks out full history so it can read them. Existing repos get both with `upgrade`.
+- **Tests:** 2 new: planned and actual dates from a repo's history, and a build without git.
+
 ## v2.5.0 (2026-11-24)
 
 The Overview shows the journey from zero to scale simply, and keeps only what a founder checks every day.

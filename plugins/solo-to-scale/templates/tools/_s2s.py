@@ -117,8 +117,12 @@ def resolved(status: str, cfg: dict[str, Any]) -> bool:
 
 
 def playbook(root: Path) -> list[dict[str, Any]]:
+    return playbook_text(read(root / "founder" / "playbook.md"))
+
+
+def playbook_text(text: str) -> list[dict[str, Any]]:
     stages = []
-    for table in tables(read(root / "founder" / "playbook.md")):
+    for table in tables(text):
         for r in table:
             if r.get("#", "").isdigit() and "gate" in r:
                 row = {"stage": int(r["#"]), "phase": r.get("phase", ""), "name": r.get("stage", ""),
@@ -127,6 +131,9 @@ def playbook(root: Path) -> list[dict[str, Any]]:
                     row["where"] = r["where"]
                 if "evidence" in r:  # optional column: what shows the gate was met (decision IDs, files, links)
                     row["evidence"] = r["evidence"]
+                for col in ("start", "target"):  # optional columns: planned dates (YYYY-MM-DD) for the roadmap timeline
+                    if col in r:
+                        row[col] = r[col]
                 stages.append(row)
     return stages
 

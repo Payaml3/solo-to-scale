@@ -108,6 +108,31 @@ ul.list li:last-child { border-bottom: 0; }
 .phase ol { margin: 0; padding-left: 22px; font-size: .9rem; }
 .phase li.cur { font-weight: 600; color: var(--accent); }
 .phase li.done { color: var(--muted); }
+.gantt-wrap { overflow-x: auto; }
+.gantt { position: relative; min-width: 680px; --lab: 220px; font-size: .85rem; padding-top: 20px; }
+@media (max-width: 760px) { .gantt { --lab: 140px; min-width: 560px; } }
+.g-row { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr); align-items: center; min-height: 30px; border-bottom: 1px solid var(--line); }
+.g-row:hover .g-lab, .g-row:hover { background: var(--sunk); }
+.g-lab { position: sticky; left: 0; z-index: 2; background: var(--surface); padding: 4px 10px 4px 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-lab small { color: var(--muted); font-family: var(--mono); font-size: .72rem; margin-right: 6px; }
+.g-row.g-group { min-height: 34px; } .g-row.g-group .g-lab { font-weight: 600; }
+.g-row.g-sub .g-lab { padding-left: 14px; }
+.g-head { min-height: 26px; border-bottom-color: var(--line-strong); }
+.g-head .g-lab { font: 500 .72rem/1.4 var(--mono); color: var(--muted); }
+.g-track { position: relative; height: 26px; }
+.g-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); pointer-events: none; }
+.g-head .g-tick { border-left-color: var(--line-strong); }
+.g-head .g-tick span { position: absolute; left: 4px; top: 5px; font: .7rem/1.4 var(--mono); color: var(--muted); white-space: nowrap; }
+.g-plan { position: absolute; top: 4px; height: 18px; min-width: 4px; border: 1px dashed var(--line-strong); border-radius: 4px; background: color-mix(in srgb, var(--todo) 8%, transparent); }
+.g-act { position: absolute; top: 9px; height: 8px; min-width: 6px; border-radius: 4px; background: currentColor; }
+.g-group .g-act { top: 8px; height: 10px; }
+.g-act.open { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.g-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--waiting); left: calc(var(--lab) + (100% - var(--lab)) * var(--at)); z-index: 1; pointer-events: none; }
+.g-today span { position: absolute; top: 1px; left: 4px; font: 500 .68rem/1.4 var(--mono); color: var(--waiting); background: var(--surface); padding: 0 3px; border-radius: 3px; }
+.g-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
+.g-legend i { display: inline-block; width: 18px; height: 8px; border-radius: 4px; vertical-align: middle; margin-right: 6px; background: currentColor; }
+.g-legend i.plan { height: 12px; border: 1px dashed var(--line-strong); background: none; }
+.g-legend i.now { width: 0; height: 12px; border-left: 2px solid var(--waiting); border-radius: 0; }
 th button.sort { all: unset; cursor: pointer; }
 th button.sort:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
 th[aria-sort="ascending"] button.sort::after { content: " ▲"; font-size: .7em; }
@@ -1157,6 +1182,97 @@ a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         { search: "Search stories", filters: [{ label: "Epics", f: function (r) { return r.epic; } }, { label: "Slices", f: function (r) { return r.slice; } }, { label: "Statuses", f: function (r) { return r.status; } }] }))];
   }
 
+  // The roadmap timeline: phases A to G with their stages, then the slices, as bars over time. The dashed box is
+  // the plan (Start and Target); the solid bar is what happened, dated by the commits that changed its status.
+  function gantt() {
+    var rows = (R.schedule || {}).rows || [], today = String(D.built || "").slice(0, 10);
+    var DAY = 864e5, MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function t(d) { var v = d ? Date.parse(d + "T00:00:00Z") : NaN; return isNaN(v) ? null : v; }
+    var now = t(today) || Date.now();
+    function span(r) {
+      var a = t(r.started), b = t(r.finished) || (a !== null && r.state !== "done" ? now : a);
+      return { ps: t(r.start), pe: t(r.target), as: a, ae: b, open: a !== null && r.state !== "done" && !t(r.finished) };
+    }
+    function dated(sp) { return sp.ps !== null || sp.pe !== null || sp.as !== null; }
+    function late(r, sp) { return r.state !== "done" && sp.pe !== null && sp.pe < now; }
+    function fmt(v) { var d = new Date(v); return MON[d.getUTCMonth()] + " " + d.getUTCDate(); }
+    // Phases from their stages: plan from the first start to the last target, actual from the first start to the last finish.
+    var items = [], phases = {}, order = [];
+    rows.filter(function (r) { return r.kind === "stage"; }).forEach(function (r) {
+      var k = r.phase || "Stages";
+      if (!phases[k]) { phases[k] = []; order.push(k); }
+      phases[k].push({ r: r, sp: span(r) });
+    });
+    function lo(xs) { xs = xs.filter(function (x) { return x !== null; }); return xs.length ? Math.min.apply(null, xs) : null; }
+    function hi(xs) { xs = xs.filter(function (x) { return x !== null; }); return xs.length ? Math.max.apply(null, xs) : null; }
+    order.forEach(function (k) {
+      var kids = phases[k].filter(function (x) { return dated(x.sp); });
+      if (!kids.length) return;
+      var all = phases[k], st = all.every(function (x) { return x.r.state === "done"; }) ? "done" : all.some(function (x) { return x.r.state !== "todo"; }) ? "progress" : "todo";
+      var sp = { ps: lo(kids.map(function (x) { return x.sp.ps; })), pe: hi(kids.map(function (x) { return x.sp.pe; })),
+        as: lo(kids.map(function (x) { return x.sp.as; })), ae: hi(kids.map(function (x) { return x.sp.ae; })),
+        open: kids.some(function (x) { return x.sp.open; }) };
+      var done = all.filter(function (x) { return x.r.state === "done"; }).length;
+      items.push({ group: true, label: k, tag: done + "/" + all.length, state: st, sp: sp, late: st !== "done" && sp.pe !== null && sp.pe < now });
+      kids.forEach(function (x) { items.push({ label: x.r.name, tag: x.r.id, state: x.r.state, status: x.r.status, sp: x.sp, late: late(x.r, x.sp) }); });
+    });
+    var sl = rows.filter(function (r) { return r.kind === "slice"; }).map(function (r) { return { r: r, sp: span(r) }; });
+    var dsl = sl.filter(function (x) { return dated(x.sp); });
+    if (dsl.length) {
+      items.push({ group: true, label: "Slices", tag: sl.filter(function (x) { return x.r.state === "done"; }).length + "/" + sl.length, state: null, sp: null });
+      dsl.forEach(function (x) { items.push({ label: x.r.name || x.r.id, tag: x.r.id, state: x.r.state, status: x.r.status, sp: x.sp, late: late(x.r, x.sp) }); });
+    }
+    var undated = rows.length - items.filter(function (i) { return !i.group; }).length;
+    var how = "Planned dates come from Start and Target columns in founder/playbook.md and start and target on each slice in founder/slices.json (YYYY-MM-DD). Actual dates come from the commits that moved a status to in progress and to done.";
+    if (!items.length) return panel("Timeline", null, el("p", { cls: "empty", text: rows.length ? "Nothing to draw yet: no stage or slice has a date. " + how : "No stages or slices yet." }));
+    // The time axis: every date plus today, padded, at least four weeks wide.
+    var ts = [now];
+    items.forEach(function (i) { if (i.sp) [i.sp.ps, i.sp.pe, i.sp.as, i.sp.ae].forEach(function (v) { if (v !== null) ts.push(v); }); });
+    var a0 = Math.min.apply(null, ts) - 3 * DAY, a1 = Math.max.apply(null, ts) + 3 * DAY;
+    if (a1 - a0 < 28 * DAY) { var mid = (a0 + a1) / 2; a0 = mid - 14 * DAY; a1 = mid + 14 * DAY; }
+    function x(v) { return Math.max(0, Math.min(100, 100 * (v - a0) / (a1 - a0))); }
+    function pos(s0, s1) { var l = x(s0), r = x(s1 === null ? s0 : s1); return "left:" + l.toFixed(2) + "%;width:" + Math.max(0, r - l).toFixed(2) + "%"; }
+    var ticks = [], d = new Date(a0), weekly = a1 - a0 <= 75 * DAY;
+    if (weekly) { d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + ((8 - d.getUTCDay()) % 7 || 7))); }
+    else d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    while (d.getTime() < a1) {
+      var v = d.getTime();
+      ticks.push({ v: v, text: weekly ? fmt(v) : d.getUTCMonth() === 0 ? String(d.getUTCFullYear()) : MON[d.getUTCMonth()] });
+      d = weekly ? new Date(v + 7 * DAY) : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    }
+    function grid(withText) { return ticks.map(function (k) { return el("i", { cls: "g-tick", style: "left:" + x(k.v).toFixed(2) + "%" }, withText ? el("span", { text: k.text }) : null); }); }
+    function cls(i) { return i.late ? "s-behind" : i.state === "done" ? "s-done" : i.state === "progress" ? "s-progress" : "s-todo"; }
+    function words(i) {
+      var sp = i.sp, out = [i.label + (i.status ? " (" + i.status + ")" : "")];
+      if (sp.ps !== null || sp.pe !== null) out.push("planned " + (sp.ps !== null ? fmt(sp.ps) : "?") + " to " + (sp.pe !== null ? fmt(sp.pe) : "?"));
+      if (sp.as !== null) out.push("actual " + fmt(sp.as) + " to " + (sp.open ? "now" : fmt(sp.ae)));
+      if (i.late) out.push("past its target");
+      return out.join(", ");
+    }
+    var body = [el("div", { cls: "g-row g-head" }, el("span", { cls: "g-lab", text: (weekly ? "Week of, " : "Month, ") + new Date(a0).getUTCFullYear() }), el("div", { cls: "g-track" }, grid(true)))];
+    items.forEach(function (i) {
+      var track = el("div", { cls: "g-track" }, grid(false));
+      if (i.sp) {
+        track.setAttribute("role", "img"); track.setAttribute("aria-label", words(i)); track.setAttribute("title", words(i));
+        if (i.sp.ps !== null || i.sp.pe !== null) track.appendChild(el("i", { cls: "g-plan", style: pos(i.sp.ps !== null ? i.sp.ps : i.sp.pe, i.sp.pe !== null ? i.sp.pe : i.sp.ps) }));
+        if (i.sp.as !== null) track.appendChild(el("i", { cls: "g-act " + cls(i) + (i.sp.open ? " open" : ""), style: pos(i.sp.as, i.sp.ae) }));
+      }
+      body.push(el("div", { cls: "g-row " + (i.group ? "g-group" : "g-sub") },
+        el("span", { cls: "g-lab", title: i.label }, el("small", { text: i.tag }), i.label), track));
+    });
+    var line = el("i", { cls: "g-today", style: "--at:" + (x(now) / 100).toFixed(4) }, el("span", { text: "Today" })), wrap = el("div", { cls: "gantt-wrap" });
+    body.push(line); wrap.appendChild(el("div", { cls: "gantt" }, body));
+    // On a narrow screen the chart scrolls sideways: start with today in view.
+    setTimeout(function () { if (wrap.scrollWidth > wrap.clientWidth) wrap.scrollLeft = Math.max(0, line.offsetLeft - wrap.clientWidth * 0.6); }, 0);
+    return panel("Timeline", "Phases and their stages, then the slices, over time. The dashed box is the plan, the bar is what happened. Hover a bar for its dates." +
+        (undated ? " " + undated + " without a date " + (undated === 1 ? "is" : "are") + " left out." : ""),
+      wrap,
+      el("p", { cls: "g-legend" }, [["plan", "Planned"], ["s-done", "Done"], ["s-progress", "In progress"], ["s-behind", "Past target"], ["now", "Today"]].map(function (k) {
+        return el("span", null, el("i", { cls: k[0] }), k[1]);
+      })),
+      undated ? el("p", { cls: "note", text: how }) : null);
+  }
+
   function roadmapTab() {
     var sDone = slices.filter(function (x) { return String(x.status).toLowerCase() === "done"; }).length;
     return [
@@ -1165,6 +1281,7 @@ a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         tile("Open tickets", G.ok ? String(openTickets.length) : "?", G.ok ? openTickets.filter(function (t) { return t.claimed; }).length + " claimed, " + openTickets.filter(function (t) { return t.blocked; }).length + " blocked" : "GitHub data missing"),
         tile("Decisions waiting", String((road.decisions_waiting || []).length), "Proposed or Open"),
         tile("Stuck", G.ok ? String((NEED.stuck || []).length) : "?", "no update in " + (NEED.stale_hours || 48) + "h, or the last run failed")),
+      gantt(),
       panel("Slices", "Shippable increments, each with an exit check.", table([
         { h: "Slice", f: function (r) { return r.id; } }, { h: "Name", f: function (r) { return r.name; } },
         { h: "Status", f: function (r) { return pill(r.status, /done/i.test(r.status) ? "done" : /todo|planned/i.test(r.status) ? "todo" : "progress"); } },
