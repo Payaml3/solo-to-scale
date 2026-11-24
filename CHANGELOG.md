@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.11.4 (2026-11-24)
+
+- **Agent runs can use their tools.** Runs stopped at their first command when the action refused it. The run step now lists the tools a heartbeat needs (`--allowedTools`: Bash, file reads and edits, search, skills, subagents). A new step after each run prints only the names of any refused tools, so a refusal can be seen without exposing the run's output.
+
 ## v2.11.3 (2026-11-24)
 
 - **No more run loops.** A ticket blocked on the founder kept starting its role every minute: the run released it, so it looked ready again, and runs that never started a heartbeat weren't counted. Now the autopilot skips escalated tickets, waits 6 hours before retrying a ticket whose last run ended blocked or failed, waits an hour after a run that found nothing to do, and counts every run toward `max_runs_per_day` (`finish` records a run that never started a heartbeat).
