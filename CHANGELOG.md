@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.11.0 (2026-11-24)
+
+The AI team works toward the goals on its own, and tells you when it needs you.
+
+- **Autopilot.** With `"autopilot": {"enabled": true}` in `founder/heartbeats.json` and the `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret, the new `agents` workflow starts agents itself. On every ticket event and every hour, `tools/autopilot.py due` gives the chief of staff a planning ticket (`autopilot-plan`) when the current stage's gate, a live initiative or a key result has no open ticket, and starts one Claude Code run (the `heartbeat` skill) for each role with a ticket ready. When runs end it checks again, so a handoff starts the next role straight away. Heartbeat on, budget left, not paused, one run per role and `max_runs_per_day` still apply; founder gates are unchanged.
+- **`tickets.py new --stage N`** labels work `stage:N` (inherited by sub-tickets), so the autopilot knows a stage is covered.
+- **Needs you, by email.** The new `needs-you` workflow keeps one issue labelled `needs-you` current and assigned to you, and mentions you for each new item and in a daily digest, so GitHub emails you; no secret needed. Optional plain email through SMTP secrets.
+- **Blocked tickets in Needs you:** a ticket blocked with no update for a day now shows there, on the dashboard and in the email.
+- `doctor` checks the two new workflows, their labels, and that the autopilot has its secret.
+- Existing repos get the workflows and tools with `upgrade`; the autopilot stays off until you turn it on.
+
 ## v2.10.0 (2026-11-24)
 
 The AI team moves up the Overview and comes alive.

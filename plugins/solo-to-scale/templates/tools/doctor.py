@@ -37,10 +37,11 @@ import tickets  # noqa: E402
 GATED = {"founder/team.md": "hire", "founder/heartbeats.json": "budget", "founder/dashboard.json": "deploy",
          "founder/portfolio.json": "deploy", "founder/goals.json": "decision",
          "founder/finance.json": "spend"}
-WORKFLOWS = ["governance.yml", "founder-gates.yml", "tickets.yml", "dashboard.yml", "portfolio.yml"]
+WORKFLOWS = ["governance.yml", "founder-gates.yml", "tickets.yml", "dashboard.yml", "portfolio.yml", "agents.yml",
+             "needs-you.yml"]
 LABELS = {tickets.TICKET: "0e8a16", tickets.CLAIMED: "fbca04", tickets.BLOCKED: "b60205", tickets.LOG: "c5def5",
           approval.LABEL: "d93f0b", approval.PR_LABEL: "0e8a16", heartbeat.COST_LOG: "c5def5",
-          "agent-controls": "5319e7",
+          "agent-controls": "5319e7", "needs-you": "d93f0b", "autopilot-plan": "5319e7",
           **{f"role:{r}": "1d76db" for r in tickets.ROLES}}
 NO_RUN_HOURS = 72
 GOALS_TEMPLATE = {
@@ -176,6 +177,16 @@ def hosting_checks(root: Path, hub: tickets.Hub | None, cache: dict[str, Any]) -
                         "Add the repository secret" + ("s " if len(names) > 1 else " ") + " and ".join(names)
                         + (" (the deploy also needs Vercel Authentication on All Deployments)" if via == "vercel" else "")
                         if unset or unknown else "", "The startup dashboard"))
+    auto = heartbeat.policy(root).get("autopilot")
+    if isinstance(auto, dict) and auto.get("enabled") is True:
+        flags = [has_secret(n, hub, cache) for n in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY")]
+        ok = any(flags)
+        out.append(item("autopilot", "Autopilot", "ok" if ok else "unknown" if None in flags else "broken",
+                        "agents start themselves from the agents workflow" if ok else
+                        "couldn't check the secrets from here" if None in flags else
+                        "on, but nothing can start a run: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY secret",
+                        "" if ok else "Run `claude setup-token` and add the token as the repository secret "
+                        "CLAUDE_CODE_OAUTH_TOKEN; install the Claude GitHub app on the repo", "The AI team"))
     port = load_json(root, "founder/portfolio.json")
     ventures = (port or {}).get("ventures") if isinstance(port, dict) else None
     if ventures:

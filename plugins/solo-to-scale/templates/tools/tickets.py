@@ -9,6 +9,7 @@ written to the ticket and to one activity log (an issue labelled `activity-log`)
                                          # and its objective goal:O1; a sub-ticket inherits its parent's. While
                                          # goals.json has active objectives, a ticket that names none is refused,
                                          # and once they have initiatives, one that names no initiative is too.
+                                         # --stage N labels it stage:N (the playbook gate it works toward; inherited)
   python tools/tickets.py claim <n> --role <role>      # atomic: exactly one claimant wins
   python tools/tickets.py release <n> --role <role>
   python tools/tickets.py handoff <n> --to <role> --note "..." --by <role>
@@ -51,7 +52,7 @@ import approval  # noqa: E402
 from approval import repo_name  # noqa: E402
 
 OK, REFUSED, ERROR = 0, 1, 5
-NEEDS_REVIEW, ESCALATED = "needs-review:", "escalated-to:"
+NEEDS_REVIEW, ESCALATED, STAGE = "needs-review:", "escalated-to:", "stage:"
 VERDICTS = ("approved", "changes")
 REVIEW = re.compile(r"<!-- s2s:review (\{.*?\}) -->")
 TICKET, CLAIMED, BLOCKED, LOG = "ticket", "claimed", "blocked", "activity-log"
@@ -273,6 +274,18 @@ def which_objective(a: argparse.Namespace, hub: Hub) -> tuple[str, str]:
     return "", ""
 
 
+def stage_label(a: argparse.Namespace, hub: Hub) -> str:
+    """`stage:<n>` from --stage, else the parent's: the autopilot counts a stage as covered by these tickets."""
+    n = getattr(a, "stage", None)
+    if n is not None:
+        if not 1 <= n <= 30:
+            raise SystemExit(f"--stage must be 1 to 30, not {n}")
+        return f"{STAGE}{n}"
+    if a.parent:
+        return next((lb for lb in labels_of(hub.issue(a.parent)) if re.fullmatch(STAGE + r"\d{1,2}", lb)), "")
+    return ""
+
+
 def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     need_role(a.role)
     if a.by:
@@ -281,7 +294,8 @@ def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     objective, initiative = which_objective(a, hub)
     body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by, objective, initiative)
     reviewer = review_for(a, hub)
-    labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else []) \
+    stage = stage_label(a, hub)
+    labels = [TICKET, f"role:{a.role}"] + ([stage] if stage else []) + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else []) \
         + ([goals.initiative_label(initiative)] if initiative else []) + ([NEEDS_REVIEW + reviewer] if reviewer else [])
     if a.dry_run:
         print(f"{a.title}\nlabels: {', '.join(labels)}\n\n{body}")
@@ -607,6 +621,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--parent", type=int)
     p.add_argument("--objective", default="", help="the founder/goals.json objective it serves, e.g. O1")
     p.add_argument("--initiative", default="", help="the founder/goals.json initiative it serves, e.g. I1")
+    p.add_argument("--stage", type=int, help="the playbook stage whose gate it works toward: label stage:<n>")
     p.add_argument("--blocked-by", type=int, nargs="*")
     p.add_argument("--by", default="")
     p.add_argument("--review", default="", help="the role that reviews it before done; 'none' for no review")
