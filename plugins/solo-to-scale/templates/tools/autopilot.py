@@ -51,6 +51,8 @@ DEFAULTS = {"enabled": False, "plan_every_hours": 24, "max_runs_per_day": 12, "m
 # The model each role runs on (roles/*.yaml `tier`): strongest for architecture, mid-tier for the rest.
 MODELS = {"architect": "opus"}
 DEFAULT_MODEL = "sonnet"
+IDLE_HOURS = 1  # a role whose last run found nothing to do waits this long
+COOLDOWN_HOURS = 6  # a ticket whose last run ended blocked or failed waits this long before a retry
 BUILD_STAGES = range(13, 18)
 TOKEN_ENV = "S2S_HAS_AGENT_TOKEN"
 
@@ -183,15 +185,48 @@ def plan(hub: tickets.Hub, root: Path, cfg: dict[str, Any], now: dt.datetime, dr
     return made
 
 
-def has_work(hub: tickets.Hub, role: str, open_tickets: list[dict[str, Any]]) -> str:
-    """Why this role should run now, or empty."""
+def stalled(runs: list[dict[str, Any]], role: str, now: dt.datetime) -> set[int]:
+    """Tickets this role's last run on them ended blocked or failed within COOLDOWN_HOURS: don't retry them yet."""
+    last: dict[int, dict[str, Any]] = {}
+    for e in runs:
+        if e.get("role") == role and isinstance(e.get("ticket"), int):
+            last[e["ticket"]] = e
+    out = set()
+    for n, e in last.items():
+        try:
+            at = dt.datetime.fromisoformat(str(e.get("at")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if e.get("outcome") in ("blocked", "failed") and (now - at).total_seconds() < COOLDOWN_HOURS * 3600:
+            out.add(n)
+    return out
+
+
+def idle_recently(runs: list[dict[str, Any]], role: str, now: dt.datetime) -> bool:
+    """This role's latest run did nothing (no ticket) less than IDLE_HOURS ago."""
+    mine = [e for e in runs if e.get("role") == role]
+    if not mine or mine[-1].get("outcome") != "no-work" or mine[-1].get("ticket") is not None:
+        return False
+    try:
+        at = dt.datetime.fromisoformat(str(mine[-1].get("at")).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return (now - at).total_seconds() < IDLE_HOURS * 3600
+
+
+def has_work(hub: tickets.Hub, role: str, open_tickets: list[dict[str, Any]], skip: set[int] | None = None) -> str:
+    """Why this role should run now, or empty. Escalated tickets wait for whoever they went to; `skip` holds the
+    tickets that just stalled, so a ticket blocked on the founder isn't retried run after run."""
+    skip = skip or set()
     mine = [t for t in open_tickets if tickets.role_of(t) == role]
     for t in mine:
         if tickets.CLAIMED in tickets.labels_of(t) and hub.holder(t["number"]) == f"role:{role}":
             return f"resume #{t['number']}"
     for t in mine:
         labels = tickets.labels_of(t)
-        if tickets.CLAIMED in labels or tickets.BLOCKED in labels:
+        if tickets.CLAIMED in labels or tickets.BLOCKED in labels or t["number"] in skip:
+            continue
+        if any(x.startswith(tickets.ESCALATED) for x in labels):
             continue
         if not tickets.plan_refusal(hub, t):
             return f"ready #{t['number']}"
@@ -214,11 +249,15 @@ def ask_for_plans(hub: tickets.Hub, open_tickets: list[dict[str, Any]]) -> list[
     return out
 
 
-def runs_today(hub: tickets.Hub, now: dt.datetime) -> int:
+def month_runs(hub: tickets.Hub, now: dt.datetime) -> list[dict[str, Any]]:
     month = now.strftime("%Y-%m")
+    return heartbeat.entries(heartbeat.Costs(hub, month).comments(), month)
+
+
+def runs_today(hub: tickets.Hub, now: dt.datetime, runs: list[dict[str, Any]] | None = None) -> int:
+    """Every run today counts toward the cap, even one that found nothing to do (`finish` records those)."""
     day = now.strftime("%Y-%m-%d")
-    return sum(1 for e in heartbeat.entries(heartbeat.Costs(hub, month).comments(), month)
-               if str(e.get("at", "")).startswith(day) and e.get("outcome") != "no-work")
+    return sum(1 for e in (month_runs(hub, now) if runs is None else runs) if str(e.get("at", "")).startswith(day))
 
 
 def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> tuple[list[dict[str, str]], list[str]]:
@@ -231,7 +270,8 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
     if made:
         open_tickets = hub.tickets("open")
     asked = ask_for_plans(hub, open_tickets)
-    left = int(cfg["max_runs_per_day"]) - runs_today(hub, now)
+    runs = month_runs(hub, now)
+    left = int(cfg["max_runs_per_day"]) - runs_today(hub, now, runs)
     if left <= 0:
         return [], [f"stop: {cfg['max_runs_per_day']} runs today already (autopilot.max_runs_per_day)"]
     month = now.strftime("%Y-%m")
@@ -250,7 +290,9 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
                   "no budget set" if cap is None else
                   f"budget spent (${used:.2f} of ${cap:.2f})" if used >= cap else
                   "a run is active" if held and now.timestamp() - held[1] < heartbeat.STALE_HOURS * 3600 else "")
-        work = "" if reason else has_work(hub, role, open_tickets)
+        if not reason and idle_recently(runs, role, now):
+            reason = f"its last run found nothing to do (waits {IDLE_HOURS}h)"
+        work = "" if reason else has_work(hub, role, open_tickets, stalled(runs, role, now))
         if not reason and not work:
             reason = "nothing ready"
         if work and len(out) < left:
@@ -301,6 +343,12 @@ def cmd_finish(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> 
     """After a CI run: a run that ended without `heartbeat.py end` (crash, timeout) is recorded as failed."""
     tickets.need_role(a.role)
     if heartbeat.run_holder(hub, a.role) is None:
+        link = heartbeat.session_link(a.session)
+        now = dt.datetime.now(dt.timezone.utc)
+        if link and not any(e.get("session") == link for e in month_runs(hub, now)):
+            # The run never started a heartbeat: record it, so it counts toward the daily cap.
+            return heartbeat.main(["end", a.role, "--usd", "0", "--outcome", "no-work", "--root", str(a.root),
+                                   "--note", "the run ended without starting a heartbeat", "--session", a.session])
         print(f"role:{a.role}'s run ended cleanly")
         return OK
     claimed = [t["number"] for t in hub.tickets("open") if tickets.role_of(t) == a.role
