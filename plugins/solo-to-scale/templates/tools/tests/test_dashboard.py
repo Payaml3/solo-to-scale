@@ -537,8 +537,9 @@ def test_the_overview_shows_the_journey_simply_and_the_rest_moves_to_its_tabs(ro
     # cycle's goals, delivery, the journey, then the team
     assert 'var tiles = el("div", { cls: "grid g3" }, t1, t2, t3, t4, t5, t6)' in body
     page = body[body.index("    return [G.ok"):]
-    assert page.index("tiles,") < page.index('panel("Needs you"') < page.index("cycle),") < page.index("delivery,") \
-        < page.index("journeyPanel(),") < page.index('"Your AI team"')
+    assert page.index("tiles,") < page.index("teamPanel,") < page.index('panel("Needs you"') < page.index("cycle),") \
+        < page.index("delivery,") < page.index("journeyPanel()")
+    assert "teamHub(crewAll)" in body and "teamNow(crewAll)" in body, "the AI team as a live hub, with what each agent is on"
     for k in ('"Needs you"', '"North Star"', '"This cycle"', '"Build completion"', '"Shipped, last 7 days"', '"Runway"'):
         assert 'kpi("#' in body and k in body, k
     for gone in ("ladderPanel()", "moneyPanel()", "trendPanel()", '"Recently merged"', '"Slices done"', '"Stuck"', "goalStrip()"):

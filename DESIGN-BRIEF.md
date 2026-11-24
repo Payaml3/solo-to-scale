@@ -45,12 +45,16 @@ The Overview is read first thing every day, so it holds only what changes daily 
    - **Build completion:** acceptance criteria done, stories done and the share with test evidence.
    - **Shipped, last 7 days:** pull requests merged, compared with the week before, the agent runs that worked, and a 14-day sparkline.
    - **Runway** once `founder/finance.json` is filled in (red under 6 months), otherwise **AI spend** against the budgets, with the month-end forecast.
-2. **Needs you** (the 5 oldest and most blocking) beside **Goals this cycle**: the North Star sentence and each objective's bar with the same time tick and its pace.
-3. **Delivery:** the slice being built and its progress, slices done, open, blocked and quiet tickets, agents working, and two 14-day charts (merges, and agent runs that worked).
-4. **Your journey:** the phase and stage. It changes weekly, not daily, so it sits below the daily numbers.
-5. **Your AI team:** who is working, blocked or idle.
+2. **Your AI team, as a live hub:** the AI coordinator in the middle, the other agents in a ring. Every node is a hexagon with a small four-point spark, the same mark the avatars carry, so each one reads as an AI agent and not a person. Links carry moving dots while an agent works with the AI coordinator; a blocked agent's dots run red towards the hub (asking for help); handoffs between agents in the last 2 days are curved chords; agents with their heartbeat off sit faded on a dotted link. Beside it, "Right now" lists each busy agent's ticket and the latest handoffs. The motion is the page's one ambient animation and it carries state (who is working, who is stuck), so it earns its place; with reduced motion the dots and halos stop and the colours still tell the story. On a phone the hub switches to a tall layout so names stay readable.
+3. **Needs you** (the 5 oldest and most blocking) beside **Goals this cycle**: the North Star sentence and each objective's bar with the same time tick and its pace.
+4. **Delivery:** the slice being built and its progress, slices done, open, blocked and quiet tickets, agents working, and two 14-day charts (merges, and agent runs that worked).
+5. **Your journey:** the phase and stage. It changes weekly, not daily, so it sits below the daily numbers.
 
 Removed from the Overview: the separate Goals panel (merged into Goals this cycle), the Agents working tile (now in Delivery and the team strip) and the latest agent actions (in Agent activity).
+
+## Naming the agents
+
+On the dashboard each agent is named by its job plus "agent" (Research agent, Engineering agent), and the role that coordinates them is the **AI coordinator**; "chief of staff" read like an HR title. Avatars are rounded squares with a spark, not circles, so they don't read as people. Only display names changed: the role ids (`chief-of-staff`, `engineer` and so on) stay, because tickets, labels and heartbeats use them, and the team table shows the id beside the name.
 
 ## Left as is, on purpose
 

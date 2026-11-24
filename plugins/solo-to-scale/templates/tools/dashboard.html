@@ -158,7 +158,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: .88rem; z-index: 5; }
 .toast[hidden] { display: none; }
 @starting-style { .toast { opacity: 0; transform: translate(-50%, 8px); } }
-.avatar { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; font: 600 .85rem/1 var(--body); letter-spacing: .02em; position: relative; }
+.avatar { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 30%; color: #fff; font: 600 .85rem/1 var(--body); letter-spacing: .02em; position: relative; }
+.avatar::before { content: "\2726"; position: absolute; left: -4px; top: -5px; font-size: 11px; line-height: 1; color: var(--ink); text-shadow: 0 0 2px var(--surface), 0 0 2px var(--surface); }
+.avatar.sm::before { display: none; }
+.avatar.sm { border-radius: 28%; }
+.hub .spark4 { fill: #fff; opacity: .95; pointer-events: none; }
+.hub .halo { fill: none; }
 .avatar.sm { width: 22px; height: 22px; font-size: .6rem; vertical-align: middle; margin-right: 6px; }
 .avatar .dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); background: var(--todo); }
 .avatar.sm .dot { display: none; }
@@ -248,6 +253,30 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 a.tile { display: block; color: inherit; text-decoration: none; } a.tile:hover { border-color: var(--line-strong); }
 a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hub { display: block; width: 100%; max-width: 600px; height: auto; margin: 4px auto 0; overflow: visible; }
+.hub .ln { stroke: var(--line-strong); stroke-width: 1.5; }
+.hub .ln.working { stroke: color-mix(in srgb, var(--done) 55%, var(--line)); }
+.hub .ln.blocked, .hub .ln.paused { stroke: var(--waiting); stroke-dasharray: 4 3; }
+.hub .ln.off { stroke: var(--line); stroke-dasharray: 2 4; }
+.hub .chord { fill: none; stroke: var(--link); stroke-width: 1.2; opacity: .55; }
+.hub .pl { fill: var(--done); } .hub .pl.back { fill: var(--ink); opacity: .6; } .hub .pl.help { fill: var(--waiting); } .hub .pl.idle { fill: var(--muted); opacity: .5; } .hub .pl.hand { fill: var(--link); }
+.hub .node { cursor: pointer; } .hub .node:focus-visible { outline: none; } .hub .node:focus-visible .disc { stroke: var(--link); stroke-width: 3; }
+.hub .disc { stroke: var(--surface); stroke-width: 2; transition: transform 160ms var(--ease-out); transform-box: fill-box; transform-origin: center; }
+@media (hover: hover) and (pointer: fine) { .hub .node:hover .disc { transform: scale(1.06); } }
+.hub .node.off .disc { opacity: .45; }
+.hub .halo { fill: none; stroke: var(--done); stroke-width: 2; opacity: .35; transform-box: fill-box; transform-origin: center; animation: breathe 2.8s var(--ease-in-out) infinite; }
+.hub .node.core .halo { stroke: var(--accent); opacity: .18; }
+@keyframes breathe { 0%, 100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.12); opacity: .08; } }
+.hub .ini { fill: #fff; font: 600 12px var(--body); text-anchor: middle; pointer-events: none; } .hub .ini.big { font-size: 15px; }
+.hub .st { stroke: var(--surface); stroke-width: 2; fill: var(--todo); } .hub .st.working { fill: var(--done); } .hub .st.blocked, .hub .st.paused { fill: var(--waiting); } .hub .st.off { fill: var(--line); }
+.hub .lab { fill: var(--ink); font: 600 12px var(--body); text-anchor: middle; }
+.hub .sub { fill: var(--muted); font: 11px var(--body); text-anchor: middle; }
+.hub .lab, .hub .sub { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { .hub .pulses { display: none; } .hub .halo { animation: none; } }
+.teamgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: 18px; align-items: center; }
+@media (max-width: 900px) { .teamgrid { grid-template-columns: 1fr; } }
+.teamnow .k { font-size: .8rem; color: var(--muted); }
+.teamnow .list li { padding: 7px 0; font-size: .9rem; }
 .grid.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 760px) { .grid.g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -651,13 +680,15 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   // --- the AI team as agents ------------------------------------------------------------------------------
   // The roster in founder/team.md: one seat per role. An unknown role still gets a card, named from its slug.
   var ROLE_INFO = {
-    "chief-of-staff": ["Chief of staff", "AI core", "The operating system: briefs, memory, weekly review, views"],
-    research: ["Research", "01", "Evidence and business work outside software"],
-    product: ["Product", "02", "Requirements, stories, screen specs; prepares decisions"],
-    architect: ["Architect", "03", "Stack, architecture, threat model"],
-    engineer: ["Engineer", "04", "Product build, one story group per session"],
-    qa: ["QA", "05", "Evaluation, release check, accessibility review"],
-    growth: ["Growth", "06", "Brand, website, docs, content, launch"]
+    // Display names: every role is an AI agent, and the core one coordinates the others. The role ids
+    // (chief-of-staff, research, ...) stay as they are: tickets, labels and heartbeats use them.
+    "chief-of-staff": ["AI coordinator", "AI core", "Runs the operating system: briefs, memory, weekly review, views; hands work to the other agents", "AI"],
+    research: ["Research agent", "01", "Evidence and business work outside software", "Re"],
+    product: ["Product agent", "02", "Requirements, stories, screen specs; prepares decisions", "Pr"],
+    architect: ["Architecture agent", "03", "Stack, architecture, threat model", "Ar"],
+    engineer: ["Engineering agent", "04", "Product build, one story group per session", "En"],
+    qa: ["QA agent", "05", "Evaluation, release check, accessibility review", "QA"],
+    growth: ["Growth agent", "06", "Brand, website, docs, content, launch", "Gr"]
   };
   var ROLE_ORDER = ["chief-of-staff", "research", "product", "architect", "engineer", "qa", "growth"];
   function roleName(role) {
@@ -665,14 +696,16 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     return ROLE_INFO[r] ? ROLE_INFO[r][0] : r.split(/[-_]/).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
   }
   function hue(text) { var h = 0; String(text).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; }); return h; }
+  // The short mark on an agent's avatar: its own code, or the initials of its name.
+  function code(role) { var r = String(role || "").replace(/^role:/, ""); return ROLE_INFO[r] && ROLE_INFO[r][3] ? ROLE_INFO[r][3] : initials(roleName(r)); }
   function initials(name) {
     var w = String(name).split(/\s+/).filter(Boolean);
     return (w.length > 1 ? w[0].charAt(0) + w[1].charAt(0) : String(name).slice(0, 2)).toUpperCase();
   }
   function avatar(role, state, small) {
-    var r = String(role || "").replace(/^role:/, ""), name = r === "chief-of-staff" ? "Chief Staff" : roleName(r);
+    var r = String(role || "").replace(/^role:/, ""), name = roleName(r);
     return el("span", { cls: "avatar" + (small ? " sm" : ""), style: "background:hsl(" + hue(r) + ",45%,42%)", "aria-hidden": "true", title: name + " (AI agent)" },
-      initials(name), state ? el("span", { cls: "dot " + state }) : null);
+      code(r), state ? el("span", { cls: "dot " + state }) : null);
   }
   function ago(iso) {
     var t = Date.parse(iso || ""); if (isNaN(t)) return "";
@@ -833,10 +866,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   function orgChart(list) {
     var cos = list.filter(function (a) { return a.role === "chief-of-staff"; })[0];
     var rest = list.filter(function (a) { return a.role !== "chief-of-staff"; });
-    return el("div", { cls: "org", role: "img", "aria-label": "Org chart: you, then the chief of staff, then " + rest.length + " AI roles; the board advises" },
+    return el("div", { cls: "org", role: "img", "aria-label": "Org chart: you, then the AI coordinator, then " + rest.length + " AI roles; the board advises" },
       node(el("span", { cls: "avatar", style: "background:var(--accent);color:var(--on-accent)" }, "You"), "Founder", "CEO and chair: approvals, money, go-live", "you"),
       el("div", { cls: "stem" }),
-      node(avatar("chief-of-staff", cos ? cos.state : null), "Claude, chief of staff", "AI core · " + (cos ? STATE_WORDS[cos.state] : "not scheduled")),
+      node(avatar("chief-of-staff", cos ? cos.state : null), "Claude, AI coordinator", "AI core · " + (cos ? STATE_WORDS[cos.state] : "not scheduled")),
       el("div", { cls: "stem" }),
       el("div", { cls: "row" }, rest.map(function (a) { return node(avatar(a.role, a.state), roleName(a.role), (ROLE_INFO[a.role] ? ROLE_INFO[a.role][1] + " · " : "") + STATE_WORDS[a.state]); })),
       (team.board || []).length ? el("div", { cls: "board" }, el("div", { cls: "k", text: "The advisory board: AI advisors, advice only, no vote" }),
@@ -983,10 +1016,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   var PHASE_ASK = { A: "Is the problem real?", B: "What do we sell, and to whom?", C: "What exactly do we build, and how does it look?",
     D: "Build it and prove it works", E: "From working to live", F: "Find product-market fit", G: "Grow the company" };
   var LEAD_ROLE = { "01": "research", "02": "product", "03": "architect", "04": "engineer", "05": "qa", "06": "growth" };
-  // Who leads a stage, from the playbook's Where column: "P 02" or "Code 04" is that role; "P 00" is you with the chief of staff.
+  // Who leads a stage, from the playbook's Where column: "P 02" or "Code 04" is that role; "P 00" is you with the AI coordinator.
   function leadOf(s) {
     var w = String(s.where || ""), m = /\b(?:P|Code)\s*(0\d)\b/.exec(w);
-    if (m && m[1] === "00") return { text: "You, with the chief of staff", role: "chief-of-staff" };
+    if (m && m[1] === "00") return { text: "You, with the AI coordinator", role: "chief-of-staff" };
     if (m && LEAD_ROLE[m[1]]) return { text: roleName(LEAD_ROLE[m[1]]) + " (" + m[1] + ")", role: LEAD_ROLE[m[1]] };
     if (/\bCode\b/.test(w)) return { text: "A Claude Code session" };
     if (/\bCI\b/.test(w)) return { text: "CI, automatically" };
@@ -1098,6 +1131,97 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   function kpi(href, k, v, sub, extra, alert) {
     return el("a", { cls: "tile kpi" + (alert ? " alert" : ""), href: href }, el("div", { cls: "k", text: k }), el("div", { cls: "v" }, v), el("div", { cls: "s", text: sub }), extra || null);
   }
+  // The AI team as a hub: the AI coordinator (role chief-of-staff) in the middle, the other agents around it. A link carries moving pulses
+  // while its agent works (towards the hub when it is blocked and needs help); a handoff between two agents in the
+  // last 2 days draws a chord between them. Off agents sit faded on a dashed link. Every node opens its agent page.
+  function teamHub(crew) {
+    // A phone gets a tall layout so names stay readable; a wide screen gets a wide one.
+    var narrow = window.innerWidth < 600;
+    var NS = "http://www.w3.org/2000/svg", W = narrow ? 340 : 560, H = narrow ? 440 : 350, cx = W / 2, cy = H / 2 - 4, rx = narrow ? 122 : 210, ry = narrow ? 158 : 122;
+    var hubRole = crew.some(function (a) { return a.role === "chief-of-staff"; }) ? "chief-of-staff" : null;
+    var ring = crew.filter(function (a) { return a.role !== hubRole; }), hub = crew.filter(function (a) { return a.role === hubRole; })[0];
+    function sv(tag, attrs, kids) {
+      var n = document.createElementNS(NS, tag);
+      Object.keys(attrs || {}).forEach(function (k) { if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, String(attrs[k])); });
+      (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+      return n;
+    }
+    function hex(x, y, r) {
+      var pts = []; for (var k = 0; k < 6; k++) { var t = Math.PI / 6 + k * Math.PI / 3; pts.push((x + r * Math.cos(t)).toFixed(1) + "," + (y + r * Math.sin(t)).toFixed(1)); }
+      return pts.join(" ");
+    }
+    // A four-point spark, the usual sign for "AI".
+    function spark(x, y, s) {
+      var q = s * 0.28;
+      return "M" + x + "," + (y - s) + " Q" + (x + q) + "," + (y - q) + " " + (x + s) + "," + y + " Q" + (x + q) + "," + (y + q) + " " + x + "," + (y + s) +
+        " Q" + (x - q) + "," + (y + q) + " " + (x - s) + "," + y + " Q" + (x - q) + "," + (y - q) + " " + x + "," + (y - s) + "Z";
+    }
+    var pos = {};
+    if (hub) pos[hub.role] = [cx, cy];
+    ring.forEach(function (a, i) {
+      var t = -Math.PI / 2 + i * 2 * Math.PI / Math.max(1, ring.length);
+      pos[a.role] = [cx + rx * Math.cos(t), cy + ry * Math.sin(t)];
+    });
+    var svg = sv("svg", { viewBox: "0 0 " + W + " " + H, "class": "hub", role: "img",
+      "aria-label": "AI team: " + crew.map(function (a) { return roleName(a.role) + " " + STATE_WORDS[a.state]; }).join(", ") });
+    var links = sv("g", { "class": "links" }), pulses = sv("g", { "class": "pulses" }), nodes = sv("g", { "class": "nodes" });
+    function pulse(from, to, cls, dur, n) {
+      var d = "M" + from[0].toFixed(1) + "," + from[1].toFixed(1) + " L" + to[0].toFixed(1) + "," + to[1].toFixed(1);
+      for (var k = 0; k < n; k++) {
+        pulses.appendChild(sv("circle", { r: 3, "class": "pl " + cls }, [sv("animateMotion", { dur: dur + "s", begin: (k * dur / n).toFixed(2) + "s", repeatCount: "indefinite", path: d, keyPoints: "0;1", keyTimes: "0;1", calcMode: "spline", keySplines: "0.45 0 0.55 1" })]));
+      }
+    }
+    if (hub) ring.forEach(function (a) {
+      var p = pos[a.role], c = pos[hub.role];
+      links.appendChild(sv("line", { x1: c[0], y1: c[1], x2: p[0], y2: p[1], "class": "ln " + a.state }));
+      if (a.state === "working") { pulse(c, p, "work", 2.4, 2); pulse(p, c, "work back", 3.1, 1); }
+      else if (a.state === "blocked") pulse(p, c, "help", 1.6, 2);
+      else if (a.state === "idle") pulse(c, p, "idle", 6, 1);
+    });
+    // handoffs between agents, last 2 days
+    var seen = {};
+    activity.forEach(function (r) {
+      var to = String(r.to || "").replace(/^role:/, ""), from = String(r.role || "").replace(/^role:/, ""), a = age(r.at);
+      if (!to || !pos[to] || !pos[from] || to === from || a === null || a > 2) return;
+      var key = [from, to].sort().join("|"); if (seen[key]) return; seen[key] = 1;
+      var p = pos[from], q = pos[to], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, bend = 0.25;
+      var qx = mx + (cx - mx) * bend * 1.6, qy = my + (cy - my) * bend * 1.6;
+      var d = "M" + p[0].toFixed(1) + "," + p[1].toFixed(1) + " Q" + qx.toFixed(1) + "," + qy.toFixed(1) + " " + q[0].toFixed(1) + "," + q[1].toFixed(1);
+      links.appendChild(sv("path", { d: d, "class": "chord" }));
+      pulses.appendChild(sv("circle", { r: 2.5, "class": "pl hand" }, [sv("animateMotion", { dur: "3.2s", repeatCount: "indefinite", path: d })]));
+    });
+    crew.forEach(function (a) {
+      var p = pos[a.role], big = a.role === hubRole, r = big ? 30 : 22, name = roleName(a.role);
+      var g = sv("a", { href: "#agent/" + encodeURIComponent(a.role), "class": "node " + a.state + (big ? " core" : "") });
+      g.appendChild(sv("title", {}, [document.createTextNode(name + ": " + STATE_WORDS[a.state] + (a.claimed[0] ? ", on #" + a.claimed[0].number : ""))]));
+      // Agents are hexagons, not faces: a chip-like shape with a spark, so nobody reads them as people.
+      if (a.state === "working" || big) g.appendChild(sv("polygon", { points: hex(p[0], p[1], r + 6), "class": "halo" }));
+      g.appendChild(sv("polygon", { points: hex(p[0], p[1], r), "class": "disc", style: "fill:hsl(" + hue(a.role) + ",45%,42%)" }));
+      var t = sv("text", { x: p[0], y: p[1] + (big ? 6 : 4), "class": "ini" + (big ? " big" : "") }); t.textContent = code(a.role); g.appendChild(t);
+      g.appendChild(sv("path", { d: spark(p[0] - r * 0.62, p[1] - r * 0.62, big ? 7 : 5.5), "class": "spark4" }));
+      g.appendChild(sv("circle", { cx: p[0] + r * 0.7, cy: p[1] + r * 0.62, r: 5, "class": "st " + a.state }));
+      var lab = sv("text", { x: p[0], y: p[1] + r + 16, "class": "lab" }); lab.textContent = name; g.appendChild(lab);
+      var sub = sv("text", { x: p[0], y: p[1] + r + 29, "class": "sub" }); sub.textContent = STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : ""); g.appendChild(sub);
+      nodes.appendChild(g);
+    });
+    svg.appendChild(links); svg.appendChild(pulses); svg.appendChild(nodes);
+    return svg;
+  }
+  // Beside the hub: what each busy agent is on right now, then the latest handoffs.
+  function teamNow(crew) {
+    var rows = [];
+    crew.forEach(function (a) {
+      a.blocked.forEach(function (t) { rows.push(el("li", null, avatar(a.role, null, true), el("b", { text: roleName(a.role) }), " ", pill("blocked", "blocked"), el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)))); });
+      a.claimed.forEach(function (t) { rows.push(el("li", null, avatar(a.role, null, true), el("b", { text: roleName(a.role) }), " ", pill("working", "done"), el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)))); });
+    });
+    var hand = activity.filter(function (r) { var g = age(r.at); return r.to && g !== null && g <= 2; }).slice(0, 3).map(function (r) {
+      return el("li", null, el("span", { cls: "who", text: roleName(String(r.role).replace(/^role:/, "")) + " → " + roleName(String(r.to).replace(/^role:/, "")) }), " " + r.action + " #" + r.ticket, el("span", { cls: "note", text: "  " + ago(r.at) }));
+    });
+    return el("div", { cls: "teamnow" },
+      el("div", { cls: "k", text: "Right now" }),
+      rows.length ? el("ul", { cls: "list" }, rows) : el("p", { cls: "empty", text: "No agent has a ticket right now." }),
+      hand.length ? [el("div", { cls: "k", style: "margin-top:12px", text: "Handoffs, last 2 days" }), el("ul", { cls: "list" }, hand)] : null);
+  }
   function overview() {
     var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0), m = D.money || {};
     var crewAll = agents(), working = crewAll.filter(function (a) { return a.state === "working"; }).length, blocked = crewAll.filter(function (a) { return a.state === "blocked"; }).length;
@@ -1168,19 +1292,18 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
           : el("p", { cls: "empty", text: "Charts appear once GitHub data is available." })),
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
 
-    var crew = crewAll.map(function (a) {
-      return el("a", { cls: "who2", href: "#agent/" + encodeURIComponent(a.role) }, avatar(a.role, a.state), el("div", null, el("b", { text: roleName(a.role) }),
-        el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
-    });
+    var nWork = crewAll.filter(function (a) { return a.state === "working"; }).length, nBlock = crewAll.filter(function (a) { return a.state === "blocked" || a.state === "paused"; }).length;
+    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (crewAll.length - nWork - nBlock) + " idle or off. Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
+      el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),
+      el("p", { cls: "note", style: "margin:4px 0 0" }, el("a", { href: "#team", text: "Every agent's card in Team and board" }), " · ", el("a", { href: "#activity", text: "what they did, in Agent activity" }))) : null;
     return [G.ok ? null : ghMissing(), setupPanel(), tiles,
+      teamPanel,
       el("div", { cls: "cols2" },
         panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
           NEEDS.length > 5 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
         cycle),
       delivery,
-      journeyPanel(),
-      crew.length ? panel("Your AI team", "Green: working on a ticket; red: blocked; grey: idle or heartbeat off.", el("div", { cls: "strip" }, crew),
-        el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#activity", text: "Everything the agents did, in Agent activity" }))) : null];
+      journeyPanel()];
   }
 
   // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------
@@ -1506,10 +1629,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     var roles = Object.keys(beats).map(function (k) { return { role: k, b: beats[k] || {}, t: byRole[k] || { open: 0, claimed: 0, blocked: 0 }, c: spend[k] || {} }; });
     var list = agents();
     return [agentSlot,
-      panel("Org chart", "You chair the company. Claude runs the operating system as chief of staff; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
+      panel("Org chart", "You chair the company. Claude runs the operating system as the AI coordinator; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
       panel("AI agents", "One card per agent: what it's working on, when it next wakes, what it last did, and its spend this month.", list.length ? el("div", { cls: "agents" }, list.map(agentCard)) : el("p", { cls: "empty", text: "No roles in founder/heartbeats.json yet." })),
       panel("The team in a table", "Heartbeats and budgets come from founder/heartbeats.json; tickets from GitHub.", table([
-        { h: "Role", k: function (r) { return r.role; }, f: function (r) { return [avatar(r.role, null, true), el("span", { cls: "who", text: r.role })]; } },
+        { h: "Role", k: function (r) { return r.role; }, f: function (r) { return [avatar(r.role, null, true), el("span", null, roleName(r.role) + " "), el("span", { cls: "who muted", text: r.role })]; } },
         { h: "Heartbeat", f: function (r) { return pill(r.b.enabled ? "on" : "off", r.b.enabled ? "done" : "todo"); } },
         { h: "Schedule (UTC)", f: function (r) { return el("span", { cls: "who", title: cronText(r.b.cron), text: r.b.cron || "-" }); } },
         { h: "Budget", num: true, f: function (r) { return r.b.monthly_budget_usd ? usd(r.b.monthly_budget_usd) : "not set"; } },

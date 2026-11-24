@@ -107,16 +107,16 @@ The pages are operator tools a founder reads every day, so they should feel like
 
 ## The Overview
 
-Most important first, nothing a founder doesn't check daily: six number tiles (Needs you, North Star, This cycle, Build completion, Shipped in the last 7 days, Runway or AI spend), then Needs you beside Goals this cycle, then Delivery, then the journey, then the team. Each tile is a link to its tab. A tile turns red only when it needs action. Progress against time shows as a bar with a muted tick where the cycle's time is. The reasoning is in `DESIGN-BRIEF.md`.
+Most important first, nothing a founder doesn't check daily: six number tiles (Needs you, North Star, This cycle, Build completion, Shipped in the last 7 days, Runway or AI spend), then the AI team as a live hub, then Needs you beside Goals this cycle, then Delivery, then the journey. Each tile is a link to its tab. Agents are AI, not people: avatars are rounded squares with a small spark (✦) and a two-letter code, hub nodes are hexagons with a four-point spark, and names read "<job> agent", with the AI coordinator at the centre. A tile turns red only when it needs action. Progress against time shows as a bar with a muted tick where the cycle's time is. The reasoning is in `DESIGN-BRIEF.md`.
 
 ## Motion
 
 Motion explains a change or confirms an action; it never decorates. The review behind these rules is in `DESIGN-BRIEF.md`.
 
 - Only `transform` and `opacity` animate. Curves are the `motion` tokens above, never `ease-in`; UI motion stays under 300ms (the one-time bar fill is 600ms).
-- The selected-tab marker (sidebar pill or underline) slides; the opened tab's content fades up 4px. Progress bars fill from the left once when shown. Pressable things scale to 0.97 while pressed (tiles and journey cards to 0.99). The toast rises in. A working agent's status dot breathes; nothing else loops.
+- The selected-tab marker (sidebar pill or underline) slides; the opened tab's content fades up 4px. Progress bars fill from the left once when shown. Pressable things scale to 0.97 while pressed (tiles and journey cards to 0.99). The toast rises in. A working agent's status dot breathes, and on the Overview's team hub dots travel the links of working (green) and blocked (red) agents and the chords of recent handoffs; nothing else loops.
 - Hover changes only on devices with a fine pointer (`@media (hover: hover) and (pointer: fine)`), and never carry meaning on their own.
-- Reduced motion: no movement, no fill, no breathing; short fades stay.
+- Reduced motion: no movement, no fill, no breathing, no travelling dots; short fades stay.
 
 ## Do
 
