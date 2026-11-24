@@ -12,6 +12,7 @@ The founder approves critical actions; agents never do. The gates and their mode
 ## Before a gated action
 
 1. Find the gate in `founder/gates.json`. If you're unsure whether an action is gated, treat it as gated.
+   A significant or hard-to-reverse decision (the `decision` gate, and pricing, legal or spend with lasting effect) goes to the board first: run `board-review`, then request the gate with the board summary's path (`founder/board/<ID>.md`) in `--why`, so the founder decides with the advisors' advice in front of them.
 2. Check for an approval: `python tools/approval.py check <gate> --scope "<short scope>"`, or `--issue <n>` for an earlier request.
    - Exit 0: approved. Go ahead, then comment on the request what you did and close it if it was a one-off.
    - Exit 3: no approval yet. Go to step 3.
