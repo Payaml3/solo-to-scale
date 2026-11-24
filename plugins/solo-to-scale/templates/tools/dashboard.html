@@ -248,6 +248,30 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 a.tile { display: block; color: inherit; text-decoration: none; } a.tile:hover { border-color: var(--line-strong); }
 a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hub { display: block; width: 100%; max-width: 600px; height: auto; margin: 4px auto 0; overflow: visible; }
+.hub .ln { stroke: var(--line-strong); stroke-width: 1.5; }
+.hub .ln.working { stroke: color-mix(in srgb, var(--done) 55%, var(--line)); }
+.hub .ln.blocked, .hub .ln.paused { stroke: var(--waiting); stroke-dasharray: 4 3; }
+.hub .ln.off { stroke: var(--line); stroke-dasharray: 2 4; }
+.hub .chord { fill: none; stroke: var(--link); stroke-width: 1.2; opacity: .55; }
+.hub .pl { fill: var(--done); } .hub .pl.back { fill: var(--ink); opacity: .6; } .hub .pl.help { fill: var(--waiting); } .hub .pl.idle { fill: var(--muted); opacity: .5; } .hub .pl.hand { fill: var(--link); }
+.hub .node { cursor: pointer; } .hub .node:focus-visible { outline: none; } .hub .node:focus-visible .disc { stroke: var(--link); stroke-width: 3; }
+.hub .disc { stroke: var(--surface); stroke-width: 2; transition: transform 160ms var(--ease-out); transform-box: fill-box; transform-origin: center; }
+@media (hover: hover) and (pointer: fine) { .hub .node:hover .disc { transform: scale(1.06); } }
+.hub .node.off .disc { opacity: .45; }
+.hub .halo { fill: none; stroke: var(--done); stroke-width: 2; opacity: .35; transform-box: fill-box; transform-origin: center; animation: breathe 2.8s var(--ease-in-out) infinite; }
+.hub .node.core .halo { stroke: var(--accent); opacity: .18; }
+@keyframes breathe { 0%, 100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.12); opacity: .08; } }
+.hub .ini { fill: #fff; font: 600 12px var(--body); text-anchor: middle; pointer-events: none; } .hub .ini.big { font-size: 15px; }
+.hub .st { stroke: var(--surface); stroke-width: 2; fill: var(--todo); } .hub .st.working { fill: var(--done); } .hub .st.blocked, .hub .st.paused { fill: var(--waiting); } .hub .st.off { fill: var(--line); }
+.hub .lab { fill: var(--ink); font: 600 12px var(--body); text-anchor: middle; }
+.hub .sub { fill: var(--muted); font: 11px var(--body); text-anchor: middle; }
+.hub .lab, .hub .sub { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { .hub .pulses { display: none; } .hub .halo { animation: none; } }
+.teamgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: 18px; align-items: center; }
+@media (max-width: 900px) { .teamgrid { grid-template-columns: 1fr; } }
+.teamnow .k { font-size: .8rem; color: var(--muted); }
+.teamnow .list li { padding: 7px 0; font-size: .9rem; }
 .grid.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 760px) { .grid.g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -1098,6 +1122,85 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   function kpi(href, k, v, sub, extra, alert) {
     return el("a", { cls: "tile kpi" + (alert ? " alert" : ""), href: href }, el("div", { cls: "k", text: k }), el("div", { cls: "v" }, v), el("div", { cls: "s", text: sub }), extra || null);
   }
+  // The AI team as a hub: the chief of staff in the middle, the other agents around it. A link carries moving pulses
+  // while its agent works (towards the hub when it is blocked and needs help); a handoff between two agents in the
+  // last 2 days draws a chord between them. Off agents sit faded on a dashed link. Every node opens its agent page.
+  function teamHub(crew) {
+    // A phone gets a tall layout so names stay readable; a wide screen gets a wide one.
+    var narrow = window.innerWidth < 600;
+    var NS = "http://www.w3.org/2000/svg", W = narrow ? 340 : 560, H = narrow ? 440 : 350, cx = W / 2, cy = H / 2 - 4, rx = narrow ? 122 : 210, ry = narrow ? 158 : 122;
+    var hubRole = crew.some(function (a) { return a.role === "chief-of-staff"; }) ? "chief-of-staff" : null;
+    var ring = crew.filter(function (a) { return a.role !== hubRole; }), hub = crew.filter(function (a) { return a.role === hubRole; })[0];
+    function sv(tag, attrs, kids) {
+      var n = document.createElementNS(NS, tag);
+      Object.keys(attrs || {}).forEach(function (k) { if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, String(attrs[k])); });
+      (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+      return n;
+    }
+    var pos = {};
+    if (hub) pos[hub.role] = [cx, cy];
+    ring.forEach(function (a, i) {
+      var t = -Math.PI / 2 + i * 2 * Math.PI / Math.max(1, ring.length);
+      pos[a.role] = [cx + rx * Math.cos(t), cy + ry * Math.sin(t)];
+    });
+    var svg = sv("svg", { viewBox: "0 0 " + W + " " + H, "class": "hub", role: "img",
+      "aria-label": "AI team: " + crew.map(function (a) { return roleName(a.role) + " " + STATE_WORDS[a.state]; }).join(", ") });
+    var links = sv("g", { "class": "links" }), pulses = sv("g", { "class": "pulses" }), nodes = sv("g", { "class": "nodes" });
+    function pulse(from, to, cls, dur, n) {
+      var d = "M" + from[0].toFixed(1) + "," + from[1].toFixed(1) + " L" + to[0].toFixed(1) + "," + to[1].toFixed(1);
+      for (var k = 0; k < n; k++) {
+        pulses.appendChild(sv("circle", { r: 3, "class": "pl " + cls }, [sv("animateMotion", { dur: dur + "s", begin: (k * dur / n).toFixed(2) + "s", repeatCount: "indefinite", path: d, keyPoints: "0;1", keyTimes: "0;1", calcMode: "spline", keySplines: "0.45 0 0.55 1" })]));
+      }
+    }
+    if (hub) ring.forEach(function (a) {
+      var p = pos[a.role], c = pos[hub.role];
+      links.appendChild(sv("line", { x1: c[0], y1: c[1], x2: p[0], y2: p[1], "class": "ln " + a.state }));
+      if (a.state === "working") { pulse(c, p, "work", 2.4, 2); pulse(p, c, "work back", 3.1, 1); }
+      else if (a.state === "blocked") pulse(p, c, "help", 1.6, 2);
+      else if (a.state === "idle") pulse(c, p, "idle", 6, 1);
+    });
+    // handoffs between agents, last 2 days
+    var seen = {};
+    activity.forEach(function (r) {
+      var to = String(r.to || "").replace(/^role:/, ""), from = String(r.role || "").replace(/^role:/, ""), a = age(r.at);
+      if (!to || !pos[to] || !pos[from] || to === from || a === null || a > 2) return;
+      var key = [from, to].sort().join("|"); if (seen[key]) return; seen[key] = 1;
+      var p = pos[from], q = pos[to], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, bend = 0.25;
+      var qx = mx + (cx - mx) * bend * 1.6, qy = my + (cy - my) * bend * 1.6;
+      var d = "M" + p[0].toFixed(1) + "," + p[1].toFixed(1) + " Q" + qx.toFixed(1) + "," + qy.toFixed(1) + " " + q[0].toFixed(1) + "," + q[1].toFixed(1);
+      links.appendChild(sv("path", { d: d, "class": "chord" }));
+      pulses.appendChild(sv("circle", { r: 2.5, "class": "pl hand" }, [sv("animateMotion", { dur: "3.2s", repeatCount: "indefinite", path: d })]));
+    });
+    crew.forEach(function (a) {
+      var p = pos[a.role], big = a.role === hubRole, r = big ? 30 : 22, name = roleName(a.role);
+      var g = sv("a", { href: "#agent/" + encodeURIComponent(a.role), "class": "node " + a.state + (big ? " core" : "") });
+      g.appendChild(sv("title", {}, [document.createTextNode(name + ": " + STATE_WORDS[a.state] + (a.claimed[0] ? ", on #" + a.claimed[0].number : ""))]));
+      if (a.state === "working" || big) g.appendChild(sv("circle", { cx: p[0], cy: p[1], r: r + 5, "class": "halo" }));
+      g.appendChild(sv("circle", { cx: p[0], cy: p[1], r: r, "class": "disc", style: "fill:hsl(" + hue(a.role) + ",45%,42%)" }));
+      var t = sv("text", { x: p[0], y: p[1] + (big ? 5 : 4), "class": "ini" + (big ? " big" : "") }); t.textContent = initials(a.role === "chief-of-staff" ? "Chief Staff" : name); g.appendChild(t);
+      g.appendChild(sv("circle", { cx: p[0] + r * 0.72, cy: p[1] + r * 0.72, r: 5, "class": "st " + a.state }));
+      var lab = sv("text", { x: p[0], y: p[1] + r + 16, "class": "lab" }); lab.textContent = big ? "Chief of staff" : name; g.appendChild(lab);
+      var sub = sv("text", { x: p[0], y: p[1] + r + 29, "class": "sub" }); sub.textContent = STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : ""); g.appendChild(sub);
+      nodes.appendChild(g);
+    });
+    svg.appendChild(links); svg.appendChild(pulses); svg.appendChild(nodes);
+    return svg;
+  }
+  // Beside the hub: what each busy agent is on right now, then the latest handoffs.
+  function teamNow(crew) {
+    var rows = [];
+    crew.forEach(function (a) {
+      a.blocked.forEach(function (t) { rows.push(el("li", null, avatar(a.role, null, true), el("b", { text: roleName(a.role) }), " ", pill("blocked", "blocked"), el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)))); });
+      a.claimed.forEach(function (t) { rows.push(el("li", null, avatar(a.role, null, true), el("b", { text: roleName(a.role) }), " ", pill("working", "done"), el("div", { cls: "why" }, link("#" + t.number + " " + t.title, t.url)))); });
+    });
+    var hand = activity.filter(function (r) { var g = age(r.at); return r.to && g !== null && g <= 2; }).slice(0, 3).map(function (r) {
+      return el("li", null, el("span", { cls: "who", text: roleName(String(r.role).replace(/^role:/, "")) + " → " + roleName(String(r.to).replace(/^role:/, "")) }), " " + r.action + " #" + r.ticket, el("span", { cls: "note", text: "  " + ago(r.at) }));
+    });
+    return el("div", { cls: "teamnow" },
+      el("div", { cls: "k", text: "Right now" }),
+      rows.length ? el("ul", { cls: "list" }, rows) : el("p", { cls: "empty", text: "No agent has a ticket right now." }),
+      hand.length ? [el("div", { cls: "k", style: "margin-top:12px", text: "Handoffs, last 2 days" }), el("ul", { cls: "list" }, hand)] : null);
+  }
   function overview() {
     var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0), m = D.money || {};
     var crewAll = agents(), working = crewAll.filter(function (a) { return a.state === "working"; }).length, blocked = crewAll.filter(function (a) { return a.state === "blocked"; }).length;
@@ -1168,19 +1271,18 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
           : el("p", { cls: "empty", text: "Charts appear once GitHub data is available." })),
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
 
-    var crew = crewAll.map(function (a) {
-      return el("a", { cls: "who2", href: "#agent/" + encodeURIComponent(a.role) }, avatar(a.role, a.state), el("div", null, el("b", { text: roleName(a.role) }),
-        el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
-    });
+    var nWork = crewAll.filter(function (a) { return a.state === "working"; }).length, nBlock = crewAll.filter(function (a) { return a.state === "blocked" || a.state === "paused"; }).length;
+    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (crewAll.length - nWork - nBlock) + " idle or off. Moving dots: agents working with the chief of staff; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
+      el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),
+      el("p", { cls: "note", style: "margin:4px 0 0" }, el("a", { href: "#team", text: "Every agent's card in Team and board" }), " · ", el("a", { href: "#activity", text: "what they did, in Agent activity" }))) : null;
     return [G.ok ? null : ghMissing(), setupPanel(), tiles,
+      teamPanel,
       el("div", { cls: "cols2" },
         panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
           NEEDS.length > 5 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
         cycle),
       delivery,
-      journeyPanel(),
-      crew.length ? panel("Your AI team", "Green: working on a ticket; red: blocked; grey: idle or heartbeat off.", el("div", { cls: "strip" }, crew),
-        el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#activity", text: "Everything the agents did, in Agent activity" }))) : null];
+      journeyPanel()];
   }
 
   // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------

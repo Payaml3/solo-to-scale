@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.10.0 (2026-11-24)
+
+The AI team moves up the Overview and comes alive.
+
+- **A live team hub,** right under the six numbers: the chief of staff in the middle and the other agents around it. Dots travel along a link while that agent works with the chief of staff; a blocked agent's dots run red towards the hub; handoffs between agents in the last 2 days show as curved chords with their own dots; agents whose heartbeat is off sit faded. Every node opens its agent page. On a phone the hub uses a tall layout.
+- **Right now,** beside the hub: each busy agent's ticket, working or blocked, and the latest handoffs.
+- **Order:** numbers, AI team, Needs you beside Goals this cycle, Delivery, journey.
+- Reduced motion stops the dots and halos; colour and line style still show each agent's state.
+
 ## v2.9.0 (2026-11-24)
 
 The Overview is rebuilt around what a founder checks every day: metrics, progress and goals first, and nothing that changes only weekly at the top.
