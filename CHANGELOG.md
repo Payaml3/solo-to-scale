@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.11.1 (2026-11-24)
+
+Fixes from the autopilot's first run.
+
+- **Plans no longer stall.** When the plan gate is on and a planning ticket's sub-tickets exist but nobody asked the founder to approve the plan, the autopilot asks once, as the chief of staff, so it lands in Needs you and your email. The planning ticket now says to run `tickets.py plan` before finishing.
+- **Big decisions reach the founder with the board's advice.** `board-review` now ends by requesting the gate with the board summary's path, and the `gate` skill sends significant decisions to the board first, so the founder decides in Needs you (and by email) with the advisors' memos in front of them.
+- **The goal-tree and key-result gaps can be covered.** An open ticket labelled `goal-tree` (or `kr:O1.2`) covers that gap, as `stage:<n>` and `initiative:<id>` already did; the planning ticket says each gap's key is the label that covers it.
+
 ## v2.11.0 (2026-11-24)
 
 The AI team works toward the goals on its own, and tells you when it needs you.

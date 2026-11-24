@@ -32,7 +32,7 @@ Each memo is at most 8 lines: verdict (support, concerns or oppose), biggest ris
 
 ## 4. Summarise
 
-Append to `founder/board/<decision ID>.md`: each memo under its lens name, then 3 to 6 lines on where they agree and where they disagree, and the open questions for the founder. Then hand the decision to the founder. The founder decides; record it with `record-decision`.
+Append to `founder/board/<decision ID>.md`: each memo under its lens name, then 3 to 6 lines on where they agree and where they disagree, and the open questions for the founder. Then hand the decision to the founder through the `gate` skill: one approval request (`decision` gate, or the action's own gate) with the summary's path in `--why`, so it reaches Needs you and the founder's email. The founder decides; record it with `record-decision`.
 
 ## Rules for every advisor output
 

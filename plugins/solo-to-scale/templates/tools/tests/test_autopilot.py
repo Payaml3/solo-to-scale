@@ -188,3 +188,27 @@ def test_a_ticket_blocked_for_a_day_shows_in_needs_you() -> None:
     blocked = [x for x in needs["items"] if x["kind"] == "blocked"]
     assert [x["number"] for x in blocked] == [7] and "on #6" in blocked[0]["detail"]
     assert needs["counts"]["blocked"] == 1
+
+
+def test_due_asks_the_founder_once_for_a_plan_nobody_requested(root: Path, fake: Fake) -> None:
+    (root / "founder/gates.json").write_text(json.dumps({"founders": [], "gates": {
+        "plan": {"mode": "ask", "what": "Start a plan", "paths": []}}}), encoding="utf-8")
+    pol = json.loads((root / "founder/heartbeats.json").read_text())
+    parent = ticket(fake, "chief-of-staff", ["stage:13", "initiative:I1", "kr:O1.2"])
+    body = tickets.ticket_body("engineer", "goal", "", "", parent, [], "chief-of-staff")
+    fake.make("child", body, ["ticket", "role:engineer"])
+    roles, why = autopilot.due(hub(root), root, pol, NOW)
+    plans = [n for n in fake.issues if "gate:plan" in fake.names(n)]
+    assert len(plans) == 1 and f"plan: asked the founder to approve #{parent}'s plan" in why
+    assert "engineer" not in {r["role"] for r in roles}  # still waits for the approval
+    autopilot.due(hub(root), root, pol, NOW)
+    assert len([n for n in fake.issues if "gate:plan" in fake.names(n)]) == 1  # once
+
+
+def test_the_goal_tree_gap_is_covered_by_its_label(root: Path) -> None:
+    (root / "founder/goals.json").write_text("{}", encoding="utf-8")
+    (root / "founder/playbook.md").write_text(PLAYBOOK.replace("| Passed |", "| Passed |\n| 3 | B | Business model | P | ok |  | Passed |"),
+                                              encoding="utf-8")
+    keys = [g["key"] for g in autopilot.gaps(root, [{"labels": [{"name": "stage:13"}]}], NOW.date())]
+    assert keys == ["goal-tree"]
+    assert autopilot.gaps(root, [{"labels": [{"name": "stage:13"}, {"name": "goal-tree"}]}], NOW.date()) == []
