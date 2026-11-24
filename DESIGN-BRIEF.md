@@ -34,6 +34,24 @@ Scored on a demo venture (stage 13, 12 tabs, GitHub data present), at 1280 px an
 | Motion | 3 | 8 | There was none. Now, each with a job: the tab underline slides to the selected tab (where you went); the tab's content fades up 4 px in 200 ms (that it changed); progress bars fill from the left once when shown (what the number means); pressables scale to 0.97 (the press registered); the toast rises in; a working agent's status dot breathes (the one live thing on the page); the ladder's chevron turns. All use `transform` and `opacity` with a strong ease-out. With reduced motion, movement goes and only short fades stay. Arrow-key tab changes still move instantly apart from the underline. |
 | Brand fit | 8 | 9 | Still the black-and-white operator look, no new colours or fonts; motion is crisp and short to match a professional tool. |
 
+## The Overview: what a founder checks every day
+
+The Overview is read first thing every day, so it holds only what changes daily and needs a decision or a look, in order of importance. Everything else lives one click away in its tab.
+
+1. **Six numbers, each opening its tab** (3 by 2 on desktop, 2 by 3 on a phone):
+   - **Needs you:** decisions, approvals and founder items waiting, and how many are overdue. Turns red when something is overdue.
+   - **North Star:** current value against the target, with a progress bar and the deadline.
+   - **This cycle:** the active objectives' average progress, how many are on track, and how much of the cycle has gone. A tick on the bar marks the time gone. Turns red when any objective is behind.
+   - **Build completion:** acceptance criteria done, stories done and the share with test evidence.
+   - **Shipped, last 7 days:** pull requests merged, compared with the week before, the agent runs that worked, and a 14-day sparkline.
+   - **Runway** once `founder/finance.json` is filled in (red under 6 months), otherwise **AI spend** against the budgets, with the month-end forecast.
+2. **Needs you** (the 5 oldest and most blocking) beside **Goals this cycle**: the North Star sentence and each objective's bar with the same time tick and its pace.
+3. **Delivery:** the slice being built and its progress, slices done, open, blocked and quiet tickets, agents working, and two 14-day charts (merges, and agent runs that worked).
+4. **Your journey:** the phase and stage. It changes weekly, not daily, so it sits below the daily numbers.
+5. **Your AI team:** who is working, blocked or idle.
+
+Removed from the Overview: the separate Goals panel (merged into Goals this cycle), the Agents working tile (now in Delivery and the team strip) and the latest agent actions (in Agent activity).
+
 ## Left as is, on purpose
 
 - **Agent avatars keep their per-role hue.** They are identity, not decoration, and the team view needs them told apart at a glance.

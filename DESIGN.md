@@ -105,6 +105,10 @@ The pages are operator tools a founder reads every day, so they should feel like
 - Tables: muted 0.75rem headers on a `sunk` band, 9px 10px cells, hairline rows, `sunk` row hover.
 - Inputs and selects: 36px high, 6px radius, hairline border.
 
+## The Overview
+
+Most important first, nothing a founder doesn't check daily: six number tiles (Needs you, North Star, This cycle, Build completion, Shipped in the last 7 days, Runway or AI spend), then Needs you beside Goals this cycle, then Delivery, then the journey, then the team. Each tile is a link to its tab. A tile turns red only when it needs action. Progress against time shows as a bar with a muted tick where the cycle's time is. The reasoning is in `DESIGN-BRIEF.md`.
+
 ## Motion
 
 Motion explains a change or confirms an action; it never decorates. The review behind these rules is in `DESIGN-BRIEF.md`.

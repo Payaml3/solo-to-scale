@@ -533,10 +533,15 @@ def test_the_overview_shows_the_journey_simply_and_the_rest_moves_to_its_tabs(ro
     assert [x.get("where") for x in road["stages"]] == ["P 01", "P 02", "Code"], "the lead role comes from the Where column"
     html = bd.PAGE.read_text(encoding="utf-8")
     body = html[html.index("  function overview() {"):html.index("  // --- setup: what tools/doctor.py found")]
-    # the Overview: what needs you, the journey, the team and the goals; four tiles, each opening its tab
-    assert body.index('panel("Needs you"') < body.index("journeyPanel(),") < body.index('"Your AI team"') < body.index("goalStrip()")
-    assert body.count('el("a", { cls: "tile') == 4 and '"grid g4"' in body
-    for gone in ("ladderPanel()", "moneyPanel()", "trendPanel()", '"Recently merged"', '"Slices done"', '"Stuck"'):
+    # the Overview, most important first: six daily numbers (each opening its tab), what needs you beside the
+    # cycle's goals, delivery, the journey, then the team
+    assert 'var tiles = el("div", { cls: "grid g3" }, t1, t2, t3, t4, t5, t6)' in body
+    page = body[body.index("    return [G.ok"):]
+    assert page.index("tiles,") < page.index('panel("Needs you"') < page.index("cycle),") < page.index("delivery,") \
+        < page.index("journeyPanel(),") < page.index('"Your AI team"')
+    for k in ('"Needs you"', '"North Star"', '"This cycle"', '"Build completion"', '"Shipped, last 7 days"', '"Runway"'):
+        assert 'kpi("#' in body and k in body, k
+    for gone in ("ladderPanel()", "moneyPanel()", "trendPanel()", '"Recently merged"', '"Slices done"', '"Stuck"', "goalStrip()"):
         assert gone not in body, gone
     # and where each went
     tab = lambda name, nxt: html[html.index("  function " + name + "() {"):html.index("  function " + nxt)]

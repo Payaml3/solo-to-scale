@@ -248,6 +248,29 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 a.tile { display: block; color: inherit; text-decoration: none; } a.tile:hover { border-color: var(--line-strong); }
 a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .grid.g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi .v small { font-size: .9rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.kpi .s { overflow-wrap: anywhere; margin-bottom: 10px; }
+.kpi .bar, .kpi .tspark { margin-top: auto; }
+.tspark { display: block; width: 84px; height: 22px; }
+.tspark rect.on { fill: var(--ink); } .tspark rect.off { fill: var(--line); }
+.bar.paced { position: relative; overflow: visible; }
+.bar.paced > i { border-radius: 9999px; }
+.bar .now { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--muted); }
+.cols2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .cols2 { grid-template-columns: 1fr; } }
+.delivery { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .delivery { grid-template-columns: 1fr; } }
+.delivery .k { font-size: .8rem; color: var(--muted); }
+.delivery .slice { margin: 2px 0 8px; }
+.facts { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 4px 18px; margin: 14px 0 0; font-size: .88rem; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.facts dd.bad { color: var(--waiting); } .facts dd.warnv { color: var(--progress); }
+.charts.c1 { grid-template-columns: 1fr; gap: 14px; }
+.charts.c1 .chart { max-width: 440px; height: 56px; }
+
 @media (max-width: 760px) { .grid.g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .jhead { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
 .jhead .big { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.03em; }
@@ -507,7 +530,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("class", "chart"); svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", title + ", last " + n + " days: " + rows.map(function (r) { return String(r.date).slice(5) + " " + fmt(r); }).join(", "));
     rows.forEach(function (r, i) {
-      var y = H;
+      var y = H, base = document.createElementNS(NS, "rect");
+      // a hairline under every day, so a quiet day still reads as a day
+      base.setAttribute("x", (i * bw + 1).toFixed(1)); base.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
+      base.setAttribute("y", (H - 1).toFixed(1)); base.setAttribute("height", "1"); base.setAttribute("class", "b"); svg.appendChild(base);
       parts.forEach(function (p) {
         var part = p(r), v = Number(part.v) || 0; if (!v || !hi) return;
         var h = Math.max(1, v / hi * (H - 2)), rect = document.createElementNS(NS, "rect");
@@ -1048,35 +1074,113 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   }
   // The Overview keeps what a founder checks every day: what needs you, where the venture is in the journey, who is
   // working on it, money left and the goals. Everything else has its own tab.
+  // The Overview answers, in this order, what a founder checks every day: what needs me, are we on track for the goal,
+  // is the build moving, are we shipping, and how long the money lasts. Each tile opens the tab with the detail.
+  function spark14(rows, key) {
+    var NS = "http://www.w3.org/2000/svg", W = 84, H = 22, n = rows.length || 1, hi = 0, bw = W / n;
+    rows.forEach(function (r) { hi = Math.max(hi, Number(r[key]) || 0); });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("class", "tspark"); svg.setAttribute("aria-hidden", "true");
+    rows.forEach(function (r, i) {
+      var v = Number(r[key]) || 0, h = hi ? Math.max(v ? 2 : 1, v / hi * H) : 1, rect = document.createElementNS(NS, "rect");
+      rect.setAttribute("x", (i * bw + 1).toFixed(1)); rect.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
+      rect.setAttribute("y", (H - h).toFixed(1)); rect.setAttribute("height", h.toFixed(1)); rect.setAttribute("class", v ? "on" : "off");
+      svg.appendChild(rect);
+    });
+    return svg;
+  }
+  // A progress bar with a tick where the cycle's time is: the bar should be past the tick.
+  function paceTrack(progress, o) {
+    var b = bar(progress || 0, 1, paceBar(progress, o.quarter, o)), e = elapsed(o.quarter, o);
+    if (e !== null) { b.appendChild(el("b", { cls: "now", style: "left:" + Math.round(100 * e) + "%", title: Math.round(100 * e) + "% of the cycle gone" })); b.classList.add("paced"); }
+    return b;
+  }
+  function kpi(href, k, v, sub, extra, alert) {
+    return el("a", { cls: "tile kpi" + (alert ? " alert" : ""), href: href }, el("div", { cls: "k", text: k }), el("div", { cls: "v" }, v), el("div", { cls: "s", text: sub }), extra || null);
+  }
   function overview() {
     var cap = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0), m = D.money || {};
     var crewAll = agents(), working = crewAll.filter(function (a) { return a.state === "working"; }).length, blocked = crewAll.filter(function (a) { return a.state === "blocked"; }).length;
-    var runway = !m.set ? "not set" : m.runway_months !== null && m.runway_months !== undefined ? m.runway_months + " months" : m.net_burn <= 0 ? "not burning" : "set cash";
+    var days = (G.ok && G.trends && G.trends.days) || [];
+    var live = OBJS.filter(function (o) { return o.status === "active"; });
+    var ns = GOALS.north_star;
+    var chain = {}; (trace.chain || []).forEach(function (c) { chain[c.order] = c; });
+    var crit = chain[2], storiesC = chain[1], tested = chain[3];
+    var cur = slices.filter(function (x) { return /progress/i.test(x.status); })[0] || slices.filter(function (x) { return !/done/i.test(x.status); })[0];
+    var slicesDone = slices.filter(function (x) { return /done/i.test(x.status); }).length;
+    // 1. Needs you
+    var t1 = kpi("#needs", "Needs you", String(NEEDS.length), NEED.overdue ? NEED.overdue + " overdue" : NEEDS.length ? "nothing overdue" : "all clear", null, NEED.overdue);
+    // 2. North Star
+    var t2 = ns ? kpi("#goals", "North Star", [num(ns.current, ns.unit), el("small", { text: " / " + num(ns.target, ns.unit) })], ns.metric + (ns.by ? ", by " + ns.by : ""),
+      bar(ns.progress || 0, 1, ns.progress >= 1 ? "" : "n")) : kpi("#goals", "North Star", "not set", "okr-plan drafts it once the business model is approved");
+    // 3. This cycle
+    var avg = live.length ? live.reduce(function (a, o) { return a + (o.progress || 0); }, 0) / live.length : null;
+    var onTrack = live.filter(function (o) { return paceBar(o.progress, o.quarter, o) !== "w"; }).length;
+    var cycleObj = live[0] || {}, gone = live.length ? elapsed(cycleObj.quarter, cycleObj) : null;
+    var t3 = live.length ? kpi("#goals", "This cycle" + (GOALS.current_cycle ? " (" + GOALS.current_cycle + ")" : ""), pctText(avg),
+      onTrack + " of " + live.length + " objectives on track" + (gone !== null ? " · " + Math.round(100 * gone) + "% of the cycle gone" : ""),
+      paceTrack(avg, cycleObj), onTrack < live.length) : kpi("#goals", "This cycle", "–", "no active objectives");
+    // 4. Build completion
+    var t4 = crit && crit.total ? kpi("#trace", "Build completion", crit.pct + "%",
+      (storiesC ? storiesC.done + " of " + storiesC.total + " stories done" : "") + (tested ? " · " + tested.pct + "% tested" : ""), bar(crit.done, crit.total))
+      : kpi("#trace", "Build completion", "–", "no stories in founder/slices.json yet");
+    // 5. Shipped
+    var last7 = days.slice(-7).reduce(function (a, r) { return a + (r.merged || 0); }, 0), prev7 = days.slice(-14, -7).reduce(function (a, r) { return a + (r.merged || 0); }, 0);
+    var tried = days.slice(-7).reduce(function (a, r) { return a + (r.tried || 0); }, 0), worked = days.slice(-7).reduce(function (a, r) { return a + (r.worked || 0); }, 0);
+    var t5 = G.ok ? kpi("#activity", "Shipped, last 7 days", [String(last7), el("small", { text: last7 === 1 ? " PR" : " PRs" })],
+      (last7 > prev7 ? "up from " : last7 < prev7 ? "down from " : "same as ") + prev7 + " the week before" + (tried ? " · " + Math.round(100 * worked / tried) + "% of agent runs worked" : ""),
+      days.length ? spark14(days, "merged") : null) : kpi("#activity", "Shipped, last 7 days", "?", "GitHub data missing");
+    // 6. Money
     var low = m.set && m.runway_months !== null && m.runway_months !== undefined && m.runway_months < 6;
-    var tiles = el("div", { cls: "grid g4" },
-      el("a", { cls: "tile" + (NEED.overdue ? " alert" : ""), href: "#needs" }, el("div", { cls: "k", text: "Needs you" }), el("div", { cls: "v", text: String(NEEDS.length) }),
-        el("div", { cls: "s", text: NEED.overdue ? NEED.overdue + " overdue" : NEEDS.length ? "nothing overdue" : "all clear" })),
-      el("a", { cls: "tile", href: "#team" }, el("div", { cls: "k", text: "Agents working" }), el("div", { cls: "v", text: G.ok ? working + " of " + crewAll.length : "?" }),
-        el("div", { cls: "s", text: G.ok ? (blocked ? blocked + " blocked" : "none blocked") : "GitHub data missing" })),
-      el("a", { cls: "tile" + (low ? " alert" : ""), href: "#costs" }, el("div", { cls: "k", text: "Runway" }), el("div", { cls: "v", text: runway }),
-        el("div", { cls: "s", text: m.set ? (m.cash_left === null || m.cash_left === undefined ? "cash not set" : money(m.cash_left, m.currency) + " cash") : "fill in founder/finance.json" })),
-      el("a", { cls: "tile", href: "#costs" }, el("div", { cls: "k", text: "AI spend " + (costs.month || D.month) }), el("div", { cls: "v", text: G.ok ? usd(costs.total) : "?" }),
-        el("div", { cls: "s", text: G.ok && cap ? "of " + usd(cap) + " budgeted" : "budgets in founder/heartbeats.json" })));
+    var spendSub = G.ok ? "AI " + usd(costs.total) + (cap ? " of " + usd(cap) : "") + (costs.forecast !== null && costs.forecast !== undefined ? ", month-end " + usd(costs.forecast) : "") : "AI spend needs GitHub data";
+    var t6 = m.set && m.runway_months !== null && m.runway_months !== undefined ? kpi("#costs", "Runway", m.runway_months + " months", spendSub, null, low)
+      : kpi("#costs", "AI spend " + (costs.month || D.month), G.ok ? usd(costs.total) : "?", (cap ? "of " + usd(cap) + " budgeted" : "no budgets set") + (m.set ? "" : " · runway: fill in founder/finance.json"),
+        G.ok && cap ? bar(costs.total, cap, costs.total >= cap ? "x" : costs.total >= 0.8 * cap ? "w" : "") : null);
+    var tiles = el("div", { cls: "grid g3" }, t1, t2, t3, t4, t5, t6);
+
     var needs = NEEDS.slice(0, 5).map(needItem);
-    var recent = activity.slice(0, 4).map(activityItem);
+    var cycle = panel("Goals this cycle", live.length ? "The tick on each bar is how much of the cycle has gone; the bar should be past it." : null,
+      GOALS.goal ? el("p", { cls: "goal", text: GOALS.goal }) : el("p", { cls: "empty", text: "No North Star yet: okr-plan drafts it once the business model is approved." }),
+      dueNote(),
+      live.map(function (o) {
+        return el("div", { cls: "goalrow" }, el("div", null, o.id + " " + o.title, " ", pace(o.progress, o.quarter, o)), paceTrack(o.progress, o), el("b", { text: pctText(o.progress) }));
+      }),
+      GOALS.goal && !live.length ? el("p", { cls: "empty", text: "No active objectives this cycle." }) : null,
+      el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#goals", text: "Key results and initiatives in Goals" })));
+
+    var stuckDays = 3, stuck = openTickets.filter(function (t) { var a = age(t.updated); return a !== null && a >= stuckDays; });
+    var blockedT = openTickets.filter(function (t) { return t.blocked; });
+    var delivery = panel("Delivery", "The slice being built, how complete the build is, and the last 14 days of work.",
+      el("div", { cls: "delivery" },
+        el("div", null,
+          cur ? [el("div", { cls: "k", text: "Now building" }), el("div", { cls: "slice" }, el("b", { text: cur.id + " " + cur.name }), " ", el("span", { cls: "muted", text: cur.criteria ? cur.criteria_done + " of " + cur.criteria + " criteria" : "no stories yet" })),
+            bar(cur.criteria_done || 0, cur.criteria || 0, "n")] : el("p", { cls: "empty", text: slices.length ? "Every slice is done." : "No slices in founder/slices.json yet." }),
+          slices.length ? el("p", { cls: "note", style: "margin:6px 0 0", text: slicesDone + " of " + slices.length + " slices done" }) : null,
+          el("dl", { cls: "facts" },
+            el("dt", { text: "Open tickets" }), el("dd", { text: G.ok ? String(openTickets.length) : "?" }),
+            el("dt", { text: "Blocked" }), el("dd", { cls: blockedT.length ? "bad" : "", text: G.ok ? String(blockedT.length) : "?" }),
+            el("dt", { text: "Quiet " + stuckDays + "+ days" }), el("dd", { cls: stuck.length ? "warnv" : "", text: G.ok ? String(stuck.length) : "?" }),
+            el("dt", { text: "Agents working" }), el("dd", { text: G.ok ? working + " of " + crewAll.length + (blocked ? ", " + blocked + " blocked" : "") : "?" }))),
+        days.length ? el("div", { cls: "charts c1" },
+          dayChart("Pull requests merged", days, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; }),
+          days.some(function (r) { return r.worked || r.other; }) ? dayChart("Agent runs (green: worked)", days, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }], function (r) { return r.worked + " worked of " + (r.worked + r.other); })
+            : el("div", null, el("div", { cls: "k", text: "Agent runs" }), el("p", { cls: "empty", style: "margin:4px 0 0", text: "No agent runs in the last 14 days." })))
+          : el("p", { cls: "empty", text: "Charts appear once GitHub data is available." })),
+      el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
+
     var crew = crewAll.map(function (a) {
       return el("a", { cls: "who2", href: "#agent/" + encodeURIComponent(a.role) }, avatar(a.role, a.state), el("div", null, el("b", { text: roleName(a.role) }),
         el("small", { text: STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : "") })));
     });
-    return [tiles, G.ok ? null : ghMissing(),
-      setupPanel(),
-      panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
-        NEEDS.length > 5 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
+    return [G.ok ? null : ghMissing(), setupPanel(), tiles,
+      el("div", { cls: "cols2" },
+        panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
+          NEEDS.length > 5 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
+        cycle),
+      delivery,
       journeyPanel(),
       crew.length ? panel("Your AI team", "Green: working on a ticket; red: blocked; grey: idle or heartbeat off.", el("div", { cls: "strip" }, crew),
-        recent.length ? [el("h3", { cls: "k", style: "margin:14px 0 4px", text: "Latest" }), el("ul", { cls: "list" }, recent)] : null,
-        el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#activity", text: "Everything the agents did, in Agent activity" }))) : null,
-      goalStrip()];
+        el("p", { cls: "note", style: "margin:8px 0 0" }, el("a", { href: "#activity", text: "Everything the agents did, in Agent activity" }))) : null];
   }
 
   // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------
