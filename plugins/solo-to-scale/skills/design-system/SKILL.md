@@ -23,7 +23,7 @@ shadcn/ui and Tailwind only where the interface already uses React (the React an
 
 ## 4. Who leads when
 
-- **Design system and the public website:** taste (`design-taste-frontend`) leads. It proposes 2 or 3 directions from `founder/brand.md`; the founder picks one; it becomes `tokens.json`, recorded with `record-decision`.
+- **Design system and the public website:** taste (`design-taste-frontend`) leads. It proposes 2 or 3 directions from `founder/brand.md`; the founder picks one; it becomes `tokens.json`, recorded with `record-decision` Each direction may start from a company's DESIGN.md in [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (MIT), picked for products that look like this one. The chosen one is adapted into `DESIGN.md` at the repo root (look, rules, do's and don'ts; values point to `tokens.json`), never a copy of another brand's name or marks.
 - **Product screens:** `design-system` and `product-design` lead. Taste only reviews, within the existing tokens and components, and may not add colours, fonts or components without a decision.
 - **Design QA:** one reviewer per pass: taste for visual quality, `impeccable` for UX and accessibility. Never both on the same pass.
 

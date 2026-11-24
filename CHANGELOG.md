@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.3.0 (2026-11-24)
+
+A new look for the dashboard and the portfolio, written down in `DESIGN.md`.
+
+- **`DESIGN.md`** at the repo root: the design system for the generated pages, in the DESIGN.md format agents read. It starts from the Vercel analysis in VoltAgent/awesome-design-md (MIT) and adapts it to a dense dashboard: our own name, system fonts (the page's security policy blocks web fonts), a real dark theme and status colours.
+- **The pages follow it.** Near-white (or black) canvas, hairline cards with a soft stacked shadow, ink as the only accent, tighter headings and large tabular numbers, mono for build lines and tags, tinted status pills, a translucent sticky tab bar, and tables with a header band and row hover. Same layout, data and behaviour. Existing repos get it with `upgrade`.
+- **Contrast fixes in dark mode:** text on filled status colours (the Needs you count, passed stage marks) and the founder's avatar now stay readable.
+- **Design references in `design-system`:** at stage 11, each proposed direction may start from a company's DESIGN.md in awesome-design-md, and the chosen one becomes the venture's own `DESIGN.md`. The handbook says which component libraries fit which stack (shadcn/ui, 21st.dev, Magic UI and Aceternity UI need React; Uiverse is plain CSS).
+- **CI:** the drift check fails if a colour in `DESIGN.md` and the pages' CSS disagree, in either theme.
+
 ## v2.2.0 (2026-11-24)
 
 The venture stage, as a ladder on the Overview.
