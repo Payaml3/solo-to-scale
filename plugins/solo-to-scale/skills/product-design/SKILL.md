@@ -1,6 +1,6 @@
 ---
 name: product-design
-description: Turn approved requirements into screen specifications - journeys, information architecture, interactions, validations, permissions, every state, responsive and accessibility rules, and acceptance criteria tied to story IDs. First used at stage 6.
+description: Turn approved requirements into screen specifications - journeys, information architecture, interactions, validations, permissions, every state, responsive and accessibility rules, and acceptance criteria tied to story IDs; and, at stage 9, the design brief that must be approved before any code. First used at stage 6.
 ---
 
 # product-design
@@ -12,6 +12,15 @@ Read `AGENTS.md`, `HANDOFF.md` and `founder/operating-protocol.md` first. No sub
 ## Inputs: approved requirements only
 
 Spec Kit `spec.md` and requirements, and the stories with their IDs. If a requirement it needs is Proposed or Open, **stop and ask**. Never design on top of an unapproved requirement.
+
+## Design brief (stage 9): the gate before code
+
+Once the product model (stage 5) and MVP scope (stage 7) are approved and the specs are being written, act as the product designer and write `docs/design/brief.md` (template: `references/design-brief.md`):
+- **References:** 3 to 5 shipped products in the same category or for the same users, from Mobbin, Refero, Land-book, Httpster or Component Gallery, each with what to take (a flow, a layout, a density) and what to avoid.
+- **The look:** one company's DESIGN.md from [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), or our own direction, and how it is adapted to `founder/brand.md`. Never copy another brand's name, logo or marks.
+- **Key flows** for the MVP journeys, and the **component sources** for this stack: shadcn/ui, 21st.dev, Magic UI or Aceternity UI only where the interface uses React; otherwise native components, with Uiverse for small CSS pieces.
+
+Use `ui-ux-pro-max`, if installed, for the industry's rules and palette and type options; it advises, the brief decides. Before asking for approval, score the brief 0 to 10 on hierarchy, consistency, accessibility, responsiveness, empty and error states, motion and brand fit, and fix everything under 8. Offer 2 or 3 options where the choice is real; the founder picks and the choice is recorded with `record-decision` as a `D-` decision. Stage 11 (`design-system`) then turns it into `DESIGN.md` and `tokens.json`. The build (stage 13) cannot start until stages 9 and 11 are Passed; `check_governance` enforces it. The whole process: `docs/design.md` in the plugin. At stage 6, use the same references lightly for the prototype.
 
 ## What it produces
 

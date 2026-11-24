@@ -15,7 +15,7 @@ Run `python3 <plugin>/scripts/init_repo.py assess --repo .` and report in at mos
 - what exists (docs, specs, registers, CI, instruction files, `.claude/`, skills, hooks)
 - whether the default branch is current, and work that sits only on unmerged branches
 - duplicates and contradictions (two registers, two plans, the protocol in several places)
-- which recommended plugins this session can see: founder, Superpowers, marketing, brand-skills, Spec Kit. List your available skills; being enabled on an account doesn't mean a repo session loads it
+- which recommended plugins this session can see: founder, Superpowers, marketing, brand-skills, Spec Kit, and the design skills in `docs/design.md` (ui-ux-pro-max, Emil Kowalski's skills). List your available skills; being enabled on an account doesn't mean a repo session loads it
 - which interfaces use React (only those can use shadcn/ui)
 
 If the report suggests `upgrade` (a version file or existing Founder HQ), stop and propose the `upgrade` skill instead.
@@ -60,6 +60,6 @@ Propose three starter tickets for after the merge, matched to the stage (for exa
 2. Create the Monday scheduled task from `founder/claude-project/weekly-review-task.md`, in a session with artifact tools.
 3. Add the solo-to-scale marketplace on claude.ai (`Payaml3/solo-to-scale`), so Project chats get the decision skills.
 4. Add the repo secrets the founder items list. Never commit them.
-5. Before stage 6, where `product-design` is first used, confirm the design skills are available. At stage 11, run `design-system` to set the foundations.
+5. Before stage 6, where `product-design` is first used, confirm the design skills are available. At stage 9, `product-design` writes the design brief; at stage 11, `design-system` sets the foundations. Both gate the build.
 
 Close with a short close: `Done / Pending / Next`, and a "Next session" line naming the project, model and first message.

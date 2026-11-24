@@ -31,6 +31,7 @@ Setup takes about an hour and one Claude Code session, once per startup.
 - [ ] **Install repo skills** during init:
   - Spec Kit (`.claude/skills/speckit-*`)
   - brand-skills (`npx skills add cofoundy/brand-skills`)
+  - design skills from [docs/design.md](design.md): `ui-ux-pro-max` (plugin marketplace) and Emil Kowalski's skills (`npx skills@latest add emilkowalski/skills`); `app-store-screenshots` only for a mobile app
   - Superpowers and founder enabled in `.claude/settings.json`
 - [ ] **Review and merge the init PR.** That merge approves the protocol.
 - [ ] **Create the Claude Project:**
@@ -110,13 +111,13 @@ Each phase's gate must pass before the next phase starts. The stage table below 
 | 3 | Business model and positioning | P 01 | founder: pricing-strategy; marketing: competitive-brief | `B-` decisions | Founder approves |
 | 4 | Brand strategy | P 06 | brand-skills: naming, brand-architecture | `brand.md`, `B-` decisions | Name, trademark and domain checked |
 | 5 | Product and operating model | P 02 | founder: product-brief | Product definition, operating model | Founder approves |
-| 6 | UX prototype and test | P 02, Code | product-design, Claude Design | Key journeys, clickable prototype | Tested with 3 to 5 target users |
+| 6 | UX prototype and test | P 02, Code | product-design, Claude Design; references from Mobbin or Refero | Key journeys, clickable prototype | Tested with 3 to 5 target users |
 | 7 | MVP scope and launch criteria | P 02 | founder: mvp-scope | Must / Should / Won't, launch criteria | Founder approves scope |
 | **C** | **Specify and design** |  |  |  |  |
 | 8 | Specify | Code | Spec Kit: specify, clarify, checklist | `spec.md`, requirements, stories, journeys; open items | Every open item answered or deferred |
-| 9 | Screen specs | Code | product-design | `specs/*/ux/<screen>.md` with states and acceptance criteria | Criteria linked to stories |
+| 9 | Product design | Code | product-design; references from awesome-design-md, Mobbin, Refero, Land-book, Httpster, Component Gallery | `docs/design/brief.md` (references, chosen look, flows), `specs/*/ux/<screen>.md` with states and acceptance criteria | Founder approves the brief; criteria linked to stories |
 | 10 | Plan the system | Code, P 03 | Spec Kit: plan, constitution; Superpowers: brainstorming | Stack, architecture, data model, contracts, security, invariants, CI/CD and environments | Founder approves architecture, threat model and Well-Architected review |
-| 11 | Design system | Code | design-system, brand-skills: brand-identity | `tokens.json`, components, `docs/design-system/` | Founder approves foundations |
+| 11 | Design system | Code | design-system, brand-skills: brand-identity | `DESIGN.md`, `tokens.json`, components, `docs/design-system/` | Founder approves foundations |
 | 12 | Tasks and story groups | Code | Spec Kit: tasks, analyze | `tasks.md`, slices, story groups | `analyze` finds no contradictions |
 | **D** | **Build and prove** |  |  |  |  |
 | 13 | Build, one session per story group | Code 04 | Superpowers: writing-plans, test-driven-development, systematic-debugging, requesting-code-review | Code, tests, evidence | Definition of done met |
@@ -125,7 +126,7 @@ Each phase's gate must pass before the next phase starts. The stage table below 
 | 16 | Deploy continuously, to non-production | CI | (pipeline) | Every merge deployed to preview and staging | Test data only; dependencies pinned, builds signed |
 | 17 | Release check | P 05, Code | release-check | Go / no-go | Go |
 | **E** | **Launch** |  |  |  |  |
-| 18 | Demo and website | Code, P 06 | founder: landing-page; marketing: brand-review | Demo instance, public site | Honesty checklist signed |
+| 18 | Demo and website | Code, P 06 | founder: landing-page; marketing: brand-review; Magic UI or Aceternity UI sections where the site uses React | Demo instance, public site | Honesty checklist signed |
 | 19 | Sandbox or beta | Code | (build) | Self-serve access with test data | External user completes the core flow |
 | 20 | Design partners | P 06 | founder: go-to-market | Shadow runs or pilots on partner data | Partner confirms value |
 | 21 | Production readiness | P 05, Code | release-check, security review | Security test, legal terms, service targets and error budget, alerts, restore and load tests, AI spending caps, runbooks, incident process | All readiness items closed |
@@ -471,7 +472,7 @@ When you run several ventures, each keeps its own repo, its own team, its own ga
 
 ## Skills and plugins
 
-Seven sources of skills cover the whole journey. The operating-system skills come from the solo-to-scale plugin, which the repo's settings enable, so every session has them.
+Eight sources of skills cover the whole journey. The operating-system skills come from the solo-to-scale plugin, which the repo's settings enable, so every session has them.
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
@@ -482,21 +483,11 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 | Spec Kit | Repo `.claude/skills/speckit-*`, installed by init | specify, clarify, checklist, plan, constitution, tasks, analyze, implement, converge | C |
 | Superpowers | Account plugin, enabled in repo settings | brainstorming, writing-plans, executing-plans, test-driven-development, systematic-debugging, requesting-code-review, receiving-code-review, verification-before-completion, finishing-a-development-branch | C, D |
 | Built in | Always | impeccable, frontend-design, design-taste-frontend, emil-design-eng, docs, xlsx, pptx, pdf | C, D, E |
+| Design | Recommended installs (see [docs/design.md](design.md)) | ui-ux-pro-max; Emil Kowalski's skills (animate, review-animations, improve-animations); app-store-screenshots for mobile apps | B to E |
 
 Before relying on a plugin in Claude Code, start a session and ask it to list its skills. Being enabled on your account doesn't guarantee that a repo session loads it.
 
-**Design skills: which one leads at each stage.** The taste skill (`design-taste-frontend`) chooses its own art direction, so it leads only where no design system exists yet.
-
-| Stage | Leads | Supports |
-| --- | --- | --- |
-| 11. Design system | Taste: art direction for type, palette and composition, which becomes `tokens.json` | brand-skills: brand-identity |
-| 18. Website and landing pages | Taste: public pages, with its screenshot check | founder: landing-page for copy |
-| 13. Product screens | `design-system` and `product-design` | Taste, for review only, within the existing tokens and components |
-| Design QA (level 5) | One reviewer per pass: taste for visual quality, or `impeccable` for UX and accessibility | Never both on the same pass |
-
-On screens covered by the design system, taste may suggest changes, but it may not add colours, fonts or components without a `D-` decision.
-
-**Design references.** Agents design better from a written reference than from adjectives. [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (MIT) holds DESIGN.md analyses of about 70 companies (Linear, Vercel, Stripe, Supabase, PostHog, Notion and more); at stage 11, taste may start each proposed direction from one of them, and the chosen one becomes the repo's own `DESIGN.md`. Component libraries follow the stack rule: shadcn/ui, 21st.dev, Magic UI and Aceternity UI only where the interface already uses React; Uiverse snippets are plain CSS and fit anywhere. Galleries such as Mobbin, Refero, Land-book and Component Gallery are for the founder to browse, not to install. The dashboard and the portfolio follow the plugin's own `DESIGN.md`.
+**Design: how we do what.** Which design skill leads at each stage, the design brief, the design gate before the build, component sources by stack, and the design skills to install are all in [docs/design.md](design.md), the single source.
 
 **Considered and not used: claude-mem.** It stores automatic summaries of past sessions outside the repo, and adds context at the start of every session.
 

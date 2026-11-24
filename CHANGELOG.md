@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.4.0 (2026-11-24)
+
+The design gate: product design is finished and approved before any code.
+
+- **Stage 9 is now Product design.** Once the product model (stage 5) and MVP scope (stage 7) are approved, `product-design` acts as the product designer and writes `docs/design/brief.md` (new template). The brief covers 3 to 5 reference products (Mobbin, Refero, Land-book, Httpster, Component Gallery), the look to follow (a company's DESIGN.md from awesome-design-md, adapted to the brand, or our own), the key flows, and where components come from for the stack. The founder approves it as a `D-` decision. The screen specs are written at the same stage, as before.
+- **Stage 11 writes `DESIGN.md`** next to `tokens.json`, following the brief.
+- **Enforced in CI.** `check_governance` fails a branch that moves stage 13 or later to Current or Passed unless stages 9 and 11 are Passed and `DESIGN.md` and `docs/design/brief.md` exist. Repos that were already building, or that adopt the playbook while building, get a warning instead.
+- **Design tools across the journey:** reference products for the prototype at stage 6; Magic UI or Aceternity UI sections for the website at stage 18 when it uses React. The handbook's stage table and "The design gate" section cover all of this.
+- **Existing repos:** the playbook is founder-owned, so `upgrade` doesn't rename stage 9. Rename it and update its gate by hand to pick up the new wording. The gate itself checks stage numbers, so it works either way.
+- **`docs/design.md`: how we do design, in one place.** It covers the journey stage by stage, the design brief, the gate, component sources by stack, who leads when, the rules that always hold, and the design skills. The handbook's design sections moved there and the handbook points to it.
+- **Design skills chosen.** `ui-ux-pro-max` gives industry rules and palette and type options for the brief, as advice only. Emil Kowalski's skills cover motion and polish at build and QA. `app-store-screenshots` is for mobile apps at launch, run outside the product repo. The built-in `frontend-design`, `impeccable`, `design-taste-frontend` and `emil-design-eng` keep their roles. All are recommended installs, none bundled. gstack was considered and not used: it overlaps with our roles, hooks and gates. Its 0-to-10 design review idea now scores the brief: everything under 8 is fixed before approval.
+- **Tests:** 2 new: the gate blocking and then allowing the build, and the warning for a repo that was already building.
+
 ## v2.3.0 (2026-11-24)
 
 A new look for the dashboard and the portfolio, written down in `DESIGN.md`.

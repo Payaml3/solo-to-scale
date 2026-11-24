@@ -12,7 +12,11 @@ Fails if:
   6. AGENTS.md plus the root CLAUDE.md, or any other CLAUDE.md, is longer than `claude_md_max_lines`
   7. founder/goals.json is malformed, or slices.json names an objective it doesn't define
   8. founder/finance.json is malformed
+  9. the design gate: the branch moves the build (stage 13 or later) to Current or Passed while stage 9
+     (Product design) or stage 11 (Design system) isn't Passed, or DESIGN.md or docs/design/brief.md is missing
 Warns (never fails) if:
+  - the build is already under way without that design material (repos that started before the gate,
+    or that adopt the playbook while already building)
   - founder/status.md "Last updated" is older than `status_stale_days`
   - the branch changes more than `pr_warn_lines` lines, not counting generated and lock files
 Standard library only. Limits live in .claude/governance.json.
@@ -73,6 +77,24 @@ def passed_stages(text: str | None) -> set[str]:
             if r.get("#", "").isdigit() and r.get("status", "").lower() == "passed"}
 
 
+DESIGN_STAGES = ("9", "11")
+DESIGN_FILES = ("DESIGN.md", "docs/design/brief.md")
+
+
+def stage_status(text: str | None) -> dict[str, str]:
+    return {r["#"]: r.get("status", "").strip().lower() for t in s.tables(text or "") for r in t
+            if r.get("#", "").isdigit()}
+
+
+def building(status: dict[str, str]) -> bool:
+    return any(int(n) >= 13 and v in ("current", "passed") for n, v in status.items())
+
+
+def design_gaps(root: Path, status: dict[str, str]) -> list[str]:
+    gaps = [f"stage {n} is not Passed" for n in DESIGN_STAGES if status.get(n) != "passed"]
+    return gaps + [f"{f} is missing" for f in DESIGN_FILES if not (root / f).exists()]
+
+
 def check(root: Path, base_ref: str, today: dt.date) -> tuple[list[str], list[str]]:
     cfg = s.config(root)
     errors: list[str] = []
@@ -121,6 +143,15 @@ def check(root: Path, base_ref: str, today: dt.date) -> tuple[list[str], list[st
                         - passed_stages(s.git(root, "show", f"{base}:founder/playbook.md")))
         if newly and not handoff_changed:
             errors.append(f"{', '.join(newly)} marked done but HANDOFF.md not changed; run the handoff skill")
+
+        now = stage_status(s.git(root, "show", "HEAD:founder/playbook.md"))
+        gaps = design_gaps(root, now) if building(now) else []
+        before = s.git(root, "show", f"{base}:founder/playbook.md")
+        if gaps and before and not building(stage_status(before)):
+            errors.append("design gate: the build can't start until the product design material is approved ("
+                          + "; ".join(gaps) + "); run product-design and design-system")
+        elif gaps:
+            warnings.append("design gate: building without approved design material (" + "; ".join(gaps) + ")")
 
         sources = [("commit messages", s.git(root, "log", "--format=%B", f"{base}..HEAD") or "")]
         changed = (s.git(root, "diff", "--name-only", "--diff-filter=AMR", base, "HEAD") or "").split()

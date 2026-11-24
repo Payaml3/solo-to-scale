@@ -11,7 +11,7 @@ Model: strongest for foundations and framework decisions; mid-tier for individua
 
 ## 1. Assess first (read-only, at most 40 lines)
 
-Per interface (app, admin, dashboard, marketing site): stack, styling, existing tokens and **where they're duplicated**, components, gaps. List design decisions already made, with their register IDs. Recommend the skills to use (brand-skills, `design-taste-frontend`, `impeccable`, `frontend-design`, an accessibility tool), the token roles, type and spacing scales, the first components, and the decisions still missing, each with options and a recommendation. **Implement nothing until the founder approves.** Then build on `design/system-foundations` and open one PR.
+Per interface (app, admin, dashboard, marketing site): stack, styling, existing tokens and **where they're duplicated**, components, gaps. List design decisions already made, with their register IDs. Recommend the skills to use (brand-skills, `design-taste-frontend`, `impeccable`, `frontend-design`, `ui-ux-pro-max`, an accessibility tool; the whole process is `docs/design.md` in the plugin), the token roles, type and spacing scales, the first components, and the decisions still missing, each with options and a recommendation. **Implement nothing until the founder approves.** Then build on `design/system-foundations` and open one PR.
 
 ## 2. Stack rule
 
