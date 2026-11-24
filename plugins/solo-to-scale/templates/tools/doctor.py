@@ -44,9 +44,9 @@ LABELS = {tickets.TICKET: "0e8a16", tickets.CLAIMED: "fbca04", tickets.BLOCKED: 
           **{f"role:{r}": "1d76db" for r in tickets.ROLES}}
 NO_RUN_HOURS = 72
 GOALS_TEMPLATE = {
-    "about": "The company goal, this quarter's objectives and their key results. Only the founder edits this file "
-             "(the decision gate). See the handbook, 'Goals and key results'.",
-    "goal": "", "horizon": "", "objectives": []}
+    "about": "The goal tree: North Star, cycle objectives and key results, initiatives. Only the founder edits this "
+             "file (the decision gate). See the handbook, 'Goals: North Star, OKRs and initiatives'.",
+    "goal": "", "horizon": "", "north_star": {}, "cycles": [], "objectives": [], "initiatives": []}
 STATUSES = ("broken", "todo", "unknown", "info", "ok")
 
 
@@ -120,13 +120,13 @@ def repo_checks(root: Path) -> list[dict[str, str]]:
                             "Fix founder/goals.json (python tools/goals.py check)", "Decisions and traceability"))
         else:
             out.append(item("goal", "Company goal", "ok" if str(g.get("goal") or "").strip() else "todo",
-                            str(g.get("goal") or "not set"), "Write one measurable sentence as goal in founder/goals.json",
+                            str(g.get("goal") or "not set"), "Once stage 3 is approved, run okr-plan to draft the North Star in founder/goals.json",
                             "Decisions and traceability"))
             live = goals.active(g)
             krs = sum(len(o.get("key_results") or []) for o in live)
-            out.append(item("objectives", "This quarter's objectives", "ok" if live and krs else "todo",
+            out.append(item("objectives", "This cycle's objectives", "ok" if live and krs else "todo",
                             f"{len(live)} active, {krs} key results" if live else "none active",
-                            "Add 1 to 3 objectives with 2 to 4 key results each to founder/goals.json",
+                            "okr-plan drafts 2 or 3 objectives with 2 to 4 key results each, and their initiatives",
                             "Decisions and traceability"))
 
     pol = heartbeat.policy(root)

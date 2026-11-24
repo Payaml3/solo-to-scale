@@ -4,10 +4,11 @@ Agent coordination through GitHub issues. A ticket is an issue labelled `ticket`
 holds the parent and the blockers. Roles delegate, hand off, block and finish work here, and every action is
 written to the ticket and to one activity log (an issue labelled `activity-log`).
 
-  python tools/tickets.py new <role> --title "..." --goal "..." [--objective O1] [--parent N] [--blocked-by N ...] --by <role>
-                                         # the objective (founder/goals.json) becomes the label goal:O1; a
-                                         # sub-ticket inherits its parent's. While goals.json has active
-                                         # objectives, a ticket that names none is refused.
+  python tools/tickets.py new <role> --title "..." --goal "..." [--initiative I1 | --objective O1] [--parent N] [--blocked-by N ...] --by <role>
+                                         # the initiative (founder/goals.json) becomes the label initiative:I1
+                                         # and its objective goal:O1; a sub-ticket inherits its parent's. While
+                                         # goals.json has active objectives, a ticket that names none is refused,
+                                         # and once they have initiatives, one that names no initiative is too.
   python tools/tickets.py claim <n> --role <role>      # atomic: exactly one claimant wins
   python tools/tickets.py release <n> --role <role>
   python tools/tickets.py handoff <n> --to <role> --note "..." --by <role>
@@ -98,10 +99,11 @@ def set_blockers(body: str, blockers: list[int]) -> str:
 
 
 def ticket_body(role: str, goal: str, done_when: str, why: str, parent: int | None, blockers: list[int], by: str,
-                objective: str = "") -> str:
+                objective: str = "", initiative: str = "") -> str:
     return "\n".join([
         f"**Role:** `role:{role}`", f"**Opened by:** `role:{by}`" if by else "**Opened by:** the founder",
         *([f"**Objective:** {objective} (label `{goals.label(objective)}`)"] if objective else []),
+        *([f"**Initiative:** {initiative} (label `{goals.initiative_label(initiative)}`)"] if initiative else []),
         f"**Parent:** #{parent}" if parent else "**Parent:** none",
         "**Blocked by:** " + (", ".join(f"#{n}" for n in blockers) or "nothing"),
         "", "## Goal", quote(goal), "", "## Done when", quote(done_when), "", "## Why", quote(why), "",
@@ -234,24 +236,41 @@ def need_role(role: str) -> None:
         raise SystemExit(f"unknown role {role!r}; roles: {', '.join(ROLES)}")
 
 
-def which_objective(a: argparse.Namespace, hub: Hub) -> str:
-    """The ticket's objective: --objective, else its parent's goal: label. A ticket with neither is refused
-    while founder/goals.json has active objectives, so every piece of work says which one it serves."""
+def which_objective(a: argparse.Namespace, hub: Hub) -> tuple[str, str]:
+    """The ticket's (objective, initiative): --initiative (which implies its objective), else --objective, else
+    its parent's labels. While founder/goals.json has active objectives a ticket must name one, and once they
+    have initiatives it must name an initiative, so every piece of work traces back to the North Star."""
     data = goals.load(a.root)
     known = goals.ids(data)
-    if a.objective:
-        if a.objective not in known:
-            raise SystemExit(f"unknown objective {a.objective!r}; founder/goals.json has: {', '.join(sorted(known)) or 'none'}")
-        return a.objective
-    if a.parent:
-        inherited = goals.objective_of(labels_of(hub.issue(a.parent)))
-        if inherited:
-            return inherited
+    initiative = getattr(a, "initiative", "") or ""
+    if initiative:
+        obj = goals.initiative_objective(data, initiative)
+        if not obj:
+            have = sorted(str(i.get("id")) for i in goals.initiatives(data))
+            raise SystemExit(f"unknown initiative {initiative!r}; founder/goals.json has: {', '.join(have) or 'none'}")
+        if a.objective and a.objective != obj:
+            raise SystemExit(f"initiative {initiative} serves {obj}, not {a.objective}")
+        return obj, initiative
+    if a.objective and a.objective not in known:
+        raise SystemExit(f"unknown objective {a.objective!r}; founder/goals.json has: {', '.join(sorted(known)) or 'none'}")
+    objective = a.objective
+    if not objective and a.parent:
+        labels = labels_of(hub.issue(a.parent))
+        objective, initiative = goals.objective_of(labels), goals.initiative_of(labels)
+        if objective:
+            return objective, initiative
+    live_inits = [i for i in goals.live_initiatives(data)
+                  if not objective or goals.initiative_objective(data, str(i.get("id"))) == objective]
+    if live_inits:
+        raise SystemExit("name the initiative this ticket serves: --initiative "
+                         + " or ".join(str(i.get("id")) for i in live_inits) + " (or give a --parent that has one)")
+    if objective:
+        return objective, ""
     live = [o["id"] for o in goals.active(data)]
     if live:
         raise SystemExit("name the objective this ticket serves: --objective " + " or ".join(live)
                          + " (or give a --parent that has one)")
-    return ""
+    return "", ""
 
 
 def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
@@ -259,11 +278,11 @@ def cmd_new(a: argparse.Namespace, hub: Hub) -> int:
     if a.by:
         need_role(a.by)
     blockers = sorted(set(a.blocked_by or []))
-    objective = which_objective(a, hub)
-    body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by, objective)
+    objective, initiative = which_objective(a, hub)
+    body = ticket_body(a.role, a.goal, a.done_when, a.why, a.parent, blockers, a.by, objective, initiative)
     reviewer = review_for(a, hub)
     labels = [TICKET, f"role:{a.role}"] + ([BLOCKED] if blockers else []) + ([goals.label(objective)] if objective else []) \
-        + ([NEEDS_REVIEW + reviewer] if reviewer else [])
+        + ([goals.initiative_label(initiative)] if initiative else []) + ([NEEDS_REVIEW + reviewer] if reviewer else [])
     if a.dry_run:
         print(f"{a.title}\nlabels: {', '.join(labels)}\n\n{body}")
         return OK
@@ -587,6 +606,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--why", default="")
     p.add_argument("--parent", type=int)
     p.add_argument("--objective", default="", help="the founder/goals.json objective it serves, e.g. O1")
+    p.add_argument("--initiative", default="", help="the founder/goals.json initiative it serves, e.g. I1")
     p.add_argument("--blocked-by", type=int, nargs="*")
     p.add_argument("--by", default="")
     p.add_argument("--review", default="", help="the role that reviews it before done; 'none' for no review")
