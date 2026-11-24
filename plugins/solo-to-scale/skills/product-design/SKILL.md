@@ -20,7 +20,7 @@ Once the product model (stage 5) and MVP scope (stage 7) are approved and the sp
 - **The look:** one company's DESIGN.md from [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), or our own direction, and how it is adapted to `founder/brand.md`. Never copy another brand's name, logo or marks.
 - **Key flows** for the MVP journeys, and the **component sources** for this stack: shadcn/ui, 21st.dev, Magic UI or Aceternity UI only where the interface uses React; otherwise native components, with Uiverse for small CSS pieces.
 
-Offer 2 or 3 options where the choice is real; the founder picks and the choice is recorded with `record-decision` as a `D-` decision. Stage 11 (`design-system`) then turns it into `DESIGN.md` and `tokens.json`. The build (stage 13) cannot start until stages 9 and 11 are Passed; `check_governance` enforces it. At stage 6, use the same references lightly for the prototype.
+Use `ui-ux-pro-max`, if installed, for the industry's rules and palette and type options; it advises, the brief decides. Before asking for approval, score the brief 0 to 10 on hierarchy, consistency, accessibility, responsiveness, empty and error states, motion and brand fit, and fix everything under 8. Offer 2 or 3 options where the choice is real; the founder picks and the choice is recorded with `record-decision` as a `D-` decision. Stage 11 (`design-system`) then turns it into `DESIGN.md` and `tokens.json`. The build (stage 13) cannot start until stages 9 and 11 are Passed; `check_governance` enforces it. The whole process: `docs/design.md` in the plugin. At stage 6, use the same references lightly for the prototype.
 
 ## What it produces
 

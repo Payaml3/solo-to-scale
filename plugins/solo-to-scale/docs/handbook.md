@@ -31,6 +31,7 @@ Setup takes about an hour and one Claude Code session, once per startup.
 - [ ] **Install repo skills** during init:
   - Spec Kit (`.claude/skills/speckit-*`)
   - brand-skills (`npx skills add cofoundy/brand-skills`)
+  - design skills from [docs/design.md](design.md): `ui-ux-pro-max` (plugin marketplace) and Emil Kowalski's skills (`npx skills@latest add emilkowalski/skills`); `app-store-screenshots` only for a mobile app
   - Superpowers and founder enabled in `.claude/settings.json`
 - [ ] **Review and merge the init PR.** That merge approves the protocol.
 - [ ] **Create the Claude Project:**
@@ -471,7 +472,7 @@ When you run several ventures, each keeps its own repo, its own team, its own ga
 
 ## Skills and plugins
 
-Seven sources of skills cover the whole journey. The operating-system skills come from the solo-to-scale plugin, which the repo's settings enable, so every session has them.
+Eight sources of skills cover the whole journey. The operating-system skills come from the solo-to-scale plugin, which the repo's settings enable, so every session has them.
 
 | Source | Installed | Skills | Phases |
 | --- | --- | --- | --- |
@@ -482,29 +483,11 @@ Seven sources of skills cover the whole journey. The operating-system skills com
 | Spec Kit | Repo `.claude/skills/speckit-*`, installed by init | specify, clarify, checklist, plan, constitution, tasks, analyze, implement, converge | C |
 | Superpowers | Account plugin, enabled in repo settings | brainstorming, writing-plans, executing-plans, test-driven-development, systematic-debugging, requesting-code-review, receiving-code-review, verification-before-completion, finishing-a-development-branch | C, D |
 | Built in | Always | impeccable, frontend-design, design-taste-frontend, emil-design-eng, docs, xlsx, pptx, pdf | C, D, E |
+| Design | Recommended installs (see [docs/design.md](design.md)) | ui-ux-pro-max; Emil Kowalski's skills (animate, review-animations, improve-animations); app-store-screenshots for mobile apps | B to E |
 
 Before relying on a plugin in Claude Code, start a session and ask it to list its skills. Being enabled on your account doesn't guarantee that a repo session loads it.
 
-**Design skills: which one leads at each stage.** The taste skill (`design-taste-frontend`) chooses its own art direction, so it leads only where no design system exists yet.
-
-| Stage | Leads | Supports |
-| --- | --- | --- |
-| 11. Design system | Taste: art direction for type, palette and composition, which becomes `tokens.json` | brand-skills: brand-identity |
-| 18. Website and landing pages | Taste: public pages, with its screenshot check | founder: landing-page for copy |
-| 13. Product screens | `design-system` and `product-design` | Taste, for review only, within the existing tokens and components |
-| Design QA (level 5) | One reviewer per pass: taste for visual quality, or `impeccable` for UX and accessibility | Never both on the same pass |
-
-On screens covered by the design system, taste may suggest changes, but it may not add colours, fonts or components without a `D-` decision.
-
-**Design references.** Agents design better from a written reference than from adjectives. [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (MIT) holds DESIGN.md analyses of about 70 companies (Linear, Vercel, Stripe, Supabase, PostHog, Notion and more); at stage 11, taste may start each proposed direction from one of them, and the chosen one becomes the repo's own `DESIGN.md`. Component libraries follow the stack rule: shadcn/ui, 21st.dev, Magic UI and Aceternity UI only where the interface already uses React; Uiverse snippets are plain CSS and fit anywhere. Galleries such as Mobbin, Refero, Land-book and Component Gallery are for the founder to browse, not to install. The dashboard and the portfolio follow the plugin's own `DESIGN.md`.
-
-**The design gate.** Design work runs through the whole journey, lightly at first: references for the prototype at stage 6, a full product design once the product model (5) and MVP scope (7) are approved and the specs are being written (8). Before any code, the product designer's work must be done and approved:
-
-1. **Design brief** (stage 9, `product-design`): `docs/design/brief.md` names 3 to 5 reference products and what to take from each, the look to follow (a company's DESIGN.md from awesome-design-md, adapted, or our own), the key flows, and where components come from for this stack. The founder approves it as a `D-` decision.
-2. **Screen specs** (stage 9): every MVP screen, with states and acceptance criteria tied to stories.
-3. **Design system** (stage 11, `design-system`): `DESIGN.md` and `tokens.json` follow the brief.
-
-`check_governance` enforces it: a branch that moves stage 13 or later to Current or Passed fails until stages 9 and 11 are Passed and `DESIGN.md` and `docs/design/brief.md` exist. Repos that were already building when the gate arrived, or when they adopted the playbook, get a warning instead.
+**Design: how we do what.** Which design skill leads at each stage, the design brief, the design gate before the build, component sources by stack, and the design skills to install are all in [docs/design.md](design.md), the single source.
 
 **Considered and not used: claude-mem.** It stores automatic summaries of past sessions outside the repo, and adds context at the start of every session.
 

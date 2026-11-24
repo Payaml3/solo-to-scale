@@ -25,6 +25,9 @@ Motion and special elements: <only where they help a task; Spline or maps only w
 ## Accessibility and responsiveness
 <WCAG 2.2 AA; the breakpoints that matter; anything the references get wrong>
 
+## Review scores (0 to 10; fix anything under 8 before approval)
+| Hierarchy | Consistency | Accessibility | Responsive | Empty and error states | Motion | Brand fit |
+
 ## Decision
 <D- ID once the founder approves>
 ```
