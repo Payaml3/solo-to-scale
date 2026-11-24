@@ -212,3 +212,33 @@ def test_the_goal_tree_gap_is_covered_by_its_label(root: Path) -> None:
     keys = [g["key"] for g in autopilot.gaps(root, [{"labels": [{"name": "stage:13"}]}], NOW.date())]
     assert keys == ["goal-tree"]
     assert autopilot.gaps(root, [{"labels": [{"name": "stage:13"}, {"name": "goal-tree"}]}], NOW.date()) == []
+
+
+def run(role: str, outcome: str, minutes_ago: float, ticket: int | None = None) -> dict[str, object]:
+    at = (NOW - dt.timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"role": role, "outcome": outcome, "ticket": ticket, "at": at, "usd": 0.0, "session": ""}
+
+
+def test_an_escalated_ticket_does_not_start_its_role_again(root: Path, fake: Fake) -> None:
+    pol = json.loads((root / "founder/heartbeats.json").read_text())
+    ticket(fake, "engineer", [tickets.ESCALATED + "founder"])
+    roles, why = autopilot.due(hub(root), root, pol, NOW)
+    assert "engineer" not in {r["role"] for r in roles}
+    assert "engineer: nothing ready" in why
+
+
+def test_a_ticket_that_just_stalled_waits_before_a_retry() -> None:
+    runs = [run("engineer", "blocked", 30, 7), run("engineer", "worked", 20, 8), run("engineer", "failed", 600, 9),
+            run("qa", "blocked", 10, 8)]
+    assert autopilot.stalled(runs, "engineer", NOW) == {7}  # 8 worked last; 9 stalled too long ago
+
+
+def test_a_role_whose_last_run_did_nothing_waits_an_hour() -> None:
+    assert autopilot.idle_recently([run("qa", "worked", 90, 3), run("qa", "no-work", 20)], "qa", NOW)
+    assert not autopilot.idle_recently([run("qa", "no-work", 90)], "qa", NOW)
+    assert not autopilot.idle_recently([run("qa", "no-work", 20), run("qa", "worked", 5, 3)], "qa", NOW)
+
+
+def test_every_run_today_counts_toward_the_cap() -> None:
+    runs = [run("qa", "no-work", 10), run("engineer", "worked", 20, 1), run("qa", "no-work", 60 * 24)]
+    assert autopilot.runs_today(None, NOW, runs) == 2  # type: ignore[arg-type]

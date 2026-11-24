@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.11.3 (2026-11-24)
+
+- **No more run loops.** A ticket blocked on the founder kept starting its role every minute: the run released it, so it looked ready again, and runs that never started a heartbeat weren't counted. Now the autopilot skips escalated tickets, waits 6 hours before retrying a ticket whose last run ended blocked or failed, waits an hour after a run that found nothing to do, and counts every run toward `max_runs_per_day` (`finish` records a run that never started a heartbeat).
+
 ## v2.11.2 (2026-11-24)
 
 - **A handoff starts the next role.** The `agents` workflow's runs that follow a handoff are started by the repo's own automation (the GitHub Actions bot, or the Claude app when an agent labels a ticket), and the Claude action refused to run for bots. The run step now sets `allowed_bots: "github-actions,claude"`. The prompt still comes only from `tools/autopilot.py due`, never from the event's text, so no one else can steer a run.
