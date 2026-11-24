@@ -158,7 +158,12 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: .88rem; z-index: 5; }
 .toast[hidden] { display: none; }
 @starting-style { .toast { opacity: 0; transform: translate(-50%, 8px); } }
-.avatar { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; font: 600 .85rem/1 var(--body); letter-spacing: .02em; position: relative; }
+.avatar { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 30%; color: #fff; font: 600 .85rem/1 var(--body); letter-spacing: .02em; position: relative; }
+.avatar::before { content: "\2726"; position: absolute; left: -4px; top: -5px; font-size: 11px; line-height: 1; color: var(--ink); text-shadow: 0 0 2px var(--surface), 0 0 2px var(--surface); }
+.avatar.sm::before { display: none; }
+.avatar.sm { border-radius: 28%; }
+.hub .spark4 { fill: #fff; opacity: .95; pointer-events: none; }
+.hub .halo { fill: none; }
 .avatar.sm { width: 22px; height: 22px; font-size: .6rem; vertical-align: middle; margin-right: 6px; }
 .avatar .dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); background: var(--todo); }
 .avatar.sm .dot { display: none; }
@@ -675,13 +680,15 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   // --- the AI team as agents ------------------------------------------------------------------------------
   // The roster in founder/team.md: one seat per role. An unknown role still gets a card, named from its slug.
   var ROLE_INFO = {
-    "chief-of-staff": ["Chief of staff", "AI core", "The operating system: briefs, memory, weekly review, views"],
-    research: ["Research", "01", "Evidence and business work outside software"],
-    product: ["Product", "02", "Requirements, stories, screen specs; prepares decisions"],
-    architect: ["Architect", "03", "Stack, architecture, threat model"],
-    engineer: ["Engineer", "04", "Product build, one story group per session"],
-    qa: ["QA", "05", "Evaluation, release check, accessibility review"],
-    growth: ["Growth", "06", "Brand, website, docs, content, launch"]
+    // Display names: every role is an AI agent, and the core one coordinates the others. The role ids
+    // (chief-of-staff, research, ...) stay as they are: tickets, labels and heartbeats use them.
+    "chief-of-staff": ["AI coordinator", "AI core", "Runs the operating system: briefs, memory, weekly review, views; hands work to the other agents", "AI"],
+    research: ["Research agent", "01", "Evidence and business work outside software", "Re"],
+    product: ["Product agent", "02", "Requirements, stories, screen specs; prepares decisions", "Pr"],
+    architect: ["Architecture agent", "03", "Stack, architecture, threat model", "Ar"],
+    engineer: ["Engineering agent", "04", "Product build, one story group per session", "En"],
+    qa: ["QA agent", "05", "Evaluation, release check, accessibility review", "QA"],
+    growth: ["Growth agent", "06", "Brand, website, docs, content, launch", "Gr"]
   };
   var ROLE_ORDER = ["chief-of-staff", "research", "product", "architect", "engineer", "qa", "growth"];
   function roleName(role) {
@@ -689,14 +696,16 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     return ROLE_INFO[r] ? ROLE_INFO[r][0] : r.split(/[-_]/).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
   }
   function hue(text) { var h = 0; String(text).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; }); return h; }
+  // The short mark on an agent's avatar: its own code, or the initials of its name.
+  function code(role) { var r = String(role || "").replace(/^role:/, ""); return ROLE_INFO[r] && ROLE_INFO[r][3] ? ROLE_INFO[r][3] : initials(roleName(r)); }
   function initials(name) {
     var w = String(name).split(/\s+/).filter(Boolean);
     return (w.length > 1 ? w[0].charAt(0) + w[1].charAt(0) : String(name).slice(0, 2)).toUpperCase();
   }
   function avatar(role, state, small) {
-    var r = String(role || "").replace(/^role:/, ""), name = r === "chief-of-staff" ? "Chief Staff" : roleName(r);
+    var r = String(role || "").replace(/^role:/, ""), name = roleName(r);
     return el("span", { cls: "avatar" + (small ? " sm" : ""), style: "background:hsl(" + hue(r) + ",45%,42%)", "aria-hidden": "true", title: name + " (AI agent)" },
-      initials(name), state ? el("span", { cls: "dot " + state }) : null);
+      code(r), state ? el("span", { cls: "dot " + state }) : null);
   }
   function ago(iso) {
     var t = Date.parse(iso || ""); if (isNaN(t)) return "";
@@ -857,10 +866,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   function orgChart(list) {
     var cos = list.filter(function (a) { return a.role === "chief-of-staff"; })[0];
     var rest = list.filter(function (a) { return a.role !== "chief-of-staff"; });
-    return el("div", { cls: "org", role: "img", "aria-label": "Org chart: you, then the chief of staff, then " + rest.length + " AI roles; the board advises" },
+    return el("div", { cls: "org", role: "img", "aria-label": "Org chart: you, then the AI coordinator, then " + rest.length + " AI roles; the board advises" },
       node(el("span", { cls: "avatar", style: "background:var(--accent);color:var(--on-accent)" }, "You"), "Founder", "CEO and chair: approvals, money, go-live", "you"),
       el("div", { cls: "stem" }),
-      node(avatar("chief-of-staff", cos ? cos.state : null), "Claude, chief of staff", "AI core · " + (cos ? STATE_WORDS[cos.state] : "not scheduled")),
+      node(avatar("chief-of-staff", cos ? cos.state : null), "Claude, AI coordinator", "AI core · " + (cos ? STATE_WORDS[cos.state] : "not scheduled")),
       el("div", { cls: "stem" }),
       el("div", { cls: "row" }, rest.map(function (a) { return node(avatar(a.role, a.state), roleName(a.role), (ROLE_INFO[a.role] ? ROLE_INFO[a.role][1] + " · " : "") + STATE_WORDS[a.state]); })),
       (team.board || []).length ? el("div", { cls: "board" }, el("div", { cls: "k", text: "The advisory board: AI advisors, advice only, no vote" }),
@@ -1007,10 +1016,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   var PHASE_ASK = { A: "Is the problem real?", B: "What do we sell, and to whom?", C: "What exactly do we build, and how does it look?",
     D: "Build it and prove it works", E: "From working to live", F: "Find product-market fit", G: "Grow the company" };
   var LEAD_ROLE = { "01": "research", "02": "product", "03": "architect", "04": "engineer", "05": "qa", "06": "growth" };
-  // Who leads a stage, from the playbook's Where column: "P 02" or "Code 04" is that role; "P 00" is you with the chief of staff.
+  // Who leads a stage, from the playbook's Where column: "P 02" or "Code 04" is that role; "P 00" is you with the AI coordinator.
   function leadOf(s) {
     var w = String(s.where || ""), m = /\b(?:P|Code)\s*(0\d)\b/.exec(w);
-    if (m && m[1] === "00") return { text: "You, with the chief of staff", role: "chief-of-staff" };
+    if (m && m[1] === "00") return { text: "You, with the AI coordinator", role: "chief-of-staff" };
     if (m && LEAD_ROLE[m[1]]) return { text: roleName(LEAD_ROLE[m[1]]) + " (" + m[1] + ")", role: LEAD_ROLE[m[1]] };
     if (/\bCode\b/.test(w)) return { text: "A Claude Code session" };
     if (/\bCI\b/.test(w)) return { text: "CI, automatically" };
@@ -1122,7 +1131,7 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   function kpi(href, k, v, sub, extra, alert) {
     return el("a", { cls: "tile kpi" + (alert ? " alert" : ""), href: href }, el("div", { cls: "k", text: k }), el("div", { cls: "v" }, v), el("div", { cls: "s", text: sub }), extra || null);
   }
-  // The AI team as a hub: the chief of staff in the middle, the other agents around it. A link carries moving pulses
+  // The AI team as a hub: the AI coordinator (role chief-of-staff) in the middle, the other agents around it. A link carries moving pulses
   // while its agent works (towards the hub when it is blocked and needs help); a handoff between two agents in the
   // last 2 days draws a chord between them. Off agents sit faded on a dashed link. Every node opens its agent page.
   function teamHub(crew) {
@@ -1136,6 +1145,16 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
       Object.keys(attrs || {}).forEach(function (k) { if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, String(attrs[k])); });
       (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
       return n;
+    }
+    function hex(x, y, r) {
+      var pts = []; for (var k = 0; k < 6; k++) { var t = Math.PI / 6 + k * Math.PI / 3; pts.push((x + r * Math.cos(t)).toFixed(1) + "," + (y + r * Math.sin(t)).toFixed(1)); }
+      return pts.join(" ");
+    }
+    // A four-point spark, the usual sign for "AI".
+    function spark(x, y, s) {
+      var q = s * 0.28;
+      return "M" + x + "," + (y - s) + " Q" + (x + q) + "," + (y - q) + " " + (x + s) + "," + y + " Q" + (x + q) + "," + (y + q) + " " + x + "," + (y + s) +
+        " Q" + (x - q) + "," + (y + q) + " " + (x - s) + "," + y + " Q" + (x - q) + "," + (y - q) + " " + x + "," + (y - s) + "Z";
     }
     var pos = {};
     if (hub) pos[hub.role] = [cx, cy];
@@ -1175,11 +1194,13 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
       var p = pos[a.role], big = a.role === hubRole, r = big ? 30 : 22, name = roleName(a.role);
       var g = sv("a", { href: "#agent/" + encodeURIComponent(a.role), "class": "node " + a.state + (big ? " core" : "") });
       g.appendChild(sv("title", {}, [document.createTextNode(name + ": " + STATE_WORDS[a.state] + (a.claimed[0] ? ", on #" + a.claimed[0].number : ""))]));
-      if (a.state === "working" || big) g.appendChild(sv("circle", { cx: p[0], cy: p[1], r: r + 5, "class": "halo" }));
-      g.appendChild(sv("circle", { cx: p[0], cy: p[1], r: r, "class": "disc", style: "fill:hsl(" + hue(a.role) + ",45%,42%)" }));
-      var t = sv("text", { x: p[0], y: p[1] + (big ? 5 : 4), "class": "ini" + (big ? " big" : "") }); t.textContent = initials(a.role === "chief-of-staff" ? "Chief Staff" : name); g.appendChild(t);
-      g.appendChild(sv("circle", { cx: p[0] + r * 0.72, cy: p[1] + r * 0.72, r: 5, "class": "st " + a.state }));
-      var lab = sv("text", { x: p[0], y: p[1] + r + 16, "class": "lab" }); lab.textContent = big ? "Chief of staff" : name; g.appendChild(lab);
+      // Agents are hexagons, not faces: a chip-like shape with a spark, so nobody reads them as people.
+      if (a.state === "working" || big) g.appendChild(sv("polygon", { points: hex(p[0], p[1], r + 6), "class": "halo" }));
+      g.appendChild(sv("polygon", { points: hex(p[0], p[1], r), "class": "disc", style: "fill:hsl(" + hue(a.role) + ",45%,42%)" }));
+      var t = sv("text", { x: p[0], y: p[1] + (big ? 6 : 4), "class": "ini" + (big ? " big" : "") }); t.textContent = code(a.role); g.appendChild(t);
+      g.appendChild(sv("path", { d: spark(p[0] - r * 0.62, p[1] - r * 0.62, big ? 7 : 5.5), "class": "spark4" }));
+      g.appendChild(sv("circle", { cx: p[0] + r * 0.7, cy: p[1] + r * 0.62, r: 5, "class": "st " + a.state }));
+      var lab = sv("text", { x: p[0], y: p[1] + r + 16, "class": "lab" }); lab.textContent = name; g.appendChild(lab);
       var sub = sv("text", { x: p[0], y: p[1] + r + 29, "class": "sub" }); sub.textContent = STATE_WORDS[a.state] + (a.claimed[0] ? " · #" + a.claimed[0].number : ""); g.appendChild(sub);
       nodes.appendChild(g);
     });
@@ -1272,7 +1293,7 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
 
     var nWork = crewAll.filter(function (a) { return a.state === "working"; }).length, nBlock = crewAll.filter(function (a) { return a.state === "blocked" || a.state === "paused"; }).length;
-    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (crewAll.length - nWork - nBlock) + " idle or off. Moving dots: agents working with the chief of staff; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
+    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (crewAll.length - nWork - nBlock) + " idle or off. Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
       el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),
       el("p", { cls: "note", style: "margin:4px 0 0" }, el("a", { href: "#team", text: "Every agent's card in Team and board" }), " · ", el("a", { href: "#activity", text: "what they did, in Agent activity" }))) : null;
     return [G.ok ? null : ghMissing(), setupPanel(), tiles,
@@ -1608,10 +1629,10 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     var roles = Object.keys(beats).map(function (k) { return { role: k, b: beats[k] || {}, t: byRole[k] || { open: 0, claimed: 0, blocked: 0 }, c: spend[k] || {} }; });
     var list = agents();
     return [agentSlot,
-      panel("Org chart", "You chair the company. Claude runs the operating system as chief of staff; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
+      panel("Org chart", "You chair the company. Claude runs the operating system as the AI coordinator; each role below is an AI agent with its own heartbeat, budget and tickets.", orgChart(list)),
       panel("AI agents", "One card per agent: what it's working on, when it next wakes, what it last did, and its spend this month.", list.length ? el("div", { cls: "agents" }, list.map(agentCard)) : el("p", { cls: "empty", text: "No roles in founder/heartbeats.json yet." })),
       panel("The team in a table", "Heartbeats and budgets come from founder/heartbeats.json; tickets from GitHub.", table([
-        { h: "Role", k: function (r) { return r.role; }, f: function (r) { return [avatar(r.role, null, true), el("span", { cls: "who", text: r.role })]; } },
+        { h: "Role", k: function (r) { return r.role; }, f: function (r) { return [avatar(r.role, null, true), el("span", null, roleName(r.role) + " "), el("span", { cls: "who muted", text: r.role })]; } },
         { h: "Heartbeat", f: function (r) { return pill(r.b.enabled ? "on" : "off", r.b.enabled ? "done" : "todo"); } },
         { h: "Schedule (UTC)", f: function (r) { return el("span", { cls: "who", title: cronText(r.b.cron), text: r.b.cron || "-" }); } },
         { h: "Budget", num: true, f: function (r) { return r.b.monthly_budget_usd ? usd(r.b.monthly_budget_usd) : "not set"; } },

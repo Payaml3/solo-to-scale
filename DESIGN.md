@@ -107,7 +107,7 @@ The pages are operator tools a founder reads every day, so they should feel like
 
 ## The Overview
 
-Most important first, nothing a founder doesn't check daily: six number tiles (Needs you, North Star, This cycle, Build completion, Shipped in the last 7 days, Runway or AI spend), then the AI team as a live hub, then Needs you beside Goals this cycle, then Delivery, then the journey. Each tile is a link to its tab. A tile turns red only when it needs action. Progress against time shows as a bar with a muted tick where the cycle's time is. The reasoning is in `DESIGN-BRIEF.md`.
+Most important first, nothing a founder doesn't check daily: six number tiles (Needs you, North Star, This cycle, Build completion, Shipped in the last 7 days, Runway or AI spend), then the AI team as a live hub, then Needs you beside Goals this cycle, then Delivery, then the journey. Each tile is a link to its tab. Agents are AI, not people: avatars are rounded squares with a small spark (✦) and a two-letter code, hub nodes are hexagons with a four-point spark, and names read "<job> agent", with the AI coordinator at the centre. A tile turns red only when it needs action. Progress against time shows as a bar with a muted tick where the cycle's time is. The reasoning is in `DESIGN-BRIEF.md`.
 
 ## Motion
 

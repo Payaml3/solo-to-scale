@@ -4,7 +4,8 @@
 
 The AI team moves up the Overview and comes alive.
 
-- **A live team hub,** right under the six numbers: the chief of staff in the middle and the other agents around it. Dots travel along a link while that agent works with the chief of staff; a blocked agent's dots run red towards the hub; handoffs between agents in the last 2 days show as curved chords with their own dots; agents whose heartbeat is off sit faded. Every node opens its agent page. On a phone the hub uses a tall layout.
+- **A live team hub,** right under the six numbers: the AI coordinator in the middle and the other agents around it, each a hexagon with a spark so it reads as an AI agent. Dots travel along a link while that agent works with the AI coordinator; a blocked agent's dots run red towards the hub; handoffs between agents in the last 2 days show as curved chords with their own dots; agents whose heartbeat is off sit faded. Every node opens its agent page. On a phone the hub uses a tall layout.
+- **Clearer agent names on the dashboard.** "Chief of staff" is now the **AI coordinator**, and every role is named "<job> agent" (Research agent, QA agent). Avatars are rounded squares with a spark instead of circles, so the team reads as AI, not people. Role ids such as `chief-of-staff` are unchanged, so tickets, labels and heartbeats keep working; the team table shows the id next to the name.
 - **Right now,** beside the hub: each busy agent's ticket, working or blocked, and the latest handoffs.
 - **Order:** numbers, AI team, Needs you beside Goals this cycle, Delivery, journey.
 - Reduced motion stops the dots and halos; colour and line style still show each agent's state.
