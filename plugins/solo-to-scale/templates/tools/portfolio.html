@@ -133,6 +133,22 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
 }
 @keyframes fade { from { opacity: 0; } }
 @media print { nav, .theme { display: none; } }
+/* Desktop: the tabs are a sidebar on the left; on smaller screens they stay a strip along the top. */
+@media (min-width: 1000px) {
+  body { display: grid; grid-template-columns: 232px minmax(0, 1fr); grid-template-rows: auto 1fr; min-height: 100vh; }
+  nav { grid-column: 1; grid-row: 1 / span 2; position: sticky; top: 0; align-self: start; height: 100vh; margin: 0; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line); background: var(--paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  nav .tabs { flex-direction: column; gap: 2px; max-width: none; margin: 0; padding: 22px 12px 24px; overflow: visible; isolation: isolate; }
+  nav .tabs.more-l, nav .tabs.more-r { -webkit-mask-image: none; mask-image: none; }
+  nav .tabs::before { content: attr(data-label); display: block; padding: 0 10px 10px; font: 500 .75rem/1.4 var(--mono); color: var(--muted); }
+  nav button { display: flex; align-items: center; width: 100%; text-align: left; padding: 8px 10px; border-bottom: 0; border-radius: 6px; }
+  nav button:focus-visible { outline-offset: -2px; }
+  nav .count { margin-left: auto; }
+  nav .ink { left: 12px; right: 12px; width: auto; height: 0; top: 0; z-index: -1; border-radius: 6px; background: var(--sunk); box-shadow: inset 2px 0 0 var(--accent); transform-origin: 0 0; }
+  @media (hover: hover) and (pointer: fine) { nav button:hover { background: color-mix(in srgb, var(--sunk) 60%, transparent); } nav button[aria-selected="true"]:hover { background: none; } }
+  header, main { grid-column: 2; width: 100%; padding-left: 32px; padding-right: 32px; }
+  header { padding-top: 24px; }
+}
+
 .venture h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
 .venture .repo { font-family: var(--mono); font-size: .8rem; color: var(--muted); font-weight: 400; }
 .venture .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
@@ -430,17 +446,18 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   });
   // One underline slides to the selected tab (transform only), and the tab strip fades at an edge that scrolls.
   var ink = el("i", { cls: "ink", "aria-hidden": "true" });
-  tabs.appendChild(ink); tabs.classList.add("js");
+  tabs.appendChild(ink); tabs.classList.add("js"); tabs.setAttribute("data-label", "Portfolio");
   function moveInk(id) {
     var b = buttons[id]; if (!b) return;
-    ink.style.transform = "translateX(" + b.offsetLeft + "px) scaleX(" + b.offsetWidth + ")";
+    if (getComputedStyle(tabs).flexDirection === "column") { ink.style.height = b.offsetHeight + "px"; ink.style.transform = "translateY(" + b.offsetTop + "px)"; }
+    else { ink.style.height = ""; ink.style.transform = "translateX(" + b.offsetLeft + "px) scaleX(" + b.offsetWidth + ")"; }
   }
   function edges() {
     tabs.classList.toggle("more-l", tabs.scrollLeft > 2);
     tabs.classList.toggle("more-r", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2);
   }
   tabs.addEventListener("scroll", edges, { passive: true });
-  window.addEventListener("resize", function () { edges(); moveInk((document.querySelector('nav [aria-selected="true"]') || {}).id ? document.querySelector('nav [aria-selected="true"]').id.slice(4) : "overview"); });
+  window.addEventListener("resize", function () { edges(); ink.style.transition = "none"; requestAnimationFrame(function () { ink.style.transition = ""; }); moveInk((document.querySelector('nav [aria-selected="true"]') || {}).id ? document.querySelector('nav [aria-selected="true"]').id.slice(4) : "overview"); });
   function select(id, push) {
     if (!buttons[id]) id = "overview";
     TABS.forEach(function (t) {

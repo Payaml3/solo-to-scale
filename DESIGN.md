@@ -100,7 +100,8 @@ The pages are operator tools a founder reads every day, so they should feel like
 - Max width 1180px, 16px gutters on phones, no horizontal page scroll (wide tables scroll inside `.table-wrap`).
 - Cards: 8px radius, 1px `line` border, `--shadow`, 20px padding (tiles 14px 16px). Never a single heavy drop shadow.
 - Header: title on the left, the theme switch (a pill with a sun or moon icon) on the right. Nothing floats over the content.
-- Sticky tab bar: translucent `paper` with a backdrop blur, one 2px ink underline that slides to the selected tab, hover lifts the label to `ink`. The strip scrolls sideways with its scrollbar hidden and fades at an edge that has more tabs.
+- Navigation, desktop (1000px and wider): a 232px sidebar on the left, sticky and full height, with a hairline on its right, a mono label at the top, and one item per tab. The selected item sits on a `sunk` pill with a 2px ink edge on its left; the pill slides to the item you pick. Counts sit at the right of their item.
+- Navigation, phone and tablet: a sticky tab bar along the top, translucent `paper` with a backdrop blur, one 2px ink underline that slides to the selected tab, hover lifts the label to `ink`. The strip scrolls sideways with its scrollbar hidden and fades at an edge that has more tabs.
 - Tables: muted 0.75rem headers on a `sunk` band, 9px 10px cells, hairline rows, `sunk` row hover.
 - Inputs and selects: 36px high, 6px radius, hairline border.
 
@@ -109,7 +110,7 @@ The pages are operator tools a founder reads every day, so they should feel like
 Motion explains a change or confirms an action; it never decorates. The review behind these rules is in `DESIGN-BRIEF.md`.
 
 - Only `transform` and `opacity` animate. Curves are the `motion` tokens above, never `ease-in`; UI motion stays under 300ms (the one-time bar fill is 600ms).
-- The tab underline slides; the opened tab's content fades up 4px. Progress bars fill from the left once when shown. Pressable things scale to 0.97 while pressed (tiles and journey cards to 0.99). The toast rises in. A working agent's status dot breathes; nothing else loops.
+- The selected-tab marker (sidebar pill or underline) slides; the opened tab's content fades up 4px. Progress bars fill from the left once when shown. Pressable things scale to 0.97 while pressed (tiles and journey cards to 0.99). The toast rises in. A working agent's status dot breathes; nothing else loops.
 - Hover changes only on devices with a fine pointer (`@media (hover: hover) and (pointer: fine)`), and never carry meaning on their own.
 - Reduced motion: no movement, no fill, no breathing; short fades stay.
 

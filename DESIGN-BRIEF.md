@@ -26,7 +26,7 @@ Scored on a demo venture (stage 13, 12 tabs, GitHub data present), at 1280 px an
 
 | Dimension | Before | After | What changed |
 | --- | --- | --- | --- |
-| Hierarchy | 8 | 9 | The theme switch moved from a floating pill over the content into the header, next to the title. |
+| Hierarchy | 8 | 9 | On desktop the tabs moved into a left sidebar (the founder's call): all 12 are visible at once instead of 8 running off the edge, and the content gets the full height. The theme switch moved from a floating pill over the content into the header, next to the title. |
 | Consistency | 6 | 9 | Removed the uppercase phase labels and the three weight-700 spots (DESIGN.md allows neither). Goal bars no longer turn amber whenever a goal is short of 100%: achieved is green, on track is ink, behind is amber, so the bar agrees with its pill. The portfolio follows the same rules. |
 | Accessibility | 6 | 9 | The light `todo` grey was 3.3:1 on white, under AA for pill text; it is now `#6e6e6e` (5:1). Focus rings added to the document groups, document cards, document list and the theme switch. The theme switch has an accessible name and a sun or moon icon. |
 | Responsiveness | 6 | 8 | On a phone the goal rows stack (label on its own line, bar and percent under it) instead of squeezing to one word a line. The tab strip fades at an edge that has more tabs, so the 8 tabs past the screen edge are discoverable; its scrollbar is hidden. |
