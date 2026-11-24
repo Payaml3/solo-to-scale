@@ -123,6 +123,8 @@ def playbook(root: Path) -> list[dict[str, Any]]:
             if r.get("#", "").isdigit() and "gate" in r:
                 row = {"stage": int(r["#"]), "phase": r.get("phase", ""), "name": r.get("stage", ""),
                        "gate": r.get("gate", ""), "status": r.get("status", "")}
+                if r.get("where"):  # who or where the stage is worked: P 01 = role 01's Claude Project, Code, CI
+                    row["where"] = r["where"]
                 if "evidence" in r:  # optional column: what shows the gate was met (decision IDs, files, links)
                     row["evidence"] = r["evidence"]
                 stages.append(row)
