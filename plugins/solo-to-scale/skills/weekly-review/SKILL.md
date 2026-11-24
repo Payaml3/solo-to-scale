@@ -36,7 +36,7 @@ If GitHub can't be reached, say so and use the local git log only.
 
 ## Then
 
-1. Edit only `founder/status.md` (with "Last updated" set to today) and the stage statuses in `founder/playbook.md`.
+1. Edit only `founder/status.md` (with "Last updated" set to today) and the stage statuses in `founder/playbook.md`. A stage you propose as Passed or Deferred names its evidence in the Evidence column: decision IDs, files or links. With no evidence, leave it Current.
 2. Regenerate the view data (`python3 tools/build_roadmap.py`, `build_team.py`, `build_traceability.py`).
 3. Branch `review/<date>`, commit, push, open a PR. **Never merge it**; the founder does.
 4. Run `publish-views`, which stops by itself if nothing changed.

@@ -155,6 +155,49 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .steps i.done { background: var(--done); } .steps i.cur { background: var(--accent); }
 .stage h3 { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
 .stage h3:first-child { margin-top: 0; }
+.ladder-head { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; margin-bottom: 12px; }
+.ladder-head .big { font-size: 1.35rem; font-weight: 700; }
+.ladder-head .counts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .85rem; color: var(--muted); }
+.ladder-head .counts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.track { display: flex; gap: 6px; margin: 0 0 16px; }
+.track .ph { flex: var(--n) 1 0; min-width: 0; }
+.track .cells { display: flex; gap: 2px; }
+.track .cells i { flex: 1; height: 12px; border-radius: 2px; background: var(--sunk); border: 1px solid var(--line); }
+.track .cells i.passed { background: var(--done); border-color: var(--done); }
+.track .cells i.current { background: var(--accent); border-color: var(--accent); }
+.track .cells i.deferred { background: repeating-linear-gradient(135deg, var(--progress) 0 3px, transparent 3px 6px); border-color: var(--progress); }
+.track .cells i.gap { border-color: var(--waiting); border-width: 2px; }
+.track .ph span { display: block; font-size: .72rem; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track .ph.on span { color: var(--ink); font-weight: 700; }
+.ladder details { border-top: 1px solid var(--line); }
+.ladder details:last-child { border-bottom: 1px solid var(--line); }
+.ladder summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; padding: 10px 2px; }
+.ladder summary::-webkit-details-marker { display: none; }
+.ladder summary::before { content: "\25B8"; color: var(--muted); font-size: .8rem; width: 10px; }
+.ladder details[open] > summary::before { content: "\25BE"; }
+.ladder summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 4px; }
+.ladder summary .pname { font-weight: 600; }
+.ladder summary .pcount { margin-left: auto; font-size: .8rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ladder ol { list-style: none; margin: 0 0 8px; padding: 0; }
+.rung { display: grid; grid-template-columns: 26px 26px minmax(0, 1fr) auto; gap: 4px 10px; align-items: start; padding: 8px 4px; border-radius: 8px; }
+.rung.current { background: var(--sunk); box-shadow: inset 3px 0 0 var(--accent); }
+.rung .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 700; border: 2px solid var(--line); color: transparent; margin-top: 1px; }
+.rung.passed .mark { background: var(--done); border-color: var(--done); color: #fff; }
+.rung.current .mark { border-color: var(--accent); color: var(--accent); }
+.rung.deferred .mark { border-color: var(--progress); color: var(--progress); border-style: dashed; }
+.rung.gap .mark { border-color: var(--waiting); color: var(--waiting); }
+.rung .n { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; padding-top: 2px; text-align: right; }
+.rung .name { font-weight: 600; }
+.rung.todo .name { color: var(--muted); font-weight: 500; }
+.rung .gate, .rung .ev { font-size: .84rem; color: var(--muted); margin-top: 1px; overflow-wrap: anywhere; }
+.rung .gate b, .rung .ev b { color: var(--ink); font-weight: 600; }
+.rung .ev.none { color: var(--waiting); }
+.rung .ev a { font-family: var(--mono); font-size: .8rem; }
+.rung .pill { margin-top: 2px; }
+.s-passed { color: var(--done); } .s-deferred { color: var(--progress); } .s-notpassed { color: var(--waiting); }
+.track .ph span em { font-style: normal; }
+@media (max-width: 560px) { .track .ph span em { display: none; } .track .ph span { text-align: center; } }
+@media (max-width: 560px) { .rung { grid-template-columns: 24px minmax(0, 1fr) auto; } .rung .n { display: none; } }
 .empty { color: var(--muted); font-style: italic; }
 .goal { font-size: 1.15rem; font-weight: 600; margin: 0; }
 .objective h3 { margin: 0 0 4px; font-size: 1.05rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -707,7 +750,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
         el("div", { cls: "note", style: "margin:0", text: current ? current.phase + " · stage " + current.stage + " of " + stages.length : "stage " + road.current_stage }),
         el("div", { cls: "big", text: current ? current.name : "Stage " + road.current_stage }),
         inPhase.length ? el("div", { cls: "steps", role: "img", "aria-label": "Stage " + (inPhase.map(function (x) { return x.stage; }).indexOf(current.stage) + 1) + " of " + inPhase.length + " in this phase" },
-          inPhase.map(function (x) { return el("i", { cls: x.stage === current.stage ? "cur" : /done/i.test(x.status) ? "done" : null, title: x.stage + ". " + x.name }); })) : null,
+          inPhase.map(function (x) { return el("i", { cls: x.stage === current.stage ? "cur" : /pass|done|defer/i.test(x.status) ? "done" : null, title: x.stage + ". " + x.name }); })) : null,
         current && current.gate ? el("p", { style: "margin:6px 0" }, el("b", { text: "Done when: " }), current.gate) : null,
         next ? el("p", { cls: "note", style: "margin:0", text: "Next: " + next.stage + ". " + next.name }) : null,
         el("h3", { text: "Blockers" }), blockers.length ? el("ul", { cls: "list" }, blockers) : el("p", { cls: "empty", style: "margin:0", text: "Nothing is blocking this stage." })),
@@ -722,6 +765,85 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
           return el("li", null, el("span", { cls: "gtag g-" + d.group, text: (GROUPS.filter(function (g) { return g[0] === d.group; })[0] || [0, d.group])[1] }), " ",
             el("a", { href: "#documents", text: d.title }), el("div", { cls: "why", text: d.path + ", changed " + ago(d.updated) }));
         })) : el("p", { cls: "empty", style: "margin:0", text: "No documents yet." }))));
+  }
+
+  // The stage ladder: every stage of founder/playbook.md as passed, current, deferred or not started, with its gate
+  // and the evidence the founder recorded for it. A stage before the current one that isn't passed or deferred shows
+  // as "Not passed", so the page never claims more progress than the playbook does.
+  function stageState(s) {
+    var st = String(s.status || "").toLowerCase();
+    if (/pass|done/.test(st)) return "passed";
+    if (/defer/.test(st)) return "deferred";
+    if (s.stage === road.current_stage || /current/.test(st)) return "current";
+    var cur = road.current_stage || 0;
+    return s.stage < cur ? "gap" : "todo";
+  }
+  var STATE_LABEL = { passed: ["Passed", "passed"], current: ["Current", "current"], deferred: ["Deferred", "deferred"], gap: ["Not passed", "notpassed"], todo: ["Not started", "todo"] };
+  var STATE_MARK = { passed: "✓", current: "●", deferred: "–", gap: "!", todo: "" };
+  // Evidence text with decision IDs linked to Decisions, repo documents to Documents and https links opened.
+  function evidence(text) {
+    var docs = {}; (R.documents || []).forEach(function (d) { docs[d.path] = true; });
+    var out = [], re = /(https:\/\/[^\s,;)]+)|\b([A-Z]-\d{1,4})\b|((?:[\w.-]+\/)+[\w.-]+\.\w+)/g, last = 0, m, s = String(text);
+    while ((m = re.exec(s))) {
+      if (m.index > last) out.push(s.slice(last, m.index));
+      if (m[1]) out.push(link(m[1].replace(/^https:\/\/(www\.)?/, "").slice(0, 48), m[1]));
+      else if (m[2]) out.push(el("a", { href: "#decisions", text: m[2], title: "Open the decision register" }));
+      else out.push(docs[m[3]] ? el("a", { href: "#documents", text: m[3], title: "Open in Documents" }) : el("code", { text: m[3] }));
+      last = re.lastIndex;
+    }
+    if (last < s.length) out.push(s.slice(last));
+    return out;
+  }
+  function phaseParts(p) { var m = /^([A-Z])\s+(.+)$/.exec(String(p || "")); return m ? [m[1], m[2]] : ["", String(p || "")]; }
+  function ladderPanel() {
+    if (!stages.length) return null;
+    var order = [], byPhase = {};
+    stages.forEach(function (s) { if (!byPhase[s.phase]) { byPhase[s.phase] = []; order.push(s.phase); } byPhase[s.phase].push(s); });
+    var n = { passed: 0, current: 0, deferred: 0, gap: 0, todo: 0 };
+    stages.forEach(function (s) { n[stageState(s)]++; });
+    var curPhase = current ? current.phase : null, curIdx = order.indexOf(curPhase);
+    var hasEvidence = stages.some(function (s) { return "evidence" in s; });
+    var track = el("div", { cls: "track", role: "img", "aria-label": n.passed + " of " + stages.length + " stages passed" + (current ? ", now at stage " + current.stage + ", " + current.name : "") },
+      order.map(function (p) {
+        var pp = phaseParts(p);
+        return el("div", { cls: "ph" + (p === curPhase ? " on" : ""), style: "--n:" + byPhase[p].length, title: p },
+          el("div", { cls: "cells" }, byPhase[p].map(function (s) { return el("i", { cls: stageState(s), title: s.stage + ". " + s.name + ": " + STATE_LABEL[stageState(s)][0] }); })),
+          pp[0] ? el("span", null, pp[0], el("em", { text: " " + pp[1] })) : el("span", { text: pp[1] }));
+      }));
+    var ladder = el("div", { cls: "ladder" }, order.map(function (p, i) {
+      var list = byPhase[p], pp = phaseParts(p);
+      var passed = list.filter(function (s) { return stageState(s) === "passed"; }).length, deferred = list.filter(function (s) { return stageState(s) === "deferred"; }).length;
+      var count = (passed + deferred === list.length ? "\u2713 " : "") + passed + " of " + list.length + " passed" + (deferred ? ", " + deferred + " deferred" : "");
+      var d = el("details", null,
+        el("summary", null, pp[0] ? el("span", { cls: "badge", text: pp[0] }) : null, el("span", { cls: "pname", text: pp[1] }),
+          el("span", { cls: "pcount", text: count })),
+        el("ol", null, list.map(function (s) {
+          var x = stageState(s), lab = STATE_LABEL[x], ev = String(s.evidence || "").trim();
+          var evNode = null;
+          if (ev) evNode = el("div", { cls: "ev" }, el("b", { text: "Evidence: " }), evidence(ev));
+          else if (x === "passed") evNode = el("div", { cls: "ev none", text: hasEvidence ? "No evidence recorded for this gate." : "No evidence recorded: add an Evidence column to founder/playbook.md." });
+          else if (x === "gap") evNode = el("div", { cls: "ev none", text: "Before the current stage, but not passed or deferred in founder/playbook.md." });
+          return el("li", { cls: "rung " + x, "aria-current": x === "current" ? "step" : null },
+            el("span", { cls: "mark", "aria-hidden": "true", text: STATE_MARK[x] }),
+            el("span", { cls: "n", text: String(s.stage) }),
+            el("div", null, el("div", { cls: "name", text: s.name }),
+              s.gate ? el("div", { cls: "gate" }, el("b", { text: x === "passed" ? "Gate met: " : "Gate: " }), s.gate) : null, evNode),
+            pill(lab[0], lab[1]));
+        })));
+      if (curIdx < 0 ? i === 0 : i <= curIdx) d.open = true;
+      return d;
+    }));
+    var counts = el("div", { cls: "counts" },
+      el("span", null, el("b", { text: String(n.passed) }), " passed"),
+      n.deferred ? el("span", null, el("b", { text: String(n.deferred) }), " deferred") : null,
+      n.gap ? el("span", { cls: "s-notpassed" }, el("b", { text: String(n.gap) }), " not passed") : null,
+      el("span", null, el("b", { text: String(n.todo) }), " not started"));
+    return panel("Venture stage", "Every stage of the journey and its gate, from founder/playbook.md. A gate counts as passed only when the playbook says so.",
+      el("div", { cls: "ladder-head" },
+        el("div", null, el("div", { cls: "note", style: "margin:0", text: current ? "Stage " + current.stage + " of " + stages.length + " · " + current.phase : "Stage " + (road.current_stage || "?") + " of " + stages.length }),
+          el("div", { cls: "big", text: current ? current.name : "No current stage" })),
+        counts),
+      track, ladder);
   }
 
   // --- money: runway from founder/finance.json, AI spend from the cost log -------------------------------------
@@ -761,8 +883,9 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     return [tiles, G.ok ? null : ghMissing(),
       setupPanel(),
       panel("Needs you", "Oldest and most blocking first." + (NEEDS.length > 8 ? " " + (NEEDS.length - 8) + " more in the Needs you tab." : ""), needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }), NEEDS.length > 8 ? el("p", { cls: "note" }, el("a", { href: "#needs", text: "All " + NEEDS.length + " in Needs you" })) : null),
-      moneyPanel(),
+      ladderPanel(),
       stagePanel(),
+      moneyPanel(),
       goalStrip(),
       trendPanel(),
       crew.length ? panel("Your AI team", "Each role is an AI agent. Green: working on a ticket; red: blocked; grey: idle or heartbeat off. Details in Team and board.", el("div", { cls: "strip" }, crew)) : null,
@@ -948,7 +1071,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
     var phases = Object.keys(byPhase).map(function (p) {
       return el("div", { cls: "panel phase" }, el("h3", { text: p }), el("ol", null, byPhase[p].map(function (s) {
         var st = String(s.status).toLowerCase();
-        return el("li", { value: s.stage, cls: s.stage === road.current_stage ? "cur" : /done/.test(st) ? "done" : null, title: s.gate ? "Gate: " + s.gate : null, text: s.name + (s.stage === road.current_stage ? " (now)" : "") });
+        return el("li", { value: s.stage, cls: s.stage === road.current_stage ? "cur" : /pass|done|defer/.test(st) ? "done" : null, title: s.gate ? "Gate: " + s.gate : null, text: s.name + (s.stage === road.current_stage ? " (now)" : "") });
       })));
     });
     return [

@@ -312,6 +312,30 @@ def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
         assert "issue_comment:" in text and "sleep 60" in text and "cancel-in-progress: true" in text
 
 
+def test_the_stage_ladder_shows_every_gate_with_its_evidence(root, fake):
+    (root / "founder" / "playbook.md").write_text(
+        "| # | Phase | Stage | Where | Gate | Evidence | Status |\n| --- | --- | --- | --- | --- | --- | --- |\n"
+        f"| 1 | A Discover | Problem validation | P 01 | Pain confirmed | B-01, founder/sources/interviews.md </script><img src=x onerror=alert(1)> | Passed |\n"
+        "| 2 | A Discover | Customer discovery | P 01 | 5 to 8 interviews |  | Deferred |\n"
+        "| 3 | B Define | Business model | P 01 | Founder approves |  | To do |\n"
+        "| 4 | B Define | Product and operating model | P 02 | Founder approves |  | Current |\n", encoding="utf-8")
+    page = bd.page(bd.build(root, now=NOW))
+    assert page.count("</script>") == 2, "evidence text stays text"
+    road = data_of(page)["repo"]["roadmap"]
+    assert road["current_stage"] == 4
+    assert [(x["stage"], x["status"]) for x in road["stages"]] == [(1, "Passed"), (2, "Deferred"), (3, "To do"), (4, "Current")]
+    assert road["stages"][0]["evidence"].startswith("B-01, founder/sources/interviews.md")
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert "ladderPanel()," in html and '"Venture stage"' in html and "Not passed" in html
+    assert html.index("ladderPanel(),") < html.index("stagePanel(),") < html.index("moneyPanel(),")
+    # an older playbook without the Evidence column still builds, and says evidence is missing
+    (root / "founder" / "playbook.md").write_text(
+        "| # | Phase | Stage | Where | Gate | Status |\n| --- | --- | --- | --- | --- | --- |\n"
+        "| 1 | A Discover | Problem validation | P 01 | Pain confirmed | Passed |\n", encoding="utf-8")
+    assert "evidence" not in data_of(bd.page(bd.build(root, now=NOW)))["repo"]["roadmap"]["stages"][0]
+    assert "add an Evidence column to founder/playbook.md" in html
+
+
 def test_paused_roles_revise_and_approval_reminders_reach_the_page(root, fake):
     import control
     issue = fake.make(control.TITLE, control.BODY, [control.LABEL])
