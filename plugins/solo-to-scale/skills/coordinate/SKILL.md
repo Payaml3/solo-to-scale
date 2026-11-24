@@ -19,7 +19,7 @@ Roles work together only through tickets: GitHub issues labelled `ticket` and `r
 
 ## Delegate: split a goal across roles
 
-- One sub-ticket per role and outcome: `python tools/tickets.py new <role> --title "<outcome>" --goal "<what>" --done-when "<check>" --why "<reason>" --parent <n> [--blocked-by <m> ...] --by <your role>`. A ticket with no parent names the objective it serves with `--objective O1` (`founder/goals.json`); sub-tickets inherit their parent's.
+- One sub-ticket per role and outcome: `python tools/tickets.py new <role> --title "<outcome>" --goal "<what>" --done-when "<check>" --why "<reason>" --parent <n> [--blocked-by <m> ...] --by <your role>`. A ticket with no parent names the objective it serves with `--objective O1` (`founder/goals.json`); sub-tickets inherit their parent's. Work toward a playbook stage's gate carries `--stage <n>` (inherited too); the autopilot counts a stage or initiative as covered once an open ticket has its label.
 - Order the work with `--blocked-by`, not with prose. `--dry-run` shows the ticket first.
 - With the `plan` gate on (`founder/gates.json`), run `python tools/tickets.py plan <parent> --by <your role> --note "<why this plan>"` once the sub-tickets exist: none can be claimed until the founder approves it. Adding a sub-ticket later means asking again.
 - Delegate only to the six team roles or `chief-of-staff`. Advisors are asked through `board-review`, never ticketed.

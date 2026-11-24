@@ -878,9 +878,9 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
 
   // --- needs you: everything waiting on the founder, one list, oldest and most blocking first ----------------
   var NEED = D.needs || {}, NEEDS = NEED.items || [];
-  var NEED_WORDS = { approval: "approval", escalation: "escalation", budget: "budget stop", stuck: "stuck", decision: "decision", "founder item": "founder item" };
-  var NEED_TILES = { approval: "Approvals", escalation: "Escalations", budget: "Budget stops", stuck: "Stuck work", decision: "Decisions", "founder item": "Founder items" };
-  var NEED_STATE = { approval: "waiting", escalation: "waiting", budget: "stopped", stuck: "blocked", decision: "proposed", "founder item": "todo" };
+  var NEED_WORDS = { approval: "approval", escalation: "escalation", budget: "budget stop", blocked: "blocked", stuck: "stuck", decision: "decision", "founder item": "founder item" };
+  var NEED_TILES = { approval: "Approvals", escalation: "Escalations", budget: "Budget stops", blocked: "Blocked", stuck: "Stuck work", decision: "Decisions", "founder item": "Founder items" };
+  var NEED_STATE = { approval: "waiting", escalation: "waiting", budget: "stopped", blocked: "blocked", stuck: "blocked", decision: "proposed", "founder item": "todo" };
   function needAge(x) {
     if (x.age_days === null || x.age_days === undefined) return "";
     var d = Math.floor(x.age_days); return d < 1 ? "today" : d + (d === 1 ? " day" : " days");
