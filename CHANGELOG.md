@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.11.2 (2026-11-24)
+
+- **A handoff starts the next role.** The `agents` workflow's runs that follow a handoff are started by the repo's own automation (the GitHub Actions bot, or the Claude app when an agent labels a ticket), and the Claude action refused to run for bots. The run step now sets `allowed_bots: "github-actions,claude"`. The prompt still comes only from `tools/autopilot.py due`, never from the event's text, so no one else can steer a run.
+
 ## v2.11.1 (2026-11-24)
 
 Fixes from the autopilot's first run.

@@ -77,6 +77,8 @@ jobs:
           plugin_marketplaces: https://github.com/Payaml3/solo-to-scale.git
           plugins: solo-to-scale@solo-to-scale
           prompt: ${{ matrix.prompt }}
+          # Follow-on runs are started by this repo's own automation; the prompt never comes from the event.
+          allowed_bots: "github-actions,claude"
           claude_args: --model ${{ matrix.model }} --max-turns 80
       - name: a run that stopped early is recorded as failed and frees its lock
         if: always()
