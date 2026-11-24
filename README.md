@@ -7,7 +7,7 @@
 - **Nothing becomes Approved without your words.** Merging a pull request is approval.
 - **It works in Claude Code and Codex,** from one source.
 
-**Status: v2.5.0.** Sixteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
+**Status: v2.6.0.** Sixteen skills, seven team roles, four board advisors (plus an optional sales advisor), shared hooks, and `init` and `upgrade` for each startup's repo. The handbook is `plugins/solo-to-scale/docs/handbook.md`.
 
 ---
 
