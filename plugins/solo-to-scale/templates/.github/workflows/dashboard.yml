@@ -33,6 +33,8 @@ jobs:
         if: github.event_name == 'issues' || github.event_name == 'issue_comment'
         run: sleep 60
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history: the roadmap timeline dates each status change from its commit
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

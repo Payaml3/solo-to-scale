@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.0 (2026-11-24)
+## v2.7.0 (2026-11-24)
 
 The goal tree: a North Star, short OKR cycles and initiatives, so every ticket traces back to one number.
 
@@ -12,6 +12,15 @@ The goal tree: a North Star, short OKR cycles and initiatives, so every ticket t
 - **The playbook** (new repos) says when the goal tree is drafted, at stages 3 and 5. Existing repos keep their playbook (it is founder-owned); `okr-plan` works either way.
 - **Docs:** the handbook's goals section is rewritten as "Goals: North Star, OKRs and initiatives", with a diagram; the cadence adds the cycle review; the chief of staff owns `okr-plan`.
 - **Tests:** 6 new, covering the tree, the new checks, when drafting and reviews are due, the cycle and North Star commands, tickets naming initiatives, and the tree on the page.
+
+## v2.6.0 (2026-11-24)
+
+A Gantt chart on the dashboard's Roadmap tab.
+
+- **Timeline panel** on Roadmap, under the counts: phases A to G with their stages, then the slices, as bars over time. A dashed box is the plan, a solid bar is what happened (green done, amber in progress, red past its target), with a line for today. Each phase bar spans its stages. Hover a bar for its dates. It works in both themes; on a phone the labels stay put and the chart scrolls sideways, opening on today.
+- **Planned dates** come from optional `Start` and `Target` columns in `founder/playbook.md` and `start` and `target` on each slice in `founder/slices.json` (YYYY-MM-DD). Nothing is required: undated items are left out and the panel says how to add dates.
+- **Actual dates** come from git: the commit that first moved a stage or slice to in progress, and the one that moved it to done. The dashboard workflow now checks out full history so it can read them. Existing repos get both with `upgrade`.
+- **Tests:** 2 new: planned and actual dates from a repo's history, and a build without git.
 
 ## v2.5.0 (2026-11-24)
 
