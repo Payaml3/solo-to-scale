@@ -110,13 +110,13 @@ Each phase's gate must pass before the next phase starts. The stage table below 
 | 3 | Business model and positioning | P 01 | founder: pricing-strategy; marketing: competitive-brief | `B-` decisions | Founder approves |
 | 4 | Brand strategy | P 06 | brand-skills: naming, brand-architecture | `brand.md`, `B-` decisions | Name, trademark and domain checked |
 | 5 | Product and operating model | P 02 | founder: product-brief | Product definition, operating model | Founder approves |
-| 6 | UX prototype and test | P 02, Code | product-design, Claude Design | Key journeys, clickable prototype | Tested with 3 to 5 target users |
+| 6 | UX prototype and test | P 02, Code | product-design, Claude Design; references from Mobbin or Refero | Key journeys, clickable prototype | Tested with 3 to 5 target users |
 | 7 | MVP scope and launch criteria | P 02 | founder: mvp-scope | Must / Should / Won't, launch criteria | Founder approves scope |
 | **C** | **Specify and design** |  |  |  |  |
 | 8 | Specify | Code | Spec Kit: specify, clarify, checklist | `spec.md`, requirements, stories, journeys; open items | Every open item answered or deferred |
-| 9 | Screen specs | Code | product-design | `specs/*/ux/<screen>.md` with states and acceptance criteria | Criteria linked to stories |
+| 9 | Product design | Code | product-design; references from awesome-design-md, Mobbin, Refero, Land-book, Httpster, Component Gallery | `docs/design/brief.md` (references, chosen look, flows), `specs/*/ux/<screen>.md` with states and acceptance criteria | Founder approves the brief; criteria linked to stories |
 | 10 | Plan the system | Code, P 03 | Spec Kit: plan, constitution; Superpowers: brainstorming | Stack, architecture, data model, contracts, security, invariants, CI/CD and environments | Founder approves architecture, threat model and Well-Architected review |
-| 11 | Design system | Code | design-system, brand-skills: brand-identity | `tokens.json`, components, `docs/design-system/` | Founder approves foundations |
+| 11 | Design system | Code | design-system, brand-skills: brand-identity | `DESIGN.md`, `tokens.json`, components, `docs/design-system/` | Founder approves foundations |
 | 12 | Tasks and story groups | Code | Spec Kit: tasks, analyze | `tasks.md`, slices, story groups | `analyze` finds no contradictions |
 | **D** | **Build and prove** |  |  |  |  |
 | 13 | Build, one session per story group | Code 04 | Superpowers: writing-plans, test-driven-development, systematic-debugging, requesting-code-review | Code, tests, evidence | Definition of done met |
@@ -125,7 +125,7 @@ Each phase's gate must pass before the next phase starts. The stage table below 
 | 16 | Deploy continuously, to non-production | CI | (pipeline) | Every merge deployed to preview and staging | Test data only; dependencies pinned, builds signed |
 | 17 | Release check | P 05, Code | release-check | Go / no-go | Go |
 | **E** | **Launch** |  |  |  |  |
-| 18 | Demo and website | Code, P 06 | founder: landing-page; marketing: brand-review | Demo instance, public site | Honesty checklist signed |
+| 18 | Demo and website | Code, P 06 | founder: landing-page; marketing: brand-review; Magic UI or Aceternity UI sections where the site uses React | Demo instance, public site | Honesty checklist signed |
 | 19 | Sandbox or beta | Code | (build) | Self-serve access with test data | External user completes the core flow |
 | 20 | Design partners | P 06 | founder: go-to-market | Shadow runs or pilots on partner data | Partner confirms value |
 | 21 | Production readiness | P 05, Code | release-check, security review | Security test, legal terms, service targets and error budget, alerts, restore and load tests, AI spending caps, runbooks, incident process | All readiness items closed |
@@ -497,6 +497,14 @@ Before relying on a plugin in Claude Code, start a session and ask it to list it
 On screens covered by the design system, taste may suggest changes, but it may not add colours, fonts or components without a `D-` decision.
 
 **Design references.** Agents design better from a written reference than from adjectives. [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (MIT) holds DESIGN.md analyses of about 70 companies (Linear, Vercel, Stripe, Supabase, PostHog, Notion and more); at stage 11, taste may start each proposed direction from one of them, and the chosen one becomes the repo's own `DESIGN.md`. Component libraries follow the stack rule: shadcn/ui, 21st.dev, Magic UI and Aceternity UI only where the interface already uses React; Uiverse snippets are plain CSS and fit anywhere. Galleries such as Mobbin, Refero, Land-book and Component Gallery are for the founder to browse, not to install. The dashboard and the portfolio follow the plugin's own `DESIGN.md`.
+
+**The design gate.** Design work runs through the whole journey, lightly at first: references for the prototype at stage 6, a full product design once the product model (5) and MVP scope (7) are approved and the specs are being written (8). Before any code, the product designer's work must be done and approved:
+
+1. **Design brief** (stage 9, `product-design`): `docs/design/brief.md` names 3 to 5 reference products and what to take from each, the look to follow (a company's DESIGN.md from awesome-design-md, adapted, or our own), the key flows, and where components come from for this stack. The founder approves it as a `D-` decision.
+2. **Screen specs** (stage 9): every MVP screen, with states and acceptance criteria tied to stories.
+3. **Design system** (stage 11, `design-system`): `DESIGN.md` and `tokens.json` follow the brief.
+
+`check_governance` enforces it: a branch that moves stage 13 or later to Current or Passed fails until stages 9 and 11 are Passed and `DESIGN.md` and `docs/design/brief.md` exist. Repos that were already building when the gate arrived, or when they adopted the playbook, get a warning instead.
 
 **Considered and not used: claude-mem.** It stores automatic summaries of past sessions outside the repo, and adds context at the start of every session.
 

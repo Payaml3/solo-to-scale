@@ -60,6 +60,6 @@ Propose three starter tickets for after the merge, matched to the stage (for exa
 2. Create the Monday scheduled task from `founder/claude-project/weekly-review-task.md`, in a session with artifact tools.
 3. Add the solo-to-scale marketplace on claude.ai (`Payaml3/solo-to-scale`), so Project chats get the decision skills.
 4. Add the repo secrets the founder items list. Never commit them.
-5. Before stage 6, where `product-design` is first used, confirm the design skills are available. At stage 11, run `design-system` to set the foundations.
+5. Before stage 6, where `product-design` is first used, confirm the design skills are available. At stage 9, `product-design` writes the design brief; at stage 11, `design-system` sets the foundations. Both gate the build.
 
 Close with a short close: `Done / Pending / Next`, and a "Next session" line naming the project, model and first message.

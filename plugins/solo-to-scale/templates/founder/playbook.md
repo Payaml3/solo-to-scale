@@ -1,6 +1,6 @@
 # Playbook: the journey from zero to scale
 
-30 stages in 7 phases (A to G). A stage starts only when the previous gate is passed or explicitly deferred. Inside stages 13 to 17, work ships in slices, built one story group per session. Status is one of To do, Current, Passed or Deferred. Evidence says what shows the gate was met: decision IDs from the registers, files (`founder/sources/interviews.md`) or links, and the dashboard's Venture stage ladder shows it next to each gate. `weekly-review` proposes status and evidence changes; the founder approves them. Engineering-standards gates point to `docs/engineering-standards.md`.
+30 stages in 7 phases (A to G). A stage starts only when the previous gate is passed or explicitly deferred. Inside stages 13 to 17, work ships in slices, built one story group per session. Status is one of To do, Current, Passed or Deferred. Evidence says what shows the gate was met: decision IDs from the registers, files (`founder/sources/interviews.md`) or links, and the dashboard's Venture stage ladder shows it next to each gate. `weekly-review` proposes status and evidence changes; the founder approves them. Engineering-standards gates point to `docs/engineering-standards.md`. **The design gate:** no build (stage 13) starts until stage 9 (Product design) and stage 11 (Design system) are Passed and `DESIGN.md` and `docs/design/brief.md` exist; `check_governance` fails a branch that starts the build without them.
 
 ## Stages
 
@@ -14,9 +14,9 @@
 | 6 | B Define | UX prototype and test | P 02, Code | Tested with 3 to 5 target users |  | To do |
 | 7 | B Define | MVP scope and launch criteria | P 02 | Founder approves scope |  | To do |
 | 8 | C Specify and design | Specify | Code | Every open item answered or deferred |  | To do |
-| 9 | C Specify and design | Screen specs | Code | Criteria linked to stories |  | To do |
+| 9 | C Specify and design | Product design | Code | Founder approves the design brief (`docs/design/brief.md`: references, chosen look, flows); screen specs with criteria linked to stories |  | To do |
 | 10 | C Specify and design | Plan the system | Code, P 03 | Founder approves architecture, threat model and Well-Architected review; threat model (STRIDE), Well-Architected review, scale-ready defaults in the constitution |  | To do |
-| 11 | C Specify and design | Design system | Code | Founder approves foundations |  | To do |
+| 11 | C Specify and design | Design system | Code | Founder approves foundations; `DESIGN.md` and `tokens.json` follow the brief |  | To do |
 | 12 | C Specify and design | Tasks and story groups | Code | `analyze` finds no contradictions |  | To do |
 | 13 | D Build and prove | Build, one session per story group | Code 04 | Definition of done met |  | To do |
 | 14 | D Build and prove | Test at 5 levels | CI, founder | All levels pass |  | To do |

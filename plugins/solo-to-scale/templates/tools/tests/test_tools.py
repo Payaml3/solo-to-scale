@@ -61,6 +61,8 @@ PLAYBOOK = """## Stages
 
 | # | Phase | Stage | Where | Gate | Status |
 | --- | --- | --- | --- | --- | --- |
+| 9 | C Specify and design | Product design | Code | Approved | Passed |
+| 11 | C Specify and design | Design system | Code | Approved | Passed |
 | 12 | C Specify and design | Tasks and story groups | Code | analyze finds no contradictions | Passed |
 | 13 | D Build and prove | Build | Code 04 | Definition of done met | Current |
 """
@@ -80,6 +82,8 @@ def repo(tmp_path: Path) -> Path:
     write(root / "founder/playbook.md", PLAYBOOK)
     write(root / "founder/operating-protocol.md", f"# Protocol\n\n{MARK} → Close\n")
     write(root / "HANDOFF.md", "# HANDOFF\n")
+    write(root / "DESIGN.md", "# Design\n")
+    write(root / "docs/design/brief.md", "# Design brief\n")
     write(root / "AGENTS.md", "# Example Startup\n")
     write(root / "CLAUDE.md", "@AGENTS.md\n")
     git(root, "init", "-q")
@@ -163,6 +167,37 @@ def test_stage_passed_needs_handoff(repo):
     subprocess.run([sys.executable, str(repo / "tools/build_roadmap.py")], check=True, capture_output=True)
     commit(repo)
     assert any("stage 13 marked done" in e for e in gov(repo)[0])
+
+
+def test_design_gate_before_the_build(repo):
+    early = PLAYBOOK.replace("| Approved | Passed |", "| Approved | To do |")
+    early = early.replace("| Passed |\n| 13", "| Current |\n| 13").replace("met | Current |", "met | To do |")
+    write(repo / "founder/playbook.md", early)
+    (repo / "DESIGN.md").unlink()
+    (repo / "docs/design/brief.md").unlink()
+    subprocess.run([sys.executable, str(repo / "tools/build_roadmap.py")], check=True, capture_output=True)
+    commit(repo)
+    git(repo, "branch", "-f", "main", "HEAD")
+    assert not any("design gate" in x for x in gov(repo)[0] + gov(repo)[1])
+    write(repo / "founder/playbook.md", early.replace("met | To do |", "met | Current |"))
+    subprocess.run([sys.executable, str(repo / "tools/build_roadmap.py")], check=True, capture_output=True)
+    commit(repo)
+    errors = [e for e in gov(repo)[0] if "design gate" in e]
+    assert errors and "stage 9 is not Passed" in errors[0] and "DESIGN.md is missing" in errors[0]
+    write(repo / "founder/playbook.md", PLAYBOOK)
+    write(repo / "DESIGN.md", "# Design\n")
+    write(repo / "docs/design/brief.md", "# Design brief\n")
+    write(repo / "HANDOFF.md", "# HANDOFF\n\nDesign approved.\n")
+    subprocess.run([sys.executable, str(repo / "tools/build_roadmap.py")], check=True, capture_output=True)
+    commit(repo)
+    assert not any("design gate" in x for x in gov(repo)[0] + gov(repo)[1])
+
+
+def test_design_gate_only_warns_when_the_build_had_started(repo):
+    (repo / "DESIGN.md").unlink()
+    commit(repo)
+    errors, warnings = gov(repo)
+    assert any("DESIGN.md is missing" in w for w in warnings) and not any("design gate" in e for e in errors)
 
 
 def test_stale_view_data_fails(repo):
