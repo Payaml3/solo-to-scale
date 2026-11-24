@@ -1,13 +1,23 @@
 # Changelog
 
-## v2.5.0 (2026-11-24)
+## v2.6.0 (2026-11-24)
 
 A Gantt chart on the dashboard's Roadmap tab.
 
-- **Timeline panel** at the top of Roadmap: phases A to G with their stages, then the slices, as bars over time. A dashed box is the plan, a solid bar is what happened (green done, amber in progress, red past its target), with a line for today. Each phase bar spans its stages. Hover a bar for its dates. It works in both themes; on a phone the labels stay put and the chart scrolls sideways, opening on today.
+- **Timeline panel** on Roadmap, under the counts: phases A to G with their stages, then the slices, as bars over time. A dashed box is the plan, a solid bar is what happened (green done, amber in progress, red past its target), with a line for today. Each phase bar spans its stages. Hover a bar for its dates. It works in both themes; on a phone the labels stay put and the chart scrolls sideways, opening on today.
 - **Planned dates** come from optional `Start` and `Target` columns in `founder/playbook.md` and `start` and `target` on each slice in `founder/slices.json` (YYYY-MM-DD). Nothing is required: undated items are left out and the panel says how to add dates.
 - **Actual dates** come from git: the commit that first moved a stage or slice to in progress, and the one that moved it to done. The dashboard workflow now checks out full history so it can read them. Existing repos get both with `upgrade`.
 - **Tests:** 2 new: planned and actual dates from a repo's history, and a build without git.
+
+## v2.5.0 (2026-11-24)
+
+The Overview shows the journey from zero to scale simply, and keeps only what a founder checks every day.
+
+- **Your journey, on the Overview.** The 7 phases as 7 cards, each with its question in plain words ("Is the problem real?", "What do we sell, and to whom?"), its stages as cells, how many are passed, and whether it is done, current (**You are here**) or ahead. Under them, the current phase's stages as steps, then the current stage: what "done" means, who leads it, what comes next, what blocks it and which agents are on it now. On a phone the phases stack as a list. Every card opens the full ladder.
+- **Who leads a stage** comes from the playbook's Where column: `P 02` or `Code 04` is that role, `P 00` is you with the chief of staff. The roadmap data now carries `where` for each stage.
+- **A shorter Overview.** Four tiles (needs you, agents working, runway, AI spend), each opening its tab; the top five of Needs you; your journey; your AI team with the latest four activities; the goals.
+- **Moved, not removed.** The full stage ladder with gates and evidence is now in Scope and journey (it replaces the plain phase list there). Money is at the top of Costs. The last 14 days and recent merges are in Agent activity. Slices done, open tickets, decisions waiting and stuck work are tiles on Roadmap. The "This stage" panel is folded into the journey.
+- **Tests:** 1 new: the Overview's order and contents, where each moved panel went, and the Where column reaching the page.
 
 ## v2.4.0 (2026-11-24)
 
