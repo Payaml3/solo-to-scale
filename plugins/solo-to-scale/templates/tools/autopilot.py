@@ -46,7 +46,7 @@ import heartbeat  # noqa: E402
 import tickets  # noqa: E402
 
 OK, ERROR = 0, 5
-PLAN_LABEL, STAGE_PREFIX = "autopilot-plan", "stage:"
+PLAN_LABEL, STAGE_PREFIX, GOAL_TREE = "autopilot-plan", "stage:", "goal-tree"
 DEFAULTS = {"enabled": False, "plan_every_hours": 24, "max_runs_per_day": 12, "max_parallel": 2}
 # The model each role runs on (roles/*.yaml `tier`): strongest for architecture, mid-tier for the rest.
 MODELS = {"architect": "opus"}
@@ -97,12 +97,12 @@ def gaps(root: Path, open_tickets: list[dict[str, Any]], today: dt.date) -> list
         with_init = {str(i.get("key_result")) for i in goals.initiatives(data)}
         for o in goals.active(data):
             for kr in o.get("key_results") or []:
-                if isinstance(kr, dict) and str(kr.get("id")) not in with_init:
+                if isinstance(kr, dict) and str(kr.get("id")) not in with_init and f"kr:{kr.get('id')}" not in have:
                     out.append({"key": f"kr:{kr.get('id')}", "what": f"Key result {kr.get('id')} "
                                 f"{kr.get('metric', '')} has no initiative: propose one in founder/goals.json (okr-plan)"})
         need = goals.due(root, data, today)
-        if need:
-            out.append({"key": "goals", "what": f"Goal tree: {need}"})
+        if need and GOAL_TREE not in have:
+            out.append({"key": GOAL_TREE, "what": f"Goal tree: {need}"})
     return out
 
 
@@ -128,14 +128,16 @@ def plan_body(found: list[dict[str, str]], hint: str) -> str:
         *([f"- next slice to build: {hint}"] if hint else []), "",
         "## How",
         "1. Read AGENTS.md, HANDOFF.md, `python tools/goals.py show` and `python tools/tickets.py queue chief-of-staff`.",
-        "2. Where an open ticket already does the work, label it (`stage:<n>` or `initiative:<id>`) instead of"
-        " opening another.",
+        "2. Each gap's key (in backticks) is the label that covers it. Where an open ticket already does the work,"
+        " add that label to it instead of opening another.",
         "3. Otherwise open one ticket per role and outcome with `python tools/tickets.py new <role> ... --stage <n>`"
-        " or `--initiative <id>`, ordered with `--blocked-by`, with this ticket as `--parent`. Then"
-        " `tickets.py plan <this ticket>` when the plan gate is on.",
-        "4. Anything only the founder can do (a decision, a secret, money, a go-live) goes through the `gate` skill"
+        " or `--initiative <id>`, ordered with `--blocked-by`, with this ticket as `--parent`; for any other gap,"
+        " add its key as a label to the ticket that covers it.",
+        "4. With the plan gate on (founder/gates.json), run `python tools/tickets.py plan <this ticket> --by"
+        " chief-of-staff --note \"<why>\"` before finishing: no sub-ticket can start until the founder approves it.",
+        "5. Anything only the founder can do (a decision, a secret, money, a go-live) goes through the `gate` skill"
         " or `tickets.py escalate`: it shows in Needs you.",
-        "5. `tickets.py done` this ticket once every gap has a ticket.", "",
+        "6. `tickets.py done` this ticket once every gap has a ticket.", "",
         "## Done when", "> Every gap above is covered by an open ticket, or escalated to the founder.", "",
         "A ticket never approves anything; founder gates still apply."])
 
@@ -196,6 +198,22 @@ def has_work(hub: tickets.Hub, role: str, open_tickets: list[dict[str, Any]]) ->
     return ""
 
 
+def ask_for_plans(hub: tickets.Hub, open_tickets: list[dict[str, Any]]) -> list[str]:
+    """Sub-tickets waiting on a plan nobody asked the founder for: ask once per parent, as the chief of staff."""
+    if not tickets.plan_gate_on(tickets.hub_root(hub)):
+        return []
+    asked, out = set(), []
+    for t in open_tickets:
+        parents = tickets.links(t.get("body", ""))["parent"]
+        if not parents or parents[0] in asked or tickets.latest_plan(hub, parents[0]) is not None:
+            continue
+        asked.add(parents[0])
+        note = "Opened by the autopilot: these sub-tickets can't start until you approve the plan."
+        if tickets.cmd_plan(argparse.Namespace(n=parents[0], by="chief-of-staff", note=note), hub) == tickets.OK:
+            out.append(f"plan: asked the founder to approve #{parents[0]}'s plan")
+    return out
+
+
 def runs_today(hub: tickets.Hub, now: dt.datetime) -> int:
     month = now.strftime("%Y-%m")
     day = now.strftime("%Y-%m-%d")
@@ -212,6 +230,7 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
     made = plan(hub, root, cfg, now, open_tickets=open_tickets)
     if made:
         open_tickets = hub.tickets("open")
+    asked = ask_for_plans(hub, open_tickets)
     left = int(cfg["max_runs_per_day"]) - runs_today(hub, now)
     if left <= 0:
         return [], [f"stop: {cfg['max_runs_per_day']} runs today already (autopilot.max_runs_per_day)"]
@@ -221,7 +240,7 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
     if ccap is not None and cused >= ccap:
         return [], [f"stop: the company AI budget is spent (${cused:.2f} of ${ccap:.2f})"]
     ctl = control.read(hub, root)
-    out, why = [], []
+    out, why = [], list(asked)
     for role in tickets.ROLES:
         rcfg = (pol.get("roles") or {}).get(role) or {}
         cap, used, _ = heartbeat.standing(hub, root, pol, role, month, totals)
