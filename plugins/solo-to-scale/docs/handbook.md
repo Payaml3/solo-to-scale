@@ -496,6 +496,8 @@ Before relying on a plugin in Claude Code, start a session and ask it to list it
 
 On screens covered by the design system, taste may suggest changes, but it may not add colours, fonts or components without a `D-` decision.
 
+**Design references.** Agents design better from a written reference than from adjectives. [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (MIT) holds DESIGN.md analyses of about 70 companies (Linear, Vercel, Stripe, Supabase, PostHog, Notion and more); at stage 11, taste may start each proposed direction from one of them, and the chosen one becomes the repo's own `DESIGN.md`. Component libraries follow the stack rule: shadcn/ui, 21st.dev, Magic UI and Aceternity UI only where the interface already uses React; Uiverse snippets are plain CSS and fit anywhere. Galleries such as Mobbin, Refero, Land-book and Component Gallery are for the founder to browse, not to install. The dashboard and the portfolio follow the plugin's own `DESIGN.md`.
+
 **Considered and not used: claude-mem.** It stores automatic summaries of past sessions outside the repo, and adds context at the start of every session.
 
 - **It would be a second memory.** The repo is the memory: `HANDOFF.md`, `status.md` and the registers hold only what was approved.
