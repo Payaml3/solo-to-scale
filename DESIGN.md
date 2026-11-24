@@ -18,7 +18,7 @@ colors:
     link: "#0068d6"
     done: "#1a7f37"
     progress: "#ab570a"
-    todo: "#8f8f8f"
+    todo: "#6e6e6e"         # 5:1 on white; #8f8f8f failed AA as pill text
     waiting: "#cb2a2f"
     group-business: "#ab570a"
     group-product: "#7928ca"
@@ -57,6 +57,14 @@ spacing: [4px, 8px, 12px, 16px, 20px, 24px, 32px]
 shadow:
   light: "0 1px 1px rgba(0,0,0,.02), 0 2px 2px rgba(0,0,0,.04)"
   dark: none
+motion:
+  ease-out: "cubic-bezier(0.23, 1, 0.32, 1)"       # everything that enters or responds
+  ease-in-out: "cubic-bezier(0.77, 0, 0.175, 1)"   # things that move across the screen
+  press: { scale: 0.97, duration: 160ms }
+  hover: { duration: 150ms, easing: ease }
+  tab-underline: 240ms
+  tab-enter: { duration: 200ms, from: "opacity 0, translateY 4px" }
+  bar-fill: 600ms
 ---
 
 # DESIGN.md: solo-to-scale views
@@ -91,9 +99,19 @@ The pages are operator tools a founder reads every day, so they should feel like
 
 - Max width 1180px, 16px gutters on phones, no horizontal page scroll (wide tables scroll inside `.table-wrap`).
 - Cards: 8px radius, 1px `line` border, `--shadow`, 20px padding (tiles 14px 16px). Never a single heavy drop shadow.
-- Sticky tab bar: translucent `paper` with a backdrop blur, 2px ink underline on the selected tab, hover lifts the label to `ink`.
+- Header: title on the left, the theme switch (a pill with a sun or moon icon) on the right. Nothing floats over the content.
+- Sticky tab bar: translucent `paper` with a backdrop blur, one 2px ink underline that slides to the selected tab, hover lifts the label to `ink`. The strip scrolls sideways with its scrollbar hidden and fades at an edge that has more tabs.
 - Tables: muted 0.75rem headers on a `sunk` band, 9px 10px cells, hairline rows, `sunk` row hover.
 - Inputs and selects: 36px high, 6px radius, hairline border.
+
+## Motion
+
+Motion explains a change or confirms an action; it never decorates. The review behind these rules is in `DESIGN-BRIEF.md`.
+
+- Only `transform` and `opacity` animate. Curves are the `motion` tokens above, never `ease-in`; UI motion stays under 300ms (the one-time bar fill is 600ms).
+- The tab underline slides; the opened tab's content fades up 4px. Progress bars fill from the left once when shown. Pressable things scale to 0.97 while pressed (tiles and journey cards to 0.99). The toast rises in. A working agent's status dot breathes; nothing else loops.
+- Hover changes only on devices with a fine pointer (`@media (hover: hover) and (pointer: fine)`), and never carry meaning on their own.
+- Reduced motion: no movement, no fill, no breathing; short fades stay.
 
 ## Do
 
@@ -106,6 +124,7 @@ The pages are operator tools a founder reads every day, so they should feel like
 - Don't add a brand hue, a gradient or a second accent.
 - Don't load anything from outside the page.
 - Don't use uppercase micro-labels or weight 700.
+- Don't animate layout properties (width, height, margin), loop anything but the live dot, or animate in a way that hides content until it ends.
 - Don't copy another company's logo, wordmark or name into the page.
 
 ## Where this came from

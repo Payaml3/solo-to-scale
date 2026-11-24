@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.8.0 (2026-11-24)
+
+A design pass on the dashboard and the portfolio with the design skills from v2.4.0: a scored review, layout and accessibility fixes, and motion with a job.
+
+- **The review** is in `DESIGN-BRIEF.md`: each dimension scored 0 to 10 before and after, with the advice taken from UI/UX Pro Max and Emil Kowalski's skills. Everything that scored under 8 was fixed.
+- **Layout and UX.** The theme switch moved from a floating pill over the content into the header, with a sun or moon icon. On a phone, goal rows stack instead of squeezing to one word a line, and the tab strip fades at an edge that has more tabs. Goal bars follow their pace: green achieved, ink on track, amber behind (they were amber whenever a goal was short of 100%).
+- **Accessibility.** The light `todo` grey is now `#6e6e6e` (5:1 on white; it was 3.3:1, under AA). Focus rings on document groups, cards and the document list. No more weight-700 text or uppercase labels, as `DESIGN.md` says.
+- **Motion,** only `transform` and `opacity`, with a strong ease-out: the tab underline slides, a tab's content fades up as it opens, progress bars fill once, pressables scale on press, the toast rises in, and a working agent's status dot breathes. Hover effects only with a mouse. Reduced motion keeps short fades and drops the rest.
+- **`DESIGN.md`** gains motion tokens and a Motion section. Existing repos get the new pages with `upgrade`.
+
 ## v2.7.0 (2026-11-24)
 
 The goal tree: a North Star, short OKR cycles and initiatives, so every ticket traces back to one number.

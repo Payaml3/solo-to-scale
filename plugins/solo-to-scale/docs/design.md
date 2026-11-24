@@ -83,4 +83,4 @@ On screens covered by the design system, no skill may add colours, fonts or comp
 
 ## The plugin's own pages
 
-The dashboard and the portfolio follow the plugin repo's own `DESIGN.md` (a Vercel-inspired look from awesome-design-md, with system fonts because the pages' security policy blocks web fonts). CI fails if the colours in `DESIGN.md` and the pages' CSS disagree.
+The dashboard and the portfolio follow the plugin repo's own `DESIGN.md` (a Vercel-inspired look from awesome-design-md, with system fonts because the pages' security policy blocks web fonts). CI fails if the colours in `DESIGN.md` and the pages' CSS disagree. Their design review (scores per dimension, references, and the motion rules from Emil Kowalski's skills and UI/UX Pro Max) is in the plugin repo's `DESIGN-BRIEF.md`.
