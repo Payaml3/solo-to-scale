@@ -4,6 +4,11 @@
 
 - **A burst of ticket events costs two runs, not dozens.** The 30-second sleep-and-cancel debounce still billed a minute for every event: opening ten tickets with their labels made about 30 events, and each started the `agents`, `dashboard` and `needs-you` workflows, so about 90 billed minutes. The three workflows now queue instead: one run starts at once, and each newer event replaces the run waiting behind it, which never starts and costs nothing. A burst now makes at most two runs of each, and nothing sleeps.
 
+## v2.12.2 (2026-11-25)
+
+- **The team shows why an agent is waiting.** An agent with a ready ticket now reads "queued for the next run", or "waiting: run cap" once today's `autopilot.max_runs_per_day` runs are used, instead of "idle". The team headline and "Blocking this stage" say when the cap is used and that the agents start again at midnight UTC.
+- **A run is counted once.** `autopilot.py finish` no longer records a second, empty run when the agent logged its cost with a wrong session link, which used up the daily cap early.
+
 ## v2.12.1 (2026-11-25)
 
 - **Agents can run the tests.** In a uv project (`uv.lock`), the `agents` workflow now installs the project's dependencies before the run, so an agent runs the tests and linters before it hands off instead of leaving them for CI.

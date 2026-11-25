@@ -245,3 +245,10 @@ def test_a_role_whose_last_run_did_nothing_waits_an_hour() -> None:
 def test_every_run_today_counts_toward_the_cap() -> None:
     runs = [run("qa", "no-work", 10), run("engineer", "worked", 20, 1), run("qa", "no-work", 60 * 24)]
     assert autopilot.runs_today(None, NOW, runs) == 2  # type: ignore[arg-type]
+
+
+def test_finish_does_not_count_a_run_twice_when_the_agent_logged_a_wrong_link() -> None:
+    runs = [run("qa", "worked", 3, 30)]
+    assert autopilot.logged_lately(runs, "qa", "https://github.com/o/r/actions/runs/9", NOW)
+    assert not autopilot.logged_lately(runs, "engineer", "https://github.com/o/r/actions/runs/9", NOW)
+    assert not autopilot.logged_lately([run("qa", "worked", 120, 30)], "qa", "https://github.com/o/r/actions/runs/9", NOW)
