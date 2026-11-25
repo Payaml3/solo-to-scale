@@ -309,7 +309,7 @@ def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
     wf = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "dashboard.yml"
     if wf.exists():
         text = wf.read_text(encoding="utf-8")
-        assert "issue_comment:" in text and "sleep 30" in text and "cancel-in-progress: true" in text
+        assert "issue_comment:" in text and "sleep" not in text and "cancel-in-progress: false" in text
 
 
 def test_the_stage_ladder_shows_every_gate_with_its_evidence(root, fake):

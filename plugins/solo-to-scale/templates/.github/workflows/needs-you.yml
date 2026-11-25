@@ -21,13 +21,12 @@ jobs:
   notify:
     if: github.event_name != 'issue_comment' || github.event.comment.user.type != 'Bot'
     runs-on: ubuntu-latest
-    concurrency:   # on the job, so a skipped run (an agent's comment) never cancels a message still waiting
+    # On the job, so a skipped run (an agent's comment) never joins it. A burst of events makes at most two runs: one
+    # runs, and each newer event replaces the one waiting behind it, which never starts and so costs no minutes.
+    concurrency:
       group: needs-you
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
-      - name: wait half a minute, so a burst of events makes one message (a newer event cancels this one)
-        if: github.event_name == 'issues' || github.event_name == 'issue_comment'
-        run: sleep 30
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
