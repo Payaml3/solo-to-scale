@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.12.3 (2026-11-25)
+
+- **The doctor stops crying wolf.** "Dashboard build" now judges the last run that actually ran: a skipped run (an agent's comment) or a cancelled one (a newer run took over) no longer shows as broken. With the autopilot on, "Heartbeat runs" only lists a quiet role that has an open ticket; a role with nothing to do isn't started, so it isn't a setup problem.
+
 ## v2.12.2 (2026-11-25)
 
 - **The team shows why an agent is waiting.** An agent with a ready ticket now reads "queued for the next run", or "waiting: run cap" once today's `autopilot.max_runs_per_day` runs are used, instead of "idle". The team headline and "Blocking this stage" say when the cap is used and that the agents start again at midnight UTC.

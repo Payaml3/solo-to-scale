@@ -132,6 +132,33 @@ def test_github_labels_runs_and_the_dashboard_build(root):
     assert found["labels"]["status"] == found["runs"]["status"] == found["dashboard_run"]["status"] == "ok"
 
 
+def test_a_skipped_dashboard_run_is_not_a_broken_build(root):
+    at = NOW.strftime("%Y-%m-%dT%H:%M:%SZ")
+    hub = Hub(labels=list(doctor.LABELS), secrets=[], runs=[
+        {"status": "completed", "conclusion": "skipped", "updated_at": at, "html_url": "x/2"},
+        {"status": "completed", "conclusion": "cancelled", "updated_at": at, "html_url": "x/3"},
+        {"status": "completed", "conclusion": "success", "updated_at": at, "html_url": "x/1"}])
+    assert by_key(doctor.run(root, now=NOW, hub=hub))["dashboard_run"]["status"] == "ok"
+
+
+def test_with_the_autopilot_a_quiet_role_without_a_ticket_is_fine(root):
+    hb = json.loads((root / "founder" / "heartbeats.json").read_text(encoding="utf-8"))
+    hb["autopilot"] = {"enabled": True}
+    (root / "founder" / "heartbeats.json").write_text(json.dumps(hb), encoding="utf-8")
+
+    class Busy(Hub):
+        open_tickets: list = []
+
+        def tickets(self, state="open", label="ticket"):
+            return self.open_tickets if label == "ticket" else super().tickets(state, label)
+    hub = Busy(labels=list(doctor.LABELS), secrets=[])
+    found = by_key(doctor.run(root, now=NOW, hub=hub))
+    assert found["runs"]["status"] == "ok" and "engineer" in found["runs"]["detail"], "no ticket, nothing to run"
+    hub.open_tickets = [{"number": 7, "labels": [{"name": "role:engineer"}]}]
+    found = by_key(doctor.run(root, now=NOW, hub=hub))
+    assert found["runs"]["status"] == "todo", "a role with a ticket that hasn't run is worth a look"
+
+
 def test_github_trouble_is_unknown_never_a_crash(root):
     class Down(Hub):
         def api(self, path, *args, payload=None):
