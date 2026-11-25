@@ -1,8 +1,12 @@
 # Changelog
 
-## v2.12.3 (2026-11-25)
+## v2.12.4 (2026-11-25)
 
 - **A burst of ticket events costs two runs, not dozens.** The 30-second sleep-and-cancel debounce still billed a minute for every event: opening ten tickets with their labels made about 30 events, and each started the `agents`, `dashboard` and `needs-you` workflows, so about 90 billed minutes. The three workflows now queue instead: one run starts at once, and each newer event replaces the run waiting behind it, which never starts and costs nothing. A burst now makes at most two runs of each, and nothing sleeps.
+
+## v2.12.3 (2026-11-25)
+
+- **The doctor stops crying wolf.** "Dashboard build" now judges the last run that actually ran: a skipped run (an agent's comment) or a cancelled one (a newer run took over) no longer shows as broken. With the autopilot on, "Heartbeat runs" only lists a quiet role that has an open ticket; a role with nothing to do isn't started, so it isn't a setup problem.
 
 ## v2.12.2 (2026-11-25)
 
