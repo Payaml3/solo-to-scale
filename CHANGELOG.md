@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.12.3 (2026-11-25)
+
+- **A burst of ticket events costs two runs, not dozens.** The 30-second sleep-and-cancel debounce still billed a minute for every event: opening ten tickets with their labels made about 30 events, and each started the `agents`, `dashboard` and `needs-you` workflows, so about 90 billed minutes. The three workflows now queue instead: one run starts at once, and each newer event replaces the run waiting behind it, which never starts and costs nothing. A burst now makes at most two runs of each, and nothing sleeps.
+
 ## v2.12.1 (2026-11-25)
 
 - **Agents can run the tests.** In a uv project (`uv.lock`), the `agents` workflow now installs the project's dependencies before the run, so an agent runs the tests and linters before it hands off instead of leaving them for CI.

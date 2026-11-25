@@ -26,17 +26,16 @@ jobs:
   pick:
     if: github.event_name != 'issue_comment' || github.event.comment.user.type != 'Bot'
     runs-on: ubuntu-latest
+    # A burst of ticket events makes at most two checks: one runs, and each newer event replaces the one waiting
+    # behind it, which never starts and so costs no minutes. (A sleep-and-cancel debounce billed a minute per event.)
     concurrency:
       group: agents-pick
-      cancel-in-progress: true
+      cancel-in-progress: false
     outputs:
       run: ${{ steps.due.outputs.run }}
       matrix: ${{ steps.due.outputs.matrix }}
       parallel: ${{ steps.due.outputs.parallel }}
     steps:
-      - name: wait a little, so a burst of events makes one check (a newer event cancels this one)
-        if: github.event_name == 'issues' || github.event_name == 'issue_comment'
-        run: sleep 30
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
