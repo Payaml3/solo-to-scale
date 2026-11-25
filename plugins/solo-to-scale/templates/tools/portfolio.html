@@ -437,7 +437,7 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
 
   // --- shell ----------------------------------------------------------------------------------------------
   document.getElementById("title").textContent = D.name || "Portfolio";
-  document.getElementById("meta").textContent = "Built " + when(D.built) + " UTC from " + V.length + " venture summaries. Rebuilt every hour; a summary older than " + D.stale_hours + " hours is marked stale.";
+  document.getElementById("meta").textContent = "Built " + when(D.built) + " UTC from " + V.length + " venture summaries. Rebuilt every six hours; a summary older than " + D.stale_hours + " hours is marked stale.";
   var tabs = document.getElementById("tabs"), main = document.getElementById("main"), sections = {}, buttons = {};
   TABS.forEach(function (t) {
     var b = el("button", { type: "button", role: "tab", id: "tab-" + t[0], "aria-controls": "panel-" + t[0], on: { click: function () { select(t[0], true); } } }, t[1],

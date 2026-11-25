@@ -16,7 +16,7 @@ How the team works on its own:
    it into tickets for the right roles (`coordinate` skill), so the founder never has to hand out tasks.
 2. Waking. `due` lists every role that has work right now: its own claimed ticket to resume, or a ready one
    (unclaimed, unblocked, claimable under the plan gate). The `agents` workflow runs it on every ticket event
-   and every hour, and starts one Claude Code run per role (the `heartbeat` skill). A handoff or a newly
+   and every three hours, and starts one Claude Code run per role (the `heartbeat` skill). A handoff or a newly
    unblocked ticket therefore starts the next role straight away.
 3. Limits. Only roles whose heartbeat is on, with a budget that isn't spent, not paused, and with no run
    active. `autopilot.max_runs_per_day` caps all runs together; founder gates are untouched.

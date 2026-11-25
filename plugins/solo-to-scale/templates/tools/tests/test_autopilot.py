@@ -171,7 +171,10 @@ def test_notify_mentions_the_founder_once_per_new_item_and_sends_one_digest_a_da
     assert sent["digest"] and "Daily digest: 2 things" in fake.comments[n][-1]["body"]
     fake.comments[n][-1]["created_at"] = NOW.isoformat()
     assert not notify.push(root, h, items, NOW.replace(hour=7), "auto")["digest"]  # once a day
-    assert not notify.push(root, h, items, NOW.replace(hour=9), "auto")["digest"]  # only at the digest hour
+    assert not notify.push(root, h, items, NOW.replace(hour=9), "auto")["digest"]  # still once a day
+    assert not notify.push(root, h, items, NOW.replace(day=25, hour=6), "auto")["digest"]  # not before its hour
+    fake.comments[n][-1]["created_at"] = NOW.replace(day=25).isoformat()
+    assert notify.push(root, h, items, NOW.replace(day=25, hour=9), "auto")["digest"]  # the first run after it
     assert notify.push(root, h, [], NOW, "auto")["new"] == 0
     assert "Nothing waits on you." in fake.issues[n]["body"]
 
