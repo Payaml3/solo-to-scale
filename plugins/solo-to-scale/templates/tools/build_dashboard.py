@@ -313,7 +313,12 @@ def costs(hub: tickets.Hub, root: Path, month: str, now: dt.datetime | None = No
     total = round(sum(totals.values()), 4)
     today = (now or dt.datetime.now(dt.timezone.utc)).date()
     ccap, _, cbase = heartbeat.standing(hub, root, pol, heartbeat.COMPANY, month, totals)
-    return {"month": month, "roles": roles, "entries": runs[-200:], "total": total,
+    auto = pol.get("autopilot") if isinstance(pol.get("autopilot"), dict) else {}
+    cap_runs = auto.get("max_runs_per_day", 12)
+    autopilot = {"enabled": auto.get("enabled") is True,
+                 "cap": cap_runs if isinstance(cap_runs, int) and not isinstance(cap_runs, bool) else 12,
+                 "runs_today": sum(1 for r in runs if r["at"][:10] == today.isoformat())}
+    return {"month": month, "roles": roles, "entries": runs[-200:], "total": total, "autopilot": autopilot,
             "company": {"cap": ccap, "base": cbase or None, "used": total},
             "forecast": heartbeat.forecast(total, month, today),
             "cap_total": round(sum(r["cap"] or 0 for r in roles), 4),

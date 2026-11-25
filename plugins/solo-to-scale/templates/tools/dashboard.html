@@ -743,6 +743,9 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     return "";
   }
   // One record per role: heartbeat, tickets, latest activity, spend and stories. State: working, blocked, idle or off.
+  // The autopilot's daily run cap: a role with a ready ticket waits for the next run, or for tomorrow when the cap is used.
+  var AUTO = (function (a) { a = a || {}; return { enabled: !!a.enabled, cap: a.cap, used: a.runs_today || 0,
+    capped: !!a.enabled && typeof a.cap === "number" && (a.runs_today || 0) >= a.cap }; })(costs.autopilot);
   function agents() {
     var beats = R.heartbeats || {}, spend = {}, keys = {};
     (costs.roles || []).forEach(function (r) { spend[r.role] = r; });
@@ -758,12 +761,15 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
       var last = activity.filter(function (a) { return a.role === k; })[0];
       var stories = (team.tasks || []).filter(function (t) { return t.kind === "story" && t.role === k; });
       var why = pausedWhy(k);
-      var state = why ? "paused" : blocked.length ? "blocked" : claimed.length ? "working" : b.enabled ? "idle" : "off";
+      var ready = mine.filter(function (t) { return !t.claimed && !t.blocked; });
+      var state = why ? "paused" : blocked.length ? "blocked" : claimed.length ? "working" :
+        !b.enabled ? "off" : ready.length && AUTO.enabled ? (AUTO.capped ? "capped" : "queued") : "idle";
       return { role: k, paused: why, b: b, mine: mine, claimed: claimed, blocked: blocked, last: last, c: spend[k] || {}, state: state,
         stories: stories, storiesDone: stories.filter(function (t) { return t.status === "done"; }).length };
     });
   }
-  var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off", paused: "paused by you" };
+  var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off", paused: "paused by you",
+    queued: "queued for the next run", capped: "waiting: run cap" };
   function statePill(state) { return pill(STATE_WORDS[state], state === "working" ? "done" : state === "blocked" || state === "paused" ? "blocked" : "todo"); }
   var CTL = (G.ok && G.control) || {};
   function pausedWhy(role) { return role === "board" ? null : ((CTL.roles || {})[role] || CTL.all || null); }
@@ -1060,6 +1066,7 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
     var lead = cur ? leadOf(cur) : null;
     var crew = agents(), busy = crew.filter(function (a) { return a.state === "working" || a.state === "blocked"; });
     var blockers = [];
+    if (AUTO.capped && crew.some(function (a) { return a.state === "capped"; })) blockers.push(el("li", null, pill("run cap", "todo"), " Today's " + AUTO.cap + " agent runs are used; ready work waits until midnight UTC"));
     crew.forEach(function (a) { a.blocked.forEach(function (t) { blockers.push(el("li", null, avatar(a.role, null, true), roleName(a.role) + " is blocked on ", link("#" + t.number + " " + t.title, t.url))); }); });
     (road.blockers || []).forEach(function (b) { blockers.push(el("li", null, pill("founder item", "todo"), " ", b.item)); });
     if (waiting.length) blockers.push(el("li", null, pill("approval", "waiting"), " ", el("a", { href: "#needs", text: waiting.length + " approval" + (waiting.length > 1 ? "s" : "") + " waiting for you" })));
@@ -1293,7 +1300,9 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
 
     var nWork = crewAll.filter(function (a) { return a.state === "working"; }).length, nBlock = crewAll.filter(function (a) { return a.state === "blocked" || a.state === "paused"; }).length;
-    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (crewAll.length - nWork - nBlock) + " idle or off. Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
+    var nWait = crewAll.filter(function (a) { return a.state === "queued" || a.state === "capped"; }).length;
+    var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (nWait ? nWait + " waiting for a run, " : "") + (crewAll.length - nWork - nBlock - nWait) + " idle or off. "
+      + (AUTO.capped ? "Today's " + AUTO.cap + " autopilot runs are used: the agents start again at midnight UTC (autopilot.max_runs_per_day in founder/heartbeats.json). " : "") + "Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
       el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),
       el("p", { cls: "note", style: "margin:4px 0 0" }, el("a", { href: "#team", text: "Every agent's card in Team and board" }), " · ", el("a", { href: "#activity", text: "what they did, in Agent activity" }))) : null;
     return [G.ok ? null : ghMissing(), setupPanel(), tiles,

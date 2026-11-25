@@ -552,3 +552,18 @@ def test_the_overview_shows_the_journey_simply_and_the_rest_moves_to_its_tabs(ro
     # the journey: 7 phases in plain words, the current phase's stages, the gate, who leads, what blocks it
     assert '"Your journey"' in html and "You are here" in html and "Is the problem real?" in html
     assert '"Done when"' in html and '"Led by"' in html and '"Blocking this stage"' in html and '"Next"' in html
+
+
+def test_the_autopilot_run_cap_shows_on_the_team(root, fake):
+    pol = json.loads((root / "founder/heartbeats.json").read_text(encoding="utf-8"))
+    pol["autopilot"] = {"enabled": True, "max_runs_per_day": 2}
+    (root / "founder/heartbeats.json").write_text(json.dumps(pol), encoding="utf-8")
+    log = fake.make("Cost log 2026-11", "", [heartbeat.COST_LOG])
+    day = NOW.date().isoformat()
+    for at in (f"{day}T08:00:00Z", f"{day}T09:00:00Z", "2026-11-01T09:00:00Z"):
+        fake.comments[log].append({"body": heartbeat.cost_entry("qa", 0.1, "2026-11", "measured", None, "run", {"outcome": "worked"}),
+                                   "created_at": at})
+    c = data_of(bd.page(bd.build(root, now=NOW)))["github"]["costs"]
+    assert c["autopilot"] == {"enabled": True, "cap": 2, "runs_today": 2}
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert 'capped: "waiting: run cap"' in html and "AUTO.capped" in html
