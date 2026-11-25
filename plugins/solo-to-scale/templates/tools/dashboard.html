@@ -1743,9 +1743,9 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
   (function freshness() {
     var meta = document.getElementById("meta"), m = minutesAgo(D.built);
     var ageText = m === null ? "" : m < 1 ? "just now" : m < 120 ? m + " minutes ago" : Math.round(m / 60) + " hours ago";
-    meta.appendChild(el("span", { cls: m !== null && m > 120 ? "stale" : "", text: "Built " + (ageText || when(D.built) + " UTC") }));
+    meta.appendChild(el("span", { cls: m !== null && m > 240 ? "stale" : "", text: "Built " + (ageText || when(D.built) + " UTC") }));
     meta.appendChild(document.createTextNode(" (" + when(D.built) + " UTC) from " + (D.commit ? "commit " + D.commit : "the repo") +
-      (G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every hour."));
+      (G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every three hours."));
     var rb = safeHref(D.rebuild_url);
     if (rb) { meta.appendChild(document.createTextNode(" ")); meta.appendChild(el("a", { href: rb, target: "_blank", rel: "noopener noreferrer", text: "Rebuild now" })); }
   })();

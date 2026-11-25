@@ -123,7 +123,7 @@ def age_hours(built: str, now: dt.datetime) -> float | None:
 def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> dict[str, Any]:
     now = now or dt.datetime.now(dt.timezone.utc)
     cfg = settings(root)
-    stale = float(cfg.get("stale_hours") or 3)
+    stale = float(cfg.get("stale_hours") or 8)
     rows: list[dict[str, Any]] = []
     if cfg.get("include_this_repo", True):
         here = bd.summary(bd.build(root, offline, now))

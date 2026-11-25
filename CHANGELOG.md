@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.12.0 (2026-11-25)
+
+- **Fewer GitHub Actions minutes.** In a private repo every job is billed in whole minutes, and the hourly checks alone (agents, dashboard, needs-you, portfolio) used about 2,900 a month, more than GitHub Free includes. The scheduled checks now run every three hours (the portfolio every six); ticket events and handoffs still start work straight away. Event debounces wait 30 seconds instead of 45 or 60, so most event runs bill one minute instead of two. Agents' own comments no longer rebuild the dashboard, and the dashboard's and needs-you's concurrency groups moved onto the job, so a skipped run never cancels one that was waiting. The needs-you daily digest goes out on the first run at or after `digest_hour_utc`. The dashboard header turns red after four hours instead of two; a portfolio marks a summary stale after 8 hours by default.
+- **Agents can run on your own machine.** Set the repository variable `S2S_AGENT_RUNNER` to a self-hosted runner's label and the `agents` workflow's runs go there, using no Actions minutes. Unset, nothing changes. The handbook's new "GitHub Actions minutes" note lists the levers.
+- **Plugin CI** cancels a superseded run on the same branch.
+
 ## v2.11.4 (2026-11-24)
 
 - **Agent runs can use their tools.** Runs stopped at their first command when the action refused it. The run step now lists the tools a heartbeat needs (`--allowedTools`: Bash, file reads and edits, search, skills, subagents). A new step after each run prints only the names of any refused tools, so a refusal can be seen without exposing the run's output.

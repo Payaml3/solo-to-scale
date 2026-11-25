@@ -153,7 +153,7 @@ def hosting_checks(root: Path, hub: tickets.Hub | None, cache: dict[str, Any]) -
     via = bd.provider(dash)
     field = "vercel_project" if via == "vercel" else "cloudflare_pages_project"
     if not host and not proj:
-        out.append(item("hosting", "Dashboard hosting", "info", "built every hour but not served yet; the Claude page "
+        out.append(item("hosting", "Dashboard hosting", "info", "built every few hours but not served yet; the Claude page "
                         "is the backup", "Set host and cloudflare_pages_project (or provider \"vercel\" and "
                         "vercel_project) in founder/dashboard.json", "The startup dashboard"))
     elif via not in bd.PROVIDERS:

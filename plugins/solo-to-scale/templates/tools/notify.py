@@ -7,7 +7,7 @@ and stuck work, budget stops, decisions, founder items), delivered by email thro
 
 One issue labelled `needs-you` holds the current list and is assigned to the founder. When an item is new since
 the last check, `push` comments on it mentioning the founder, and GitHub emails that mention (GitHub settings,
-Notifications: "Participating, @mentions and custom": Email, which is on by default). Once a day, at
+Notifications: "Participating, @mentions and custom": Email, which is on by default). Once a day, on the first run at or after
 `notify.digest_hour_utc` in founder/dashboard.json (default 7), it posts the whole list as a digest, unless
 nothing waits. No secret is needed. With `--mail-out`, it also writes `subject.txt` and `body.md` there and sets
 `mail=yes` in $GITHUB_OUTPUT, for the optional SMTP step in the needs-you workflow.
@@ -87,7 +87,7 @@ def inbox(hub: tickets.Hub, logins: set[str]) -> dict[str, Any]:
 
 
 def digest_due(hub: tickets.Hub, n: int, now: dt.datetime, hour: int, mode: str) -> bool:
-    if mode == "off" or (mode == "auto" and now.hour != hour):
+    if mode == "off" or (mode == "auto" and now.hour < hour):
         return False
     if mode == "now":
         return True

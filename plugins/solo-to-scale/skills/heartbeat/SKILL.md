@@ -33,7 +33,7 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
 
 ## Autopilot (agents start themselves)
 
-- On when `founder/heartbeats.json` has `"autopilot": {"enabled": true}` and the repo has the `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret. The `agents` workflow then runs `python tools/autopilot.py due` on every ticket event and hourly, and starts this skill for each role with work ready; a handoff starts the next role within minutes. Without the secret, cloud scheduled tasks still work as above.
+- On when `founder/heartbeats.json` has `"autopilot": {"enabled": true}` and the repo has the `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret. The `agents` workflow then runs `python tools/autopilot.py due` on every ticket event and every three hours, and starts this skill for each role with work ready; a handoff starts the next role within minutes. Without the secret, cloud scheduled tasks still work as above.
 - Planning: when the playbook's current stage or a live initiative has no open ticket (`stage:<n>`, `initiative:<id>` labels), the chief of staff gets one ticket labelled `autopilot-plan` listing the gaps. Work it with `coordinate`: label existing tickets that already cover a gap, open one ticket per role for the rest (`--stage` or `--initiative`, ordered with `--blocked-by`, the plan ticket as `--parent`), then `done`. `autopilot.py gaps` shows them.
 - Limits stay: heartbeat on, budget left, not paused, one run per role, `max_runs_per_day`. Founder gates are unchanged.
 - What waits on the founder (approvals, escalations, blocked work) goes to the `needs-you` issue and the dashboard, and the founder gets an email (`tools/notify.py`).
