@@ -69,6 +69,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # So the agent can run the tests and linters itself before it hands off (a uv project; other stacks skip this).
+      - if: hashFiles('uv.lock') != ''
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: install the project's dependencies
+        if: hashFiles('uv.lock') != ''
+        run: uv sync --all-packages --frozen || uv sync --frozen || echo "dependencies not installed; the run continues"
       - name: role:${{ matrix.role }} works one ticket
         id: claude
         uses: anthropics/claude-code-action@v1

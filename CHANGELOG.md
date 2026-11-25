@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.12.1 (2026-11-25)
+
+- **Agents can run the tests.** In a uv project (`uv.lock`), the `agents` workflow now installs the project's dependencies before the run, so an agent runs the tests and linters before it hands off instead of leaving them for CI.
+
 ## v2.12.0 (2026-11-25)
 
 - **Fewer GitHub Actions minutes.** In a private repo every job is billed in whole minutes, and the hourly checks alone (agents, dashboard, needs-you, portfolio) used about 2,900 a month, more than GitHub Free includes. The scheduled checks now run every three hours (the portfolio every six); ticket events and handoffs still start work straight away. Event debounces wait 30 seconds instead of 45 or 60, so most event runs bill one minute instead of two. Agents' own comments no longer rebuild the dashboard, and the dashboard's and needs-you's concurrency groups moved onto the job, so a skipped run never cancels one that was waiting. The needs-you daily digest goes out on the first run at or after `digest_hour_utc`. The dashboard header turns red after four hours instead of two; a portfolio marks a summary stale after 8 hours by default.
