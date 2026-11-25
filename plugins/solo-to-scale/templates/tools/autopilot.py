@@ -51,6 +51,7 @@ DEFAULTS = {"enabled": False, "plan_every_hours": 24, "max_runs_per_day": 12, "m
 # The model each role runs on (roles/*.yaml `tier`): strongest for architecture, mid-tier for the rest.
 MODELS = {"architect": "opus"}
 DEFAULT_MODEL = "sonnet"
+RUN_LIMIT_MINUTES = 65  # the agents workflow stops a run after 60 minutes
 IDLE_HOURS = 1  # a role whose last run found nothing to do waits this long
 COOLDOWN_HOURS = 6  # a ticket whose last run ended blocked or failed waits this long before a retry
 BUILD_STAGES = range(13, 18)
@@ -202,6 +203,21 @@ def stalled(runs: list[dict[str, Any]], role: str, now: dt.datetime) -> set[int]
     return out
 
 
+def logged_lately(runs: list[dict[str, Any]], role: str, link: str, now: dt.datetime) -> bool:
+    """This run already left a cost entry: one with its session link, or any by its role within the run's time limit
+    (an agent sometimes records a wrong session link, and a second entry would count the run twice)."""
+    for e in runs:
+        if e.get("session") == link:
+            return True
+        try:
+            at = dt.datetime.fromisoformat(str(e.get("at")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if e.get("role") == role and 0 <= (now - at).total_seconds() < RUN_LIMIT_MINUTES * 60:
+            return True
+    return False
+
+
 def idle_recently(runs: list[dict[str, Any]], role: str, now: dt.datetime) -> bool:
     """This role's latest run did nothing (no ticket) less than IDLE_HOURS ago."""
     mine = [e for e in runs if e.get("role") == role]
@@ -345,7 +361,7 @@ def cmd_finish(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> 
     if heartbeat.run_holder(hub, a.role) is None:
         link = heartbeat.session_link(a.session)
         now = dt.datetime.now(dt.timezone.utc)
-        if link and not any(e.get("session") == link for e in month_runs(hub, now)):
+        if link and not logged_lately(month_runs(hub, now), a.role, link, now):
             # The run never started a heartbeat: record it, so it counts toward the daily cap.
             return heartbeat.main(["end", a.role, "--usd", "0", "--outcome", "no-work", "--root", str(a.root),
                                    "--note", "the run ended without starting a heartbeat", "--session", a.session])
