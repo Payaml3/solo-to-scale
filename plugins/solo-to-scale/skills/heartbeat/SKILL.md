@@ -22,6 +22,7 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
    - Exit 2 (nothing to do): no ready ticket. Run step 5 and stop. No other work.
    - Exit 5: GitHub was unclear; nothing is claimed. Stop.
    - Exit 0: it prints `resume #n` (your earlier claim) or `work on #n` (claimed now, atomically). It also prints the budget left; over 80%, keep the run small.
+   - It also prints the role's rubric: 3 to 6 yes/no checks the run is graded on (defaults in `tools/heartbeat.py`; a `rubric` list on the role in `founder/heartbeats.json` replaces them).
 2. Read the ticket's Goal and Done when, and its goal chain. Work only on it, as that role, inside this run.
 3. Gated actions (deploy, external, spend, pricing...) go through the `gate` skill: request approval and do not wait in the run. Release or block the ticket and end.
 4. Finish with one of (the `coordinate` skill):
@@ -29,7 +30,11 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
    - `tickets.py handoff <n> --to <role> --note "<state, what's left, where>"`;
    - `tickets.py block` or `release` with the state, when it can't go on.
    A ticket you keep claimed is resumed next run; say so in its comment.
-5. `python tools/heartbeat.py end <role> --ticket <n> --outcome <worked|no-work|blocked|approval|failed> --session <https link> --model <tier> --note "<one line>"`: it records the run (cost measured from this session's transcript, or `--usd`, else a flat estimate; its time, ticket and objective) and frees the run lock. `worked` means a PR, handoff or done; `approval` means you asked for one. Always run it, even after exit 2 (`no-work`) or an error (`failed`).
+5. `python tools/heartbeat.py end <role> --ticket <n> --outcome <worked|no-work|blocked|approval|failed> --session <https link> --model <tier> --note "<one line>"`: it records the run (cost measured from this session's transcript, or `--usd`, else a flat estimate; its time, ticket and objective) and frees the run lock. `worked` means a PR, handoff or done; `approval` means you asked for one. For a run that worked on a ticket, add `--checks <passed>/<total>`: grade your own output against each rubric check honestly, and say which failed in the note. A check you can't verify counts as failed. Always run it, even after exit 2 (`no-work`) or an error (`failed`).
+
+## When a step keeps failing
+
+After two failures on the same step, drop one rung and say so in the ticket comment: (1) re-read the docs or the spec and retry once; (2) the plain manual route (the GitHub UI step, the simpler command); (3) the closest known-good example in the repo; (4) stop: `tickets.py block` with what failed and what you tried. Never loop on a step: the run's budget is the founder's money.
 
 ## Autopilot (agents start themselves)
 

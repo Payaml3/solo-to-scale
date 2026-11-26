@@ -37,6 +37,8 @@ Ask with your question tool (AskUserQuestion in Claude Code; a plain numbered li
 
 Write the answers to a temporary `answers.json` outside the repo (format: `references/answers.md`). Never put secrets in it.
 
+Then, in the same message, list **what the founder will need to fetch** for the setup they chose, as a table (item · where to get it · where it goes): for example the `CLAUDE_CODE_OAUTH_TOKEN` repository secret for the autopilot, the Cloudflare or Vercel login for the dashboard, the Claude Project. They fetch these while you work; never ask for a secret in the chat, and never wait for one before scaffolding.
+
 ## 3. Show the plan, wait for approval
 
 Run `python3 <plugin>/scripts/init_repo.py plan --repo . --answers <answers.json>` and show the summary: files to create, files that exist (merge proposed, never overwritten), notes. Wait for the founder's go.

@@ -165,9 +165,30 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "memos": memos,
         "epics": epics,
         "decisions": s.decisions(root, cfg),
+        "next": next_directions(root),
         "approved_words": cfg.get("approved_words") or ["Approved"],
         "reports_to": dict(tickets.REPORTS_TO),
     }
+
+
+WHY_LATER = ("not possible", "needs a credential", "out of scope")
+
+
+def next_directions(root: Path) -> list[dict[str, str]]:
+    """founder/next.md as rows: version, what, why later (one of WHY_LATER, else ""), how, source. At most 60."""
+    out = []
+    for table in s.tables(s.read(root / "founder" / "next.md")):
+        for r in table:
+            what = " ".join((r.get("what") or "").split())
+            if not what:
+                continue
+            ver = " ".join((r.get("version") or "").split()).lower()
+            why = " ".join((r.get("why later") or "").split()).lower()
+            out.append({"version": ver if re.fullmatch(r"v\d{1,2}|always", ver) else "later",
+                        "what": clip(what, 160), "why": next((w for w in WHY_LATER if why.startswith(w)), ""),
+                        "how": clip(" ".join((r.get("how") or "").split()), 240),
+                        "source": clip(" ".join((r.get("source") or "").split()), 60)})
+    return out[:60]
 
 
 # --- the roadmap timeline (Gantt) -----------------------------------------------------------------------
@@ -301,7 +322,7 @@ def costs(hub: tickets.Hub, root: Path, month: str, now: dt.datetime | None = No
         for r in mine:
             if r["at"][:10]:
                 daily[r["at"][:10]] = round(daily.get(r["at"][:10], 0.0) + r["usd"], 4)
-        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None,
+        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None, "rubric": heartbeat.rubric(pol, role),
                       "stats": heartbeat.run_stats(mine), "daily": [{"date": d, "usd": v} for d, v in sorted(daily.items())]})
 
     def group(key: str, none: str) -> list[dict[str, Any]]:

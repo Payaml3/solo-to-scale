@@ -29,7 +29,11 @@ A changed decision gets a **new row** that supersedes the old one ("Supersedes B
 
 Layer by layer, search with `grep -n` for the decision's subject and the old ID across `founder/`, `specs/`, `docs/`, `founder/slices.json` and tests. List each affected item with its path and line.
 
-## 4. Prepare the edits
+## 4. File what it defers
+
+Anything the decision leaves for later gets a row in `founder/next.md` now, not a "maybe later" in prose: the version it belongs to (`v1`, `v2`, ... or `always`), what, **why later** (exactly one of: not possible, needs a credential, out of scope), how it would be done (the mechanism and a link), and the decision ID as the source. The dashboard's Roadmap shows these as the version rail.
+
+## 5. Prepare the edits
 
 Write the edits as a list (path, line, change). Apply them **only if the founder says so**. Then:
 1. Regenerate the view data if registers or slices changed (`python3 tools/build_roadmap.py`, `build_team.py`, `build_traceability.py`).
