@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.14.1 (2026-11-26)
+
+A review of the dashboard with the dataviz and design-engineering skills.
+
+- **Charts that colour-blind readers can read.** Green beside red failed the palette validator (ΔE 5.1 for deuteranopia). Charts now draw the measure in a new `series` blue, the rest in grey and a missed check in red; both modes pass. Spend per day no longer uses the status orange.
+- **Charts rebuilt to the mark rules.** Columns are HTML, at most 24px wide, with a 4px rounded top, a square foot and 2px gaps. Two-part charts carry a legend instead of "(green: worked)" in the title. Each day is a full-height hover, tap and keyboard target whose label gives its numbers. A chart with no data says so, and "Show the numbers" opens the same 14 days as a table. The redundant "runs that worked" rate chart is gone.
+- **Interaction details.** The search palette opens with no animation, since it is opened from the keyboard. Hover styles are gated to real pointers. The new Overview pieces scale slightly when pressed. Big numbers use proportional figures.
+
 ## v2.14.0 (2026-11-26)
 
 - **How the company runs, on the Overview.** The page opens with the company goal, then one diagram: what starts work (the autopilot, schedules, approvals waiting), the AI team inside the repo (skills, gates, budgets, registers) and what comes out (pull requests merged in 7 days, graded runs that passed every check, decisions still open). Each box links to its tab.

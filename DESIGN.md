@@ -23,6 +23,7 @@ colors:
     group-business: "#ab570a"
     group-product: "#7928ca"
     group-technical: "#0068d6"
+    series: "#0068d6"       # chart marks; dataviz validator: passes against waiting and the surface
   dark:
     paper: "#000000"
     surface: "#0a0a0a"
@@ -42,6 +43,7 @@ colors:
     group-business: "#f2a33a"
     group-product: "#bf7af0"
     group-technical: "#52a8ff"
+    series: "#3d95f5"       # a step under link: #52a8ff sits above the dark lightness band
 
 typography:
   family: '"Geist", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
@@ -84,7 +86,8 @@ The pages are operator tools a founder reads every day, so they should feel like
 ## Colours and roles
 
 - `accent` is ink. It marks the selected tab, the current stage, primary action buttons and the founder's own node. There is no brand hue.
-- Status colours (`done`, `progress`, `todo`, `waiting`) are the only saturated colours on a page. Use them for status text, pills, bars and marks, never for decoration.
+- Status colours (`done`, `progress`, `todo`, `waiting`) are saturated and mean a state. Use them for status text, pills and meters, never for decoration or as a chart series.
+- Charts draw the measure in `series`, the rest in `line-strong`, and a problem (a missed check) in `waiting`. Run the dataviz palette validator before adding a chart colour: green beside red fails for colour-blind readers.
 - Pills are tinted, not outlined: `currentColor` text on a 12% `currentColor` background, fully rounded.
 - Document groups (business, product, technical) use the `group-*` tokens as a 3px edge and a mono tag.
 - Text on a filled status colour uses `--on-status` (white in light mode, near-black in dark mode) so it keeps contrast in both.
@@ -112,6 +115,8 @@ The pages are operator tools a founder reads every day, so they should feel like
 - Attached cards: what something is made of (an agent's model, access, skills, never-rules and approvals) sits as a row of small hairline cards under the diagram node they belong to, joined by a dashed hairline.
 - Status lights: one 7px dot. Only a live thing moves (the autopilot when on breathes in opacity); it stands still under reduced motion.
 - Rate charts: a share is drawn as counts stacked per day (green passed, red missed), never as a bare percentage, so a day with one run doesn't read like a day with twenty.
+- Charts: HTML columns, never wider than 24px, a 4px rounded top and a square foot, 2px apart; a legend for two or more parts; each day a full-height hover and keyboard target whose label carries its numbers; a "Show the numbers" table under the charts. Big standalone numbers use proportional figures; tabular figures only in columns.
+- No animation on anything opened from the keyboard (the search palette). Hover styles sit behind `(hover: hover) and (pointer: fine)`; things you press scale to 0.97 on `:active`.
 - Compact density: one toggle tightens panel padding, tile size, table rows and gaps for a desktop read. It never changes what is shown.
 
 ## The Overview
