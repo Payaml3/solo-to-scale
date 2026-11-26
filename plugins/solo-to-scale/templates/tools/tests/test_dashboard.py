@@ -310,6 +310,12 @@ def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
     if wf.exists():
         text = wf.read_text(encoding="utf-8")
         assert "issue_comment:" in text and "sleep" not in text and "cancel-in-progress: false" in text
+        assert "github.event.sender.type != 'Bot'" in text, "agents' ticket events must not rebuild it"
+    agents = wf.parent / "agents.yml"
+    if agents.exists():
+        text = agents.read_text(encoding="utf-8")
+        assert "11,41 8-19 * * *" in text and "startsWith(github.event.comment.body, '/approve')" in text
+        assert "gh workflow run dashboard.yml" in text and "gh workflow run needs-you.yml" in text
 
 
 def test_the_stage_ladder_shows_every_gate_with_its_evidence(root, fake):

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.12.5 (2026-11-26)
+
+- **Agents' own activity costs no Actions minutes.** Every ticket event and comment an agent made started the `agents`, `dashboard` and `needs-you` workflows, and each check billed at least a whole minute: about 750 billed runs in three days on one busy repo. Now only a person's activity starts them (a founder's ticket event, or an `/approve` or `/resume` comment for the agents); agents' events skip the job, and a skipped job bills nothing. Instead, the `agents` workflow checks for work every 30 minutes from 08:00 to 19:30 UTC (24 checks a day, about 720 minutes a month at most), and after each run it checks again and refreshes the dashboard and needs-you once. The daily run cap and founder gates are unchanged.
+- **A newer push cancels the older check.** `governance` and `founder-gates` cancel a superseded run on the same pull request.
+
 ## v2.12.4 (2026-11-25)
 
 - **A burst of ticket events costs two runs, not dozens.** The 30-second sleep-and-cancel debounce still billed a minute for every event: opening ten tickets with their labels made about 30 events, and each started the `agents`, `dashboard` and `needs-you` workflows, so about 90 billed minutes. The three workflows now queue instead: one run starts at once, and each newer event replaces the run waiting behind it, which never starts and costs nothing. A burst now makes at most two runs of each, and nothing sleeps.
