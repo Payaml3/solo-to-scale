@@ -200,7 +200,7 @@ def test_each_run_records_its_outcome_time_objective_and_session(root, fake, cap
     capsys.readouterr()
     assert run(root, "runs", "--role", "engineer") == heartbeat.OK
     out = capsys.readouterr().out
-    assert "| engineer | worked | #" in out and "success 100%" in out and "no-work 1" in out
+    assert "| engineer | worked | - | #" in out and "success 100%" in out and "no-work 1" in out
 
 
 def test_run_stats_and_the_forecast():
@@ -241,3 +241,35 @@ def test_the_company_budget_caps_all_roles_together(root, fake, capsys):
     assert run(root, "costs") == heartbeat.OK and "of the company's $10.00 (105%) STOPPED" in capsys.readouterr().out
     fake.comments[reqs[0]["number"]].append({"user": {"login": "acme"}, "body": "/approve"})
     assert run(root, "start", "architect") == heartbeat.OK, "the founder's /approve adds one more month's company budget"
+
+
+def test_each_run_is_graded_against_its_role_rubric(root, fake, capsys):
+    n = ticket(fake, "engineer", "Build it")
+    assert run(root, "start", "engineer") == heartbeat.OK
+    out = capsys.readouterr().out
+    assert "graded on" in out and "1. A pull request closes the ticket" in out, "start prints the rubric"
+    assert run(root, "end", "engineer", "--ticket", str(n), "--usd", "1", "--checks", "3/4") == heartbeat.OK
+    assert run(root, "end", "engineer", "--usd", "1", "--checks", "4/4") == heartbeat.OK
+    assert run(root, "end", "engineer", "--usd", "1", "--outcome", "no-work") == heartbeat.OK
+    for bad in ("5/4", "1/7", "three", "0/0"):
+        with pytest.raises(SystemExit, match="--checks"):
+            run(root, "end", "engineer", "--usd", "1", "--checks", bad)
+    log = next(i for i in fake.issues.values() if "cost-log" in fake.names(i["number"]))
+    runs = heartbeat.entries(fake.comments[log["number"]], MONTH)
+    assert [r["checks"] for r in runs] == [[3, 4], [4, 4], None]
+    assert ", checks 3/4" in fake.comments[log["number"]][0]["body"]
+    st = heartbeat.run_stats(runs)
+    assert (st["graded"], st["passed"], st["pass_rate"]) == (2, 1, 0.5), "a run passes only when every check passed"
+    capsys.readouterr()
+    assert run(root, "runs") == heartbeat.OK
+    assert "| 3/4 |" in capsys.readouterr().out
+    forged = [{"body": '<!-- s2s:cost {"role": "qa", "usd": 1, "month": "2026-11", "checks": [9, 2]} -->'},
+              {"body": '<!-- s2s:cost {"role": "qa", "usd": 1, "month": "2026-11", "checks": "2/2"} -->'}]
+    assert [r["checks"] for r in heartbeat.entries(forged, MONTH)] == [None, None], "bad checks are never trusted"
+
+
+def test_the_founder_can_replace_a_role_rubric():
+    pol = {"roles": {"qa": {"rubric": ["  Ran   every level ", "Wrote a go or no-go"]}, "engineer": {"rubric": [""]}}}
+    assert heartbeat.rubric(pol, "qa") == ["Ran every level", "Wrote a go or no-go"]
+    assert heartbeat.rubric(pol, "engineer") == heartbeat.DEFAULT_RUBRIC["engineer"], "an empty check falls back"
+    assert all(3 <= len(v) <= 6 for k, v in heartbeat.DEFAULT_RUBRIC.items() if k != "board")

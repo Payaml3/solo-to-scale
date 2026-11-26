@@ -19,6 +19,7 @@ The founder approves critical actions; agents never do. The gates and their mode
    - Exit 4 or 5: not approved, founder-only, or GitHub unreachable. Stop the action and report it. Never retry around it.
 3. Request it: `python tools/approval.py request <gate> --title "<what>" --why "<reason, evidence>" --impact "<cost, risk, reversible or not>" --scope "<scope>" --role <your role>`.
    - Use `--dry-run` first to check the text. One request per action. Say what happens if the founder says no.
+   - For anything that leaves the repo (an email, a post, a message, a form), put the **exact draft** in the request: the recipient or channel, the subject and the full text, ready to send as it stands, so `/approve` is the only step left and nothing is rewritten after approval. Until a connector is set up, that draft is the deliverable.
 4. Stop that action and carry on with ungated work. Record the request number in the handoff and the issue you're working on.
 
 ## Rules

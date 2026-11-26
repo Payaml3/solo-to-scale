@@ -573,3 +573,25 @@ def test_the_autopilot_run_cap_shows_on_the_team(root, fake):
     assert c["autopilot"] == {"enabled": True, "cap": 2, "runs_today": 2}
     html = bd.PAGE.read_text(encoding="utf-8")
     assert 'capped: "waiting: run cap"' in html and "AUTO.capped" in html
+
+
+def test_next_directions_rubrics_and_the_new_views_reach_the_page(root, fake):
+    (root / "founder" / "next.md").write_text(
+        "# Next directions\n\n| Version | What | Why later | How | Source |\n| --- | --- | --- | --- | --- |\n"
+        "| v2 | Card payments | Not possible today | A provider partnership | B-05 |\n"
+        "| V1 | Email invoices </script><img src=x onerror=alert(2)> | needs a credential | Provider key in the vault | B-04 |\n"
+        "| someday | Mobile app | because | | |\n| v1 |  | out of scope | nothing to show | |\n", encoding="utf-8")
+    pol = json.loads((root / "founder/heartbeats.json").read_text(encoding="utf-8"))
+    pol["roles"]["qa"]["rubric"] = ["Ran every level", "Wrote a go or no-go"]
+    (root / "founder/heartbeats.json").write_text(json.dumps(pol), encoding="utf-8")
+    page = bd.page(bd.build(root, now=NOW))
+    repo = data_of(page)["repo"]
+    assert [(r["version"], r["why"]) for r in repo["next"]] == [("v2", "not possible"), ("v1", "needs a credential"), ("later", "")]
+    assert "</script><img" not in page and "<img" not in page.split('id="s2s-data">')[1].split("</script>")[0], "hostile text stays escaped"
+    assert repo["heartbeats"]["qa"]["rubric"] == ["Ran every level", "Wrote a go or no-go"]
+    assert repo["heartbeats"]["engineer"]["rubric"] == heartbeat.DEFAULT_RUBRIC["engineer"]
+    html = bd.PAGE.read_text(encoding="utf-8")
+    for part in ("function schemaPanel", "function agentRows", "function nextPanel", "function openPalette", 'id="find"',
+                 'id="density"', 'id="strip"', '{ h: "Checks"', 'el("details", { cls: "panel source" }', '" ghost"'):
+        assert part in html, part
+    assert "nextPanel()," in html[html.index("  function roadmapTab() {"):], "the version rail sits on the Roadmap"

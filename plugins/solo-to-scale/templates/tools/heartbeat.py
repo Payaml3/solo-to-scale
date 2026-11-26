@@ -51,6 +51,35 @@ BUDGET_ROLES = (*tickets.ROLES, "board")
 OUTCOMES = ("worked", "no-work", "blocked", "approval", "failed")
 SESSION_ENV = ("S2S_SESSION_URL", "CLAUDE_CODE_SESSION_URL")
 TOP_PRICE = {"input": 10.0, "output": 50.0, "cache_write": 12.5, "cache_read": 1.0}
+# Each run is graded against its role's rubric: 3 to 6 yes/no checks. A role's `rubric` list in
+# founder/heartbeats.json replaces these defaults; `end --checks P/T` records how many passed.
+DEFAULT_RUBRIC = {
+    "chief-of-staff": ["Every brief, view or register it touched matches its source",
+                       "Work it handed out is one ticket per role, each with Goal and Done when",
+                       "Nothing gated went ahead without the founder's approval"],
+    "research": ["Every claim has a source link or an explicit 'unverified' tag",
+                 "The finding answers the ticket's question in its first line",
+                 "Assumptions are marked Assumption, never Approved"],
+    "product": ["Every requirement traces to a story ID with acceptance criteria",
+                "Every screen state is specified: empty, loading, error, done",
+                "Open questions are listed for the founder, not guessed"],
+    "architect": ["The decision names the options it rejected and why",
+                  "Security and data risks are listed with a mitigation each",
+                  "The change fits the module boundaries in the spec"],
+    "engineer": ["A pull request closes the ticket",
+                 "Every acceptance criterion has a passing test",
+                 "Lint, type checks and the area's tests pass",
+                 "No test was weakened or skipped"],
+    "qa": ["Every test level was run, with its result",
+           "Go or no-go fits in 15 lines and names the blocking gaps",
+           "Each bug has steps to reproduce"],
+    "growth": ["Every claim in the copy is true and sourced",
+               "Anything that leaves the repo is a draft behind the gate",
+               "The piece has one audience and one ask"],
+    "board": ["The memo answers the brief's question from the advisor's lens",
+              "It fits in 8 lines"],
+}
+CHECKS = re.compile(r"^(\d{1,2})/(\d{1,2})$")
 
 
 # --- policy and cost maths (pure) ------------------------------------------------------------------------
@@ -66,6 +95,23 @@ def policy(root: Path = s.ROOT) -> dict[str, Any]:
 def budget(pol: dict[str, Any], role: str) -> float | None:
     v = ((pol.get("company") or {}) if role == COMPANY else ((pol.get("roles") or {}).get(role) or {})).get("monthly_budget_usd")
     return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 else None
+
+
+def rubric(pol: dict[str, Any], role: str) -> list[str]:
+    """The role's yes/no checks: the policy's `rubric` list if it has one, else the default."""
+    own = ((pol.get("roles") or {}).get(role) or {}).get("rubric")
+    if isinstance(own, list) and own and all(isinstance(x, str) and x.strip() for x in own):
+        return [" ".join(x.split())[:160] for x in own[:6]]
+    return list(DEFAULT_RUBRIC.get(role, []))
+
+
+def checks_of(text: Any) -> list[int] | None:
+    """`P/T` as [passed, total], or None: total 1 to 6, passed no more than total."""
+    m = CHECKS.match(str(text or "").strip())
+    if not m:
+        return None
+    p, t = int(m.group(1)), int(m.group(2))
+    return [p, t] if 1 <= t <= 6 and 0 <= p <= t else None
 
 
 def price(pol: dict[str, Any], model: str) -> dict[str, float]:
@@ -120,6 +166,7 @@ def cost_entry(role: str, usd: float, month: str, how: str, ticket: int | None, 
     data = {"role": role, "usd": round(usd, 4), "month": month, "how": how, **({"ticket": ticket} if ticket else {}), **extra}
     head = f"**role:{role}** ${usd:.2f} ({how})" + (f" on #{ticket}" if ticket else "") + \
         (f", {extra['outcome']}" if extra.get("outcome") else "") + \
+        (f", checks {extra['checks'][0]}/{extra['checks'][1]}" if extra.get("checks") else "") + \
         (f", {minutes(extra['seconds'])}" if extra.get("seconds") else "")
     return f"<!-- s2s:cost {json.dumps(data)} -->\n{head}\n\n{tickets.quote(note or 'heartbeat run')}"
 
@@ -148,7 +195,10 @@ def entries(comments: list[dict[str, Any]], month: str) -> list[dict[str, Any]]:
                     "outcome": data.get("outcome") if data.get("outcome") in OUTCOMES else "",
                     "seconds": float(secs) if isinstance(secs, (int, float)) and not isinstance(secs, bool) and secs >= 0 else None,
                     "session": session_link(data.get("session")), "model": str(data.get("model") or "")[:40],
-                    "objective": str(data.get("objective") or "")[:12], "at": str(c.get("created_at") or "")})
+                    "objective": str(data.get("objective") or "")[:12], "at": str(c.get("created_at") or ""),
+                    "checks": checks_of("/".join(map(str, data["checks"]))) if isinstance(data.get("checks"), list)
+                    and len(data["checks"]) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in data["checks"])
+                    else None})
     return out
 
 
@@ -166,7 +216,10 @@ def run_stats(runs: list[dict[str, Any]]) -> dict[str, Any]:
     secs = sorted(r["seconds"] for r in runs if r["seconds"] is not None)
     median = (secs[len(secs) // 2] if len(secs) % 2 else (secs[len(secs) // 2 - 1] + secs[len(secs) // 2]) / 2) if secs else None
     total = sum(r["usd"] for r in runs)
+    graded = [r["checks"] for r in runs if r.get("checks")]
+    passed = sum(1 for c in graded if c[0] == c[1])
     return {"runs": len(runs), "outcomes": counts, "success": round(counts["worked"] / tried, 4) if tried else None,
+            "graded": len(graded), "passed": passed, "pass_rate": round(passed / len(graded), 4) if graded else None,
             "median_seconds": median, "usd": round(total, 4),
             "usd_per_worked": round(total / counts["worked"], 4) if counts["worked"] else None}
 
@@ -356,7 +409,12 @@ def cmd_start(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
         print(f"company budget: ${cused:.2f} of ${ccap:.2f} used; ${ccap - cused:.2f} left"
               + (" (WARNING: over 80%; keep this run small)" if cused >= WARN_AT * ccap else ""))
     try:
-        return pick(a, hub)
+        code = pick(a, hub)
+        if code == OK and rubric(pol, a.role):
+            print("graded on (record with `end --checks <passed>/<total>`):")
+            for i, c in enumerate(rubric(pol, a.role), 1):
+                print(f"  {i}. {c}")
+        return code
     except Exception:
         drop_run(hub, a.role)  # an unclear GitHub reply leaves no run lock behind
         raise
@@ -396,9 +454,12 @@ def cmd_end(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int
         raise SystemExit("--usd can't be negative")
     if a.outcome and a.outcome not in OUTCOMES:
         raise SystemExit(f"--outcome must be one of {', '.join(OUTCOMES)}")
+    checks = checks_of(a.checks) if a.checks else None
+    if a.checks and checks is None:
+        raise SystemExit("--checks must be passed/total, like 3/4, with 1 to 6 checks")
     costs = Costs(hub, month)
     before = costs.totals()
-    record = {"outcome": a.outcome or ("worked" if a.ticket else "no-work"), "model": a.model[:40],
+    record = {"checks": checks, "outcome": a.outcome or ("worked" if a.ticket else "no-work"), "model": a.model[:40],
               "session": session_link(a.session or next((os.environ[k] for k in SESSION_ENV if os.environ.get(k)), ""))}
     held = run_holder(hub, a.role)
     now = a.now or dt.datetime.now(dt.timezone.utc).timestamp()
@@ -454,13 +515,15 @@ def cmd_costs(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> i
 def cmd_runs(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int:
     month = a.month or this_month()
     runs = [r for r in entries(Costs(hub, month).comments(), month) if not a.role or r["role"] == a.role]
-    print(f"| When | Role | Outcome | Ticket | Time | Cost | Session |\n| --- | --- | --- | --- | --- | --- | --- |")
+    print(f"| When | Role | Outcome | Checks | Ticket | Time | Cost | Session |\n| --- | --- | --- | --- | --- | --- | --- | --- |")
     for r in runs:
-        print(f"| {r['at'][:16]} | {r['role']} | {r['outcome'] or '-'} | {'#' + str(r['ticket']) if r['ticket'] else '-'} | "
+        ck = f"{r['checks'][0]}/{r['checks'][1]}" if r.get("checks") else "-"
+        print(f"| {r['at'][:16]} | {r['role']} | {r['outcome'] or '-'} | {ck} | {'#' + str(r['ticket']) if r['ticket'] else '-'} | "
               f"{minutes(r['seconds']) if r['seconds'] is not None else '-'} | ${r['usd']:.2f} | {r['session'] or '-'} |")
     st = run_stats(runs)
     print(f"\n{st['runs']} runs in {month}; success " + (f"{st['success']:.0%}" if st["success"] is not None else "n/a")
-          + " (worked out of runs that had work); " + ", ".join(f"{o} {n}" for o, n in st["outcomes"].items() if n))
+          + " (worked out of runs that had work); " + ", ".join(f"{o} {n}" for o, n in st["outcomes"].items() if n)
+          + (f"; all checks passed in {st['passed']} of {st['graded']} graded runs ({st['pass_rate']:.0%})" if st["graded"] else ""))
     return OK
 
 
@@ -485,6 +548,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--outcome", default="", help="worked, no-work, blocked, approval or failed")
     p.add_argument("--session", default="", help="https link to this run's session or transcript")
     p.add_argument("--model", default="")
+    p.add_argument("--checks", default="", help="rubric checks passed/total, like 3/4 (start prints the rubric)")
     p.add_argument("--now", type=float, default=0, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     pol = policy(a.root)

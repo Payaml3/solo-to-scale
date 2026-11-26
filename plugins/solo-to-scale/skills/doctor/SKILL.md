@@ -24,6 +24,6 @@ Ask once: "Fix the N items doctor can fix?" Then:
 
 ## 3. The rest is the founder's
 
-List what's left as numbered steps, in the founder's words: which secret to add where, which scheduled task to create (`python3 tools/heartbeat.py plan` prints its prompt), what to write in `founder/goals.json`. Never add a secret, change a budget or set the goal yourself.
+Give the founder's items first, as one table they can work through in one go (item · where to get it · where it goes), so they fetch everything in parallel rather than one ask at a time. Then list what's left as numbered steps, in the founder's words: which secret to add where, which scheduled task to create (`python3 tools/heartbeat.py plan` prints its prompt), what to write in `founder/goals.json`. Never add a secret, change a budget or set the goal yourself.
 
 Close with `Done / Pending / Next` and a "Next session" line.

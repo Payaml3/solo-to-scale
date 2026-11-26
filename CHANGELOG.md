@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.13.0 (2026-11-26)
+
+- **Every agent run is graded.** Each role has a rubric of 3 to 6 yes/no checks (defaults in `tools/heartbeat.py`; a `rubric` list on the role in `founder/heartbeats.json` replaces them). `heartbeat.py start` prints it, and `end --checks 3/4` records the score; a run passes when every check passed. `runs` gains a Checks column and the pass rate, and the dashboard shows both. Forged or malformed scores in the cost log are ignored.
+- **Next directions.** A new founder-owned register, `founder/next.md`: everything left for later, by version (`v1`, `v2`, ... `always`), with exactly one reason (not possible, needs a credential, out of scope) and how it would be done. `record-decision` files deferrals there; the Roadmap shows it as a version rail. `upgrade` adds the file.
+- **Team and board, redesigned.** One compact row per agent (state, ticket, next run, checks passed, spend) replaces the seven long cards and the duplicate table; roles that are off are drawn as ghosts; `founder/team.md` moves behind a Source disclosure. An agent's record opens with a diagram of how it runs, Trigger → Agent → Output and grade, each value labelled with its source file.
+- **Faster to move around.** ⌘K (Ctrl+K or /) searches tabs, agents, tickets, decisions and Needs you; a one-line strip keeps needs you, approvals, agents working and AI spend in view on every inner tab; a Compact density toggle; an Open button on every Needs you row; the header's commit links to GitHub; hovering an agent on the team hub brings it forward; panel heads carry a count on the right.
+- **Skills.** `gate`: anything that leaves the repo carries the exact ready-to-send draft, so `/approve` is the last step. `init` and `doctor`: what the founder must fetch comes up front, as one table. `heartbeat`: after two failures on a step, drop one rung (docs, manual route, known-good example, then block) instead of looping.
+
 ## v2.12.5 (2026-11-26)
 
 - **Agents' own activity costs no Actions minutes.** Every ticket event and comment an agent made started the `agents`, `dashboard` and `needs-you` workflows, and each check billed at least a whole minute: about 750 billed runs in three days on one busy repo. Now only a person's activity starts them (a founder's ticket event, or an `/approve` or `/resume` comment for the agents); agents' events skip the job, and a skipped job bills nothing. Instead, the `agents` workflow checks for work every 30 minutes from 08:00 to 19:30 UTC (24 checks a day, about 720 minutes a month at most), and after each run it checks again and refreshes the dashboard and needs-you once. The daily run cap and founder gates are unchanged.

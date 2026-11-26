@@ -151,8 +151,8 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
                       "role": roles.get(code, "engineer"), "stories": len(stories),
                       "slices": sorted({str(st.get("slice", "")) for st in stories if st.get("slice")})})
     memos = [d for d in documents(root, ["founder/board/*.md"]) if not d["path"].endswith("README.md")]
-    beats = {r: {k: ((pol.get("roles") or {}).get(r) or {}).get(k) for k in ("enabled", "cron", "monthly_budget_usd")}
-             for r in heartbeat.BUDGET_ROLES}
+    beats = {r: {**{k: ((pol.get("roles") or {}).get(r) or {}).get(k) for k in ("enabled", "cron", "monthly_budget_usd")},
+                 "rubric": heartbeat.rubric(pol, r)} for r in heartbeat.BUDGET_ROLES}
     return {
         "goals": goals.build(root),
         "documents": grouped_documents(root, cfg_dash.get("documents") or DEFAULT_DOCS),
@@ -165,9 +165,30 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "memos": memos,
         "epics": epics,
         "decisions": s.decisions(root, cfg),
+        "next": next_directions(root),
         "approved_words": cfg.get("approved_words") or ["Approved"],
         "reports_to": dict(tickets.REPORTS_TO),
     }
+
+
+WHY_LATER = ("not possible", "needs a credential", "out of scope")
+
+
+def next_directions(root: Path) -> list[dict[str, str]]:
+    """founder/next.md as rows: version, what, why later (one of WHY_LATER, else ""), how, source. At most 60."""
+    out = []
+    for table in s.tables(s.read(root / "founder" / "next.md")):
+        for r in table:
+            what = " ".join((r.get("what") or "").split())
+            if not what:
+                continue
+            ver = " ".join((r.get("version") or "").split()).lower()
+            why = " ".join((r.get("why later") or "").split()).lower()
+            out.append({"version": ver if re.fullmatch(r"v\d{1,2}|always", ver) else "later",
+                        "what": clip(what, 160), "why": next((w for w in WHY_LATER if why.startswith(w)), ""),
+                        "how": clip(" ".join((r.get("how") or "").split()), 240),
+                        "source": clip(" ".join((r.get("source") or "").split()), 60)})
+    return out[:60]
 
 
 # --- the roadmap timeline (Gantt) -----------------------------------------------------------------------
