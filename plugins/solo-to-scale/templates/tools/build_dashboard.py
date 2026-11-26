@@ -46,6 +46,7 @@ import autopilot  # noqa: E402
 import build_roadmap  # noqa: E402
 import build_team  # noqa: E402
 import build_traceability  # noqa: E402
+import theme  # noqa: E402
 import control  # noqa: E402
 import doctor  # noqa: E402
 import finance  # noqa: E402
@@ -597,6 +598,7 @@ def build(root: Path, offline: bool = False, now: dt.datetime | None = None) -> 
         "links": {"portfolio": https_url(cfg_dash.get("portfolio_url")),
                   "portfolio_name": " ".join(str(cfg_dash.get("portfolio_name") or "").split())[:80]},
         "repo": repo_data(root, cfg_dash),
+        "theme": theme.build(cfg_dash),
         "setup": setup(root, offline, now),
         "github": {"ok": False, "why": "built offline"} if offline else github_data(root, cfg_dash, month, now),
     }
@@ -626,7 +628,11 @@ def money(root: Path, data: dict[str, Any], month: str) -> dict[str, Any]:
 def page(data: dict[str, Any]) -> str:
     name = data["project"]["name"] or "Startup"
     before, _, after = s.read(PAGE).partition("__S2S_DATA__")
-    return before.replace("__S2S_TITLE__", html.escape(f"{name} dashboard")) + embed(data) + after
+    before = before.replace("__S2S_TITLE__", html.escape(f"{name} dashboard"))
+    style = theme.css(data.get("theme") or {})
+    if style:
+        before = before.replace("</head>", style + "</head>", 1)
+    return before + embed(data) + after
 
 
 def clip(text: Any, n: int = 300) -> str:

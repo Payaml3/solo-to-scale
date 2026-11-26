@@ -88,6 +88,7 @@ The pages are operator tools a founder reads every day, so they should feel like
 - `accent` is ink. It marks the selected tab, the current stage, primary action buttons and the founder's own node. There is no brand hue.
 - Status colours (`done`, `progress`, `todo`, `waiting`) are saturated and mean a state. Use them for status text, pills and meters, never for decoration or as a chart series.
 - Charts draw the measure in `series`, the rest in `line-strong`, and a problem (a missed check) in `waiting`. Run the dataviz palette validator before adding a chart colour: green beside red fails for colour-blind readers.
+- A startup may theme its own dashboard from its brand (`theme` in `founder/dashboard.json`). The tokens and every rule here still hold; `tools/theme.py` refuses a mode that loses contrast or colour-blind separation. Brand action colours belong on links and focus, not on chart series.
 - Pills are tinted, not outlined: `currentColor` text on a 12% `currentColor` background, fully rounded.
 - Document groups (business, product, technical) use the `group-*` tokens as a 3px edge and a mono tag.
 - Text on a filled status colour uses `--on-status` (white in light mode, near-black in dark mode) so it keeps contrast in both.

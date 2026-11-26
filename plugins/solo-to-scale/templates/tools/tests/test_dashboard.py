@@ -17,6 +17,7 @@ sys.path.insert(0, str(TOOLS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import approval  # noqa: E402
 import build_dashboard as bd  # noqa: E402
+import theme  # noqa: E402
 import heartbeat  # noqa: E402
 import tickets  # noqa: E402
 from test_heartbeat import Fake  # noqa: E402
@@ -642,3 +643,36 @@ def test_charts_follow_the_dataviz_rules():
     assert "(green: " not in html, "a chart names its parts in a legend, not by colour in the title"
     assert "animation: enter 180ms" not in html and "animation: fadein 150ms" not in html, "the keyboard-opened palette doesn't animate"
     assert ".tile .v { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric" not in html
+
+
+DETENT_LIKE = {"light": {"paper": "#F3F3F1", "ink": "#18191B", "link": "#C2360F", "series": "#237A46", "miss": "#C2360F"},
+               "dark": {"paper": "#18191B", "surface": "#232427", "ink": "#F3F3F1", "link": "#FF4A1F", "series": "#3c9a62", "miss": "#FF4A1F"}}
+
+
+def test_a_startup_themes_its_dashboard_from_its_brand(root, fake):
+    cfg = json.loads((root / "founder/dashboard.json").read_text(encoding="utf-8")) if (root / "founder/dashboard.json").exists() else {}
+    cfg["theme"] = DETENT_LIKE
+    (root / "founder/dashboard.json").write_text(json.dumps(cfg), encoding="utf-8")
+    page = bd.page(bd.build(root, now=NOW))
+    style = page.split('<style id="s2s-theme">')[1].split("</style>")[0]
+    assert ":root { --ink: #18191b; --link: #c2360f; --miss: #c2360f; --paper: #f3f3f1; --series: #237a46; }" in style
+    assert ':root[data-theme="dark"] {' in style and "--series: #3c9a62;" in style and "prefers-color-scheme: dark" in style
+    assert page.index('id="s2s-theme"') < page.index("</head>") and data_of(page)["theme"]["warnings"] == []
+
+
+def test_a_theme_that_charts_cannot_read_is_not_applied():
+    out = theme.build({"theme": {"light": {"series": "#1a7f37", "miss": "#cb2a2f", "ink": "red", "nope": "#000000"},
+                                 "dark": {"ink": "#2a2a2a"}}})
+    assert out["light"] == {} and out["dark"] == {}
+    text = " ".join(out["warnings"])
+    assert "deutan" in text and "ignored ink, nope" in text and "ink on paper" in text
+    assert theme.css(out) == "" and theme.css({}) == ""
+    assert theme.build({"theme": "blue"}) == {"light": {}, "dark": {}, "warnings": []}
+    assert round(theme.delta_e("#1a7f37", "#cb2a2f", "deutan"), 1) == 5.1, "matches the dataviz validator"
+    hostile = theme.css({"light": {"ink": "#000000;}</style><script>"}})
+    assert "<script>" not in hostile
+
+
+def test_the_page_honours_the_miss_token_and_shows_theme_warnings():
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert ".s-w { background: var(--miss, var(--waiting)); }" in html and '" Theme: " + w' in html

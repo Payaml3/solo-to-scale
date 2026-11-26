@@ -546,7 +546,7 @@ nav .strip a { flex: none; }
 .dday { position: relative; flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; outline: none; border-radius: 4px 4px 0 0; }
 .dstack { width: 100%; max-width: 24px; display: flex; flex-direction: column-reverse; gap: 2px; }
 .dstack i { display: block; flex-basis: 0; min-height: 1px; } .dstack i:last-child { border-radius: 4px 4px 0 0; }
-.s-a { background: var(--series); } .s-b { background: var(--line-strong); } .s-c { background: var(--series); } .s-w { background: var(--waiting); }
+.s-a { background: var(--series); } .s-b { background: var(--line-strong); } .s-c { background: var(--series); } .s-w { background: var(--miss, var(--waiting)); }
 .dday::after { content: none; position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 3; white-space: nowrap; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--paper); font: .75rem/1.4 var(--body); }
 .dday.r::after { left: auto; right: 0; }
 @media (hover: hover) and (pointer: fine) { .dday:hover { background: var(--sunk); } .dday:hover::after { content: attr(data-tip); } }
@@ -2040,6 +2040,7 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
     var repoOk = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(G.repo || "")) && /^[0-9a-f]{4,40}$/.test(String(D.commit || ""));
     meta.appendChild(document.createTextNode(" (" + when(D.built) + " UTC) from " + (D.commit ? "commit " : "the repo")));
     if (D.commit) meta.appendChild(repoOk ? el("a", { href: "https://github.com/" + G.repo + "/commit/" + D.commit, target: "_blank", rel: "noopener noreferrer", text: D.commit }) : document.createTextNode(D.commit));
+    ((D.theme || {}).warnings || []).forEach(function (w) { meta.appendChild(el("span", { cls: "stale", text: " Theme: " + w + "." })); });
     meta.appendChild(document.createTextNode((G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every three hours."));
     var rb = safeHref(D.rebuild_url);
     if (rb) { meta.appendChild(document.createTextNode(" ")); meta.appendChild(el("a", { href: rb, target: "_blank", rel: "noopener noreferrer", text: "Rebuild now" })); }
