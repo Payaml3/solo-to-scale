@@ -99,11 +99,17 @@ The pages are operator tools a founder reads every day, so they should feel like
 
 - Max width 1180px, 16px gutters on phones, no horizontal page scroll (wide tables scroll inside `.table-wrap`).
 - Cards: 8px radius, 1px `line` border, `--shadow`, 20px padding (tiles 14px 16px). Never a single heavy drop shadow.
-- Header: title on the left, the theme switch (a pill with a sun or moon icon) on the right. Nothing floats over the content.
+- Header: title on the left; on the right, three pills (Search with its ⌘K key, Compact, Theme), icons only on phones. Under the build line, inner tabs show a one-line mono strip of the day's numbers (needs you, approvals, agents working, AI spend), each a link. Nothing floats over the content, except the search palette, which only opens when asked: a centred card on a lightly blurred veil, closed by Esc or a click outside.
 - Navigation, desktop (1000px and wider): a 232px sidebar on the left, sticky and full height, with a hairline on its right, a mono label at the top, and one item per tab. The selected item sits on a `sunk` pill with a 2px ink edge on its left; the pill slides to the item you pick. Counts sit at the right of their item.
 - Navigation, phone and tablet: a sticky tab bar along the top, translucent `paper` with a backdrop blur, one 2px ink underline that slides to the selected tab, hover lifts the label to `ink`. The strip scrolls sideways with its scrollbar hidden and fades at an edge that has more tabs.
 - Tables: muted 0.75rem headers on a `sunk` band, 9px 10px cells, hairline rows, `sunk` row hover.
 - Inputs and selects: 36px high, 6px radius, hairline border.
+- Panel heads: the title on the left and, when it helps, a mono count or state on the right (`2 working · 1 off`).
+- Lists of things you open (agents) are compact rows inside one hairline frame, a `sunk` header band on desktop, the whole row a link. On phones a row folds into three lines.
+- Ghosts: something configured but not active (a role with its heartbeat off) is shown, faded to about 60% and dashed, never hidden.
+- Source labels: in a diagram or record, each value sits under a small mono label naming the file or log it comes from (`founder/heartbeats.json · cron`), so the founder knows what to edit.
+- Diagrams: a flow reads left to right as hairline cards joined by short arrows (Trigger → Agent → Output and grade), and stacks top to bottom on phones.
+- Compact density: one toggle tightens panel padding, tile size, table rows and gaps for a desktop read. It never changes what is shown.
 
 ## The Overview
 
@@ -131,6 +137,7 @@ Motion explains a change or confirms an action; it never decorates. The review b
 - Don't use uppercase micro-labels or weight 700.
 - Don't animate layout properties (width, height, margin), loop anything but the live dot, or animate in a way that hides content until it ends.
 - Don't copy another company's logo, wordmark or name into the page.
+- Don't take a dense terminal look literally: no neon palette, no all-caps panel labels, no layout that only works on a wide screen. Take the structure (numbered checks, source labels, diagrams), not the skin.
 
 ## Where this came from
 

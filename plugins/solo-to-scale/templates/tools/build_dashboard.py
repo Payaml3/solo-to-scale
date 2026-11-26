@@ -151,8 +151,8 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
                       "role": roles.get(code, "engineer"), "stories": len(stories),
                       "slices": sorted({str(st.get("slice", "")) for st in stories if st.get("slice")})})
     memos = [d for d in documents(root, ["founder/board/*.md"]) if not d["path"].endswith("README.md")]
-    beats = {r: {k: ((pol.get("roles") or {}).get(r) or {}).get(k) for k in ("enabled", "cron", "monthly_budget_usd")}
-             for r in heartbeat.BUDGET_ROLES}
+    beats = {r: {**{k: ((pol.get("roles") or {}).get(r) or {}).get(k) for k in ("enabled", "cron", "monthly_budget_usd")},
+                 "rubric": heartbeat.rubric(pol, r)} for r in heartbeat.BUDGET_ROLES}
     return {
         "goals": goals.build(root),
         "documents": grouped_documents(root, cfg_dash.get("documents") or DEFAULT_DOCS),
@@ -322,7 +322,7 @@ def costs(hub: tickets.Hub, root: Path, month: str, now: dt.datetime | None = No
         for r in mine:
             if r["at"][:10]:
                 daily[r["at"][:10]] = round(daily.get(r["at"][:10], 0.0) + r["usd"], 4)
-        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None, "rubric": heartbeat.rubric(pol, role),
+        roles.append({"role": role, "used": round(used, 4), "cap": cap, "base": base or None,
                       "stats": heartbeat.run_stats(mine), "daily": [{"date": d, "usd": v} for d, v in sorted(daily.items())]})
 
     def group(key: str, none: str) -> list[dict[str, Any]]:
