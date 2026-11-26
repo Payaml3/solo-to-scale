@@ -79,6 +79,7 @@ DEFAULT_RUBRIC = {
     "board": ["The memo answers the brief's question from the advisor's lens",
               "It fits in 8 lines"],
 }
+EVAL_CASE = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 CHECKS = re.compile(r"^(\d{1,2})/(\d{1,2})$")
 
 
@@ -196,6 +197,8 @@ def entries(comments: list[dict[str, Any]], month: str) -> list[dict[str, Any]]:
                     "seconds": float(secs) if isinstance(secs, (int, float)) and not isinstance(secs, bool) and secs >= 0 else None,
                     "session": session_link(data.get("session")), "model": str(data.get("model") or "")[:40],
                     "objective": str(data.get("objective") or "")[:12], "at": str(c.get("created_at") or ""),
+                    "note": " ".join(str(data.get("note") or "").split())[:200],
+                    "eval": str(data.get("eval")) if EVAL_CASE.match(str(data.get("eval") or "")) else "",
                     "checks": checks_of("/".join(map(str, data["checks"]))) if isinstance(data.get("checks"), list)
                     and len(data["checks"]) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in data["checks"])
                     else None})
@@ -216,7 +219,7 @@ def run_stats(runs: list[dict[str, Any]]) -> dict[str, Any]:
     secs = sorted(r["seconds"] for r in runs if r["seconds"] is not None)
     median = (secs[len(secs) // 2] if len(secs) % 2 else (secs[len(secs) // 2 - 1] + secs[len(secs) // 2]) / 2) if secs else None
     total = sum(r["usd"] for r in runs)
-    graded = [r["checks"] for r in runs if r.get("checks")]
+    graded = [r["checks"] for r in runs if r.get("checks") and not r.get("eval")]
     passed = sum(1 for c in graded if c[0] == c[1])
     return {"runs": len(runs), "outcomes": counts, "success": round(counts["worked"] / tried, 4) if tried else None,
             "graded": len(graded), "passed": passed, "pass_rate": round(passed / len(graded), 4) if graded else None,
@@ -459,7 +462,9 @@ def cmd_end(a: argparse.Namespace, hub: tickets.Hub, pol: dict[str, Any]) -> int
         raise SystemExit("--checks must be passed/total, like 3/4, with 1 to 6 checks")
     costs = Costs(hub, month)
     before = costs.totals()
-    record = {"checks": checks, "outcome": a.outcome or ("worked" if a.ticket else "no-work"), "model": a.model[:40],
+    if a.eval and not EVAL_CASE.match(a.eval):
+        raise SystemExit("--eval must be a case name like week-of-may-25 (lower case, digits and hyphens)")
+    record = {"checks": checks, "eval": a.eval, "note": " ".join(a.note.split())[:200], "outcome": a.outcome or ("worked" if a.ticket else "no-work"), "model": a.model[:40],
               "session": session_link(a.session or next((os.environ[k] for k in SESSION_ENV if os.environ.get(k)), ""))}
     held = run_holder(hub, a.role)
     now = a.now or dt.datetime.now(dt.timezone.utc).timestamp()
@@ -548,6 +553,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--outcome", default="", help="worked, no-work, blocked, approval or failed")
     p.add_argument("--session", default="", help="https link to this run's session or transcript")
     p.add_argument("--model", default="")
+    p.add_argument("--eval", default="", help="the eval case this run re-ran (evals/<role>/<case>.md)")
     p.add_argument("--checks", default="", help="rubric checks passed/total, like 3/4 (start prints the rubric)")
     p.add_argument("--now", type=float, default=0, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)

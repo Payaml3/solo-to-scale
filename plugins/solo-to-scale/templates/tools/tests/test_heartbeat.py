@@ -273,3 +273,17 @@ def test_the_founder_can_replace_a_role_rubric():
     assert heartbeat.rubric(pol, "qa") == ["Ran every level", "Wrote a go or no-go"]
     assert heartbeat.rubric(pol, "engineer") == heartbeat.DEFAULT_RUBRIC["engineer"], "an empty check falls back"
     assert all(3 <= len(v) <= 6 for k, v in heartbeat.DEFAULT_RUBRIC.items() if k != "board")
+
+
+def test_a_run_keeps_its_note_and_eval_reruns_stay_out_of_the_pass_rate(root, fake):
+    assert run(root, "end", "engineer", "--usd", "1", "--checks", "2/4", "--note", "  tests   flaked\\n twice ") == heartbeat.OK
+    assert run(root, "end", "engineer", "--usd", "1", "--checks", "4/4", "--eval", "invoice-export") == heartbeat.OK
+    with pytest.raises(SystemExit, match="--eval"):
+        run(root, "end", "engineer", "--usd", "1", "--eval", "Bad Case!")
+    log = next(i for i in fake.issues.values() if "cost-log" in fake.names(i["number"]))
+    runs = heartbeat.entries(fake.comments[log["number"]], MONTH)
+    assert runs[0]["note"] == "tests flaked\\n twice" and runs[1]["eval"] == "invoice-export"
+    st = heartbeat.run_stats(runs)
+    assert (st["graded"], st["passed"]) == (1, 0), "an eval re-run is a test of the model, not a day's work"
+    forged = [{"body": '<!-- s2s:cost {"role": "qa", "usd": 1, "month": "2026-11", "eval": "../x"} -->'}]
+    assert heartbeat.entries(forged, MONTH)[0]["eval"] == ""

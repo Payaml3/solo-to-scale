@@ -42,6 +42,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _s2s as s  # noqa: E402
 import approval  # noqa: E402
+import autopilot  # noqa: E402
 import build_roadmap  # noqa: E402
 import build_team  # noqa: E402
 import build_traceability  # noqa: E402
@@ -166,9 +167,56 @@ def repo_data(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
         "epics": epics,
         "decisions": s.decisions(root, cfg),
         "next": next_directions(root),
+        "profiles": {r: role_profile(root, r, pol) for r in tickets.ROLES},
+        "evals": eval_cases(root),
+        "gates": sorted(str(k)[:40] for k, v in approval.policy(root)["gates"].items()
+                        if isinstance(v, dict) and v.get("mode") != "allow")[:30],
         "approved_words": cfg.get("approved_words") or ["Approved"],
         "reports_to": dict(tickets.REPORTS_TO),
     }
+
+
+PROFILE_SECTIONS = {"skills": "Skills", "model": "Model", "tools": "Tools", "never": "Never", "owns": "Owns",
+                    "approval": "Needs the founder's approval for"}
+
+
+def role_profile(root: Path, role: str, pol: dict[str, Any]) -> dict[str, Any]:
+    """What an agent is made of, from its generated .codex/agents/<role>.toml (the same text as the Claude agent):
+    owns, skills, model guidance, tools and never-rules, plus the autopilot's model for it."""
+    text = s.read(root / ".codex" / "agents" / f"{role}.toml")
+    out: dict[str, Any] = {"run_model": autopilot.model_of(autopilot.settings(pol), role)}
+    for key, head in PROFILE_SECTIONS.items():
+        m = re.search(rf"^## {head}\n(.*?)(?=^## |^\'\'\'|\Z)", text, re.M | re.S)
+        lines = [ln.strip() for ln in (m.group(1) if m else "").splitlines() if ln.strip()]
+        items = [clip(ln[2:], 140) for ln in lines if ln.startswith("- ")] or [clip(" ".join(lines), 200)] if lines else []
+        out[key] = items[:8]
+    return out
+
+
+def eval_cases(root: Path) -> list[dict[str, str]]:
+    """evals/<role>/<case>.md: a past ticket with a known-good result, re-run before changing a role's model.
+    The first heading is the title; the `Ticket:` line names the past ticket."""
+    out = []
+    for p in sorted((root / "evals").glob("*/*.md")):
+        role, case = p.parent.name, p.stem
+        if role not in tickets.ROLES or not heartbeat.EVAL_CASE.match(case):
+            continue
+        text = s.read(p)
+        title = next((ln.lstrip("# ").strip() for ln in text.splitlines() if ln.startswith("# ")), case)
+        ticket = re.search(r"^Ticket:\s*#?(\d{1,7})", text, re.M)
+        out.append({"role": role, "case": case, "title": clip(title, 120), "path": p.relative_to(root).as_posix(),
+                    "ticket": ticket.group(1) if ticket else ""})
+    return out[:100]
+
+
+def eval_results(runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """The latest re-run of each eval case, keyed role/case: when, which model, and checks passed."""
+    out: dict[str, dict[str, Any]] = {}
+    for r in runs:
+        if r.get("eval"):
+            out[f'{r["role"]}/{r["eval"]}'] = {"at": r["at"], "model": r["model"], "checks": r.get("checks"),
+                                               "passed": bool(r.get("checks") and r["checks"][0] == r["checks"][1])}
+    return out
 
 
 WHY_LATER = ("not possible", "needs a credential", "out of scope")
@@ -364,7 +412,7 @@ def trends(runs: list[dict[str, Any]], activity: list[dict[str, Any]], merged: l
     """The last `days` days, one row per day: runs (worked, other), success rate, agent actions, merges."""
     today = (now or dt.datetime.now(dt.timezone.utc)).date()
     keys = [(today - dt.timedelta(days=days - 1 - i)).isoformat() for i in range(days)]
-    rows = {k: {"date": k, "worked": 0, "other": 0, "tried": 0, "actions": 0, "merged": 0} for k in keys}
+    rows = {k: {"date": k, "worked": 0, "other": 0, "tried": 0, "actions": 0, "merged": 0, "graded": 0, "passed": 0} for k in keys}
     for r in runs:
         d = when_of(r.get("at"))
         row = rows.get(d.date().isoformat()) if d else None
@@ -372,6 +420,9 @@ def trends(runs: list[dict[str, Any]], activity: list[dict[str, Any]], merged: l
             continue
         row["worked" if r.get("outcome") == "worked" else "other"] += 1
         row["tried"] += 1 if r.get("outcome") and r.get("outcome") != "no-work" else 0
+        if r.get("checks") and not r.get("eval"):
+            row["graded"] += 1
+            row["passed"] += 1 if r["checks"][0] == r["checks"][1] else 0
     for a in activity:
         d = when_of(a.get("at"))
         if d and d.date().isoformat() in rows:
@@ -384,6 +435,7 @@ def trends(runs: list[dict[str, Any]], activity: list[dict[str, Any]], merged: l
     for k in keys:
         row = rows[k]
         row["success"] = round(row["worked"] / row["tried"], 4) if row["tried"] else None
+        row["pass_rate"] = round(row["passed"] / row["graded"], 4) if row["graded"] else None
         out.append(row)
     return {"days": out}
 
@@ -501,7 +553,8 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.dateti
             ctl = {"all": None, "roles": {}, "url": "", "unknown": True}
         return {"ok": True, "control": ctl, "repo": repo, "activity": activity[-limit:], "tickets": open_tickets,
                 "approvals": approvals(hub, root), "costs": c, "merged": merged,
-                "trends": trends(recent_runs + c["entries"], activity, merged, now)}
+                "trends": trends(recent_runs + c["entries"], activity, merged, now),
+                "eval_results": eval_results(recent_runs + c["entries"])}
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, KeyError, TypeError) as exc:
         return {"ok": False, "repo": repo, "why": f"GitHub unavailable or unexpected reply ({type(exc).__name__})"}
 

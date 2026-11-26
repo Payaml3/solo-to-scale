@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.14.0 (2026-11-26)
+
+- **How the company runs, on the Overview.** The page opens with the company goal, then one diagram: what starts work (the autopilot, schedules, approvals waiting), the AI team inside the repo (skills, gates, budgets, registers) and what comes out (pull requests merged in 7 days, graded runs that passed every check, decisions still open). Each box links to its tab.
+- **What each agent is made of.** Under an agent's diagram, attached cards show its model (the autopilot's choice and the model guidance), its access, its skills, its never-rules and what it asks you first, read from its agent file.
+- **Evals.** `evals/<role>/<case>.md` keeps past tickets with a known-good result (`evals/README.md` explains it; `upgrade` adds the README). Re-run them before changing a role's model with `heartbeat.py end --eval <case> --checks p/t`; the agent's page shows each case's last result, and eval runs stay out of the pass rate.
+- **Pass-rate charts.** Graded runs per day (green passed every check, red missed one) on Agent activity and each agent's page, and a Checks passed by role table on Costs.
+- **Run notes.** The `end --note` line is now kept in the run record and shown, and searchable, in every run log.
+- **Stats in the tab bar.** The day's numbers moved from under the header into the sticky tab bar, on every tab, led by an autopilot light that breathes when the autopilot is on (still under reduced motion).
+
 ## v2.13.0 (2026-11-26)
 
 - **Every agent run is graded.** Each role has a rubric of 3 to 6 yes/no checks (defaults in `tools/heartbeat.py`; a `rubric` list on the role in `founder/heartbeats.json` replaces them). `heartbeat.py start` prints it, and `end --checks 3/4` records the score; a run passes when every check passed. `runs` gains a Checks column and the pass rate, and the dashboard shows both. Forged or malformed scores in the cost log are ignored.
