@@ -9,6 +9,10 @@ permissions:
   contents: read
   pull-requests: read
   issues: read
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: founder-gates-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   founder-gates:
     runs-on: ubuntu-latest

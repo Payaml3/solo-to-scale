@@ -10,7 +10,7 @@ on:
   issue_comment:
     types: [created]
   schedule:
-    - cron: "7 */3 * * *"   # new items come from events; the daily digest goes on the first run after its hour
+    - cron: "7 */3 * * *"   # also after each agent run; the daily digest goes on the first run after its hour
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,7 +19,12 @@ permissions:
   actions: read
 jobs:
   notify:
-    if: github.event_name != 'issue_comment' || github.event.comment.user.type != 'Bot'
+    # Agents' own ticket events and comments skip it (a skipped job bills no minutes): the agents workflow runs it once
+    # after each agent run, which is when approvals and escalations appear.
+    if: >-
+      (github.event_name != 'issues' && github.event_name != 'issue_comment') ||
+      (github.event_name == 'issues' && github.event.sender.type != 'Bot') ||
+      (github.event_name == 'issue_comment' && github.event.comment.user.type != 'Bot')
     runs-on: ubuntu-latest
     # On the job, so a skipped run (an agent's comment) never joins it. A burst of events makes at most two runs: one
     # runs, and each newer event replaces the one waiting behind it, which never starts and so costs no minutes.
