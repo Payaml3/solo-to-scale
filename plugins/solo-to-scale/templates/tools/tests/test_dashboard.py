@@ -632,3 +632,13 @@ def test_the_v2_14_views_are_on_the_page():
     assert '<nav aria-label="Dashboard tabs"><div class="tabs" role="tablist" id="tabs"></div><div class="strip" id="strip"' in html, \
         "the day's numbers sit in the sticky tab bar"
     assert "goalLine(), tiles," in html and "systemPanel(crewAll)," in html, "the Overview opens with the goal and the system"
+
+
+def test_charts_follow_the_dataviz_rules():
+    html = bd.PAGE.read_text(encoding="utf-8")
+    for part in ("function legend", 'tabindex: "0", "aria-label": tip', "function trendTable", "max-width: 24px", "border-radius: 4px 4px 0 0",
+                 ".s-a { background: var(--series); }", "--series: #0068d6;", "--series: #3d95f5;"):
+        assert part in html, part
+    assert "(green: " not in html, "a chart names its parts in a legend, not by colour in the title"
+    assert "animation: enter 180ms" not in html and "animation: fadein 150ms" not in html, "the keyboard-opened palette doesn't animate"
+    assert ".tile .v { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric" not in html

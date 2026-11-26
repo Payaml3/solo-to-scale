@@ -15,7 +15,7 @@
   /* Tokens come from DESIGN.md in the solo-to-scale plugin repo; CI checks they match. Light here, dark twice below (system setting, then the toggle). */
   --paper: #fafafa; --surface: #ffffff; --sunk: #f2f2f2; --ink: #171717; --muted: #666666; --line: #ebebeb; --line-strong: #c9c9c9;
   --accent: #171717; --on-accent: #ffffff; --on-status: #ffffff; --link: #0068d6; --done: #1a7f37; --progress: #ab570a; --todo: #6e6e6e; --waiting: #cb2a2f;
-  --g-business: #ab570a; --g-product: #7928ca; --g-technical: #0068d6;
+  --g-business: #ab570a; --g-product: #7928ca; --g-technical: #0068d6; --series: #0068d6;
   --shadow: 0 1px 1px rgba(0,0,0,.02), 0 2px 2px rgba(0,0,0,.04); --radius: 8px;
   --body: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -25,7 +25,7 @@
   :root:not([data-theme="light"]) {
     --paper: #000000; --surface: #0a0a0a; --sunk: #1a1a1a; --ink: #ededed; --muted: #a1a1a1; --line: #2e2e2e; --line-strong: #454545;
     --accent: #ededed; --on-accent: #0a0a0a; --on-status: #0a0a0a; --link: #52a8ff; --done: #62c073; --progress: #f2a33a; --todo: #8f8f8f; --waiting: #ff6166;
-    --g-business: #f2a33a; --g-product: #bf7af0; --g-technical: #52a8ff;
+    --g-business: #f2a33a; --g-product: #bf7af0; --g-technical: #52a8ff; --series: #3d95f5;
     --shadow: none;
     color-scheme: dark;
   }
@@ -33,7 +33,7 @@
 :root[data-theme="dark"] {
   --paper: #000000; --surface: #0a0a0a; --sunk: #1a1a1a; --ink: #ededed; --muted: #a1a1a1; --line: #2e2e2e; --line-strong: #454545;
   --accent: #ededed; --on-accent: #0a0a0a; --on-status: #0a0a0a; --link: #52a8ff; --done: #62c073; --progress: #f2a33a; --todo: #8f8f8f; --waiting: #ff6166;
-  --g-business: #f2a33a; --g-product: #bf7af0; --g-technical: #52a8ff;
+  --g-business: #f2a33a; --g-product: #bf7af0; --g-technical: #52a8ff; --series: #3d95f5;
   --shadow: none;
   color-scheme: dark;
 }
@@ -75,7 +75,7 @@ h3 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start; }
 .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; }
 .tile .k { font-size: .8rem; color: var(--muted); }
-.tile .v { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: 2px; }
+.tile .v { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.25; margin-top: 2px; }
 .tile .s { font-size: .8rem; color: var(--muted); }
 .tile.alert { border-color: var(--waiting); } .tile.alert .v { color: var(--waiting); }
 .table-wrap { overflow-x: auto; }
@@ -124,7 +124,7 @@ ul.list li:last-child { border-bottom: 0; }
 .gantt { position: relative; min-width: 680px; --lab: 220px; font-size: .85rem; padding-top: 20px; }
 @media (max-width: 760px) { .gantt { --lab: 140px; min-width: 560px; } }
 .g-row { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr); align-items: center; min-height: 30px; border-bottom: 1px solid var(--line); }
-.g-row:hover .g-lab, .g-row:hover { background: var(--sunk); }
+@media (hover: hover) and (pointer: fine) { .g-row:hover .g-lab, .g-row:hover { background: var(--sunk); } }
 .g-lab { position: sticky; left: 0; z-index: 2; background: var(--surface); padding: 4px 10px 4px 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-lab small { color: var(--muted); font-family: var(--mono); font-size: .72rem; margin-right: 6px; }
 .g-row.g-group { min-height: 34px; } .g-row.g-group .g-lab { font-weight: 600; }
@@ -250,7 +250,7 @@ a.act:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .rung .pill { margin-top: 2px; }
 .s-passed { color: var(--done); } .s-deferred { color: var(--progress); } .s-notpassed { color: var(--waiting); }
 .track .ph span em { font-style: normal; }
-a.tile { display: block; color: inherit; text-decoration: none; } a.tile:hover { border-color: var(--line-strong); }
+a.tile { display: block; color: inherit; text-decoration: none; } @media (hover: hover) and (pointer: fine) { a.tile:hover { border-color: var(--line-strong); } }
 a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .hub { display: block; width: 100%; max-width: 600px; height: auto; margin: 4px auto 0; overflow: visible; }
@@ -298,7 +298,6 @@ a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .facts dt { color: var(--muted); } .facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
 .facts dd.bad { color: var(--waiting); } .facts dd.warnv { color: var(--progress); }
 .charts.c1 { grid-template-columns: 1fr; gap: 14px; }
-.charts.c1 .chart { max-width: 440px; height: 56px; }
 
 @media (max-width: 760px) { .grid.g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .jhead { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
@@ -307,7 +306,7 @@ a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .jwarn { color: var(--waiting); font-size: .85rem; margin: 0 0 12px; }
 .jmap { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .jp a { display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; background: var(--surface); }
-.jp a:hover { border-color: var(--line-strong); } .jp a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .jp a:hover { border-color: var(--line-strong); } } .jp a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .jp.on a { border: 2px solid var(--accent); padding: 9px; background: var(--sunk); }
 .jp.next a, .jp.part a { color: var(--muted); }
 .jp.gap a { border-color: var(--waiting); }
@@ -355,14 +354,12 @@ a.tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .spark { display: block; width: 96px; height: 24px; }
 .spark polyline { fill: none; stroke: var(--link); stroke-width: 1.5; }
 .spark circle { fill: var(--link); }
-.chart { display: block; width: 100%; height: 64px; }
-.chart rect.a { fill: var(--done); } .chart rect.b { fill: var(--line); } .chart rect.c { fill: var(--progress); }
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .charts .k { font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
 .lvl-escalated { color: var(--waiting); font-weight: 600; } .lvl-overdue { color: var(--progress); font-weight: 600; }
 .meta .stale { color: var(--waiting); font-weight: 600; }
 .bars { display: block; width: 100%; max-width: 560px; height: 72px; }
-.bars rect { fill: var(--progress); } .bars line { stroke: var(--waiting); stroke-dasharray: 4 3; stroke-width: 1; }
+.bars path { fill: var(--series); } .bars line { stroke: var(--muted); stroke-dasharray: 4 3; stroke-width: 1; }
 .agent a.open { align-self: flex-start; font-size: .85rem; font-weight: 600; }
 .agentpage { scroll-margin-top: 56px; border: 1px solid var(--line-strong); box-shadow: 0 2px 2px rgba(0,0,0,.04), 0 8px 16px -4px rgba(0,0,0,.06); border-radius: 12px; padding: 14px; margin-bottom: 18px; background: var(--surface); }
 .agentpage .head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
@@ -425,9 +422,9 @@ a.tile:active, .jp a:active { transform: scale(0.99); }
 .strip a { color: var(--muted); text-decoration: none; display: inline-flex; gap: 6px; align-items: baseline; }
 .strip a b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; } .strip a.alert b { color: var(--waiting); }
 @media (hover: hover) and (pointer: fine) { .strip a:hover span { color: var(--ink); } }
-.veil { position: fixed; inset: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 55%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; animation: fadein 150ms var(--ease-out); }
+.veil { position: fixed; inset: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 55%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; }
 @keyframes fadein { from { opacity: 0; } }
-.palette { width: 100%; max-width: 620px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 2px 2px rgba(0,0,0,.04), 0 16px 32px -8px rgba(0,0,0,.18); overflow: hidden; animation: enter 180ms var(--ease-out); }
+.palette { width: 100%; max-width: 620px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 2px 2px rgba(0,0,0,.04), 0 16px 32px -8px rgba(0,0,0,.18); overflow: hidden; }
 .palette input { width: 100%; height: 48px; border: 0; border-bottom: 1px solid var(--line); padding: 0 16px; font: inherit; font-size: 1rem; background: transparent; color: var(--ink); outline: none; }
 .palette ul { list-style: none; margin: 0; padding: 6px; max-height: 52vh; overflow-y: auto; }
 .palette li { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: .9rem; overflow-wrap: anywhere; }
@@ -506,7 +503,6 @@ details.source[open] summary { margin-bottom: 12px; }
 @media print { .hbtns, nav .strip { display: none; } }
 
 /* v2.14: attached cards, the company system, evals, run notes and the tab bar's stats. */
-.chart rect.w { fill: var(--waiting); }
 .schemawrap { margin: 4px 0 16px; } .schemawrap .schema { margin: 0; }
 .attach { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 18px; }
 .schemawrap > .attach::before { content: ""; position: absolute; left: 50%; top: -18px; height: 18px; border-left: 1px dashed var(--line-strong); }
@@ -524,7 +520,7 @@ details.source[open] summary { margin-bottom: 12px; }
 @media (hover: hover) and (pointer: fine) { .goalline:hover { border-color: var(--line-strong); } }
 .schema.sys .fact { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
 .schema.sys .fact:first-of-type { border-top: 0; }
-.schema.sys .fact b { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; } .schema.sys .fact .src { grid-column: 1 / -1; margin: 0; }
+.schema.sys .fact b { font-size: 1.1rem; font-weight: 600; } .schema.sys .fact .src { grid-column: 1 / -1; margin: 0; }
 @media (hover: hover) and (pointer: fine) { .schema.sys a.fact:hover span { text-decoration: underline; } }
 .schema.sys .frame { border-style: solid; outline: 1px dashed var(--line-strong); outline-offset: 4px; }
 .crew { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; } .crew a { border-radius: 30%; } .crew a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
@@ -542,6 +538,26 @@ nav .strip a { flex: none; }
   nav .strip { flex-direction: column; flex-wrap: nowrap; margin: auto 0 0; padding: 14px 22px 22px; border-top: 1px solid var(--line); gap: 8px; overflow: visible; }
   nav .strip a { justify-content: space-between; }
 }
+
+/* v2.14.1: charts by the dataviz rules (HTML columns, legend, hover and focus on a whole day, a table twin) and press feedback. */
+.dchart { min-width: 0; }
+.dplot { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 64px; border-bottom: 1px solid var(--line); }
+.charts.c1 .dplot { height: 56px; } .charts.c1 .dchart { max-width: 440px; }
+.dday { position: relative; flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; outline: none; border-radius: 4px 4px 0 0; }
+.dstack { width: 100%; max-width: 24px; display: flex; flex-direction: column-reverse; gap: 2px; }
+.dstack i { display: block; flex-basis: 0; min-height: 1px; } .dstack i:last-child { border-radius: 4px 4px 0 0; }
+.s-a { background: var(--series); } .s-b { background: var(--line-strong); } .s-c { background: var(--series); } .s-w { background: var(--waiting); }
+.dday::after { content: none; position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 3; white-space: nowrap; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--paper); font: .75rem/1.4 var(--body); }
+.dday.r::after { left: auto; right: 0; }
+@media (hover: hover) and (pointer: fine) { .dday:hover { background: var(--sunk); } .dday:hover::after { content: attr(data-tip); } }
+.dday:focus-visible { background: var(--sunk); box-shadow: inset 0 0 0 2px var(--link); } .dday:focus-visible::after, .dday:active::after { content: attr(data-tip); }
+.daxis { display: flex; justify-content: space-between; font: .7rem/1.6 var(--mono); color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0 0 6px; font-size: .75rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; } .legend .sw { width: 8px; height: 8px; border-radius: 2px; }
+details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer; font-size: .85rem; color: var(--link); }
+.goalline, .schema.sys a.fact, .crew a { transition: border-color 150ms ease, transform 160ms var(--ease-out); }
+.goalline:active { transform: scale(0.995); } .crew a:active, .schema.sys a.fact:active { transform: scale(0.97); }
+@media (forced-colors: active) { .dstack i { forced-color-adjust: none; border: 1px solid CanvasText; } }
 </style>
 </head>
 <body>
@@ -681,28 +697,24 @@ nav .strip a { flex: none; }
   }
   function tile(k, v, sub) { return el("div", { cls: "tile" }, el("div", { cls: "k", text: k }), el("div", { cls: "v", text: v }), sub ? el("div", { cls: "s", text: sub }) : null); }
   function usd(x) { return "$" + (Number(x) || 0).toFixed(2); }
-  // A 14-day bar chart: one bar per day, stacked from parts [{v, cls}], with every value in the label.
-  function dayChart(title, rows, parts, fmt) {
-    var NS = "http://www.w3.org/2000/svg", W = 280, H = 64, n = rows.length || 1, bw = W / n, hi = 0;
+  // A 14-day column chart in HTML: one column per day, stacked from parts [{v, cls}] with parts[0] on the baseline.
+  // Each day is a full-height hover and focus target whose label carries its numbers; a legend names every part.
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function dayText(d) { var m = /^\d{4}-(\d{2})-(\d{2})$/.exec(String(d || "")); return m ? +m[2] + " " + MONTHS[+m[1] - 1] : String(d || ""); }
+  function legend(items) { return el("div", { cls: "legend" }, items.map(function (l) { return el("span", null, el("i", { cls: "sw s-" + l[0], "aria-hidden": "true" }), l[1]); })); }
+  function dayChart(title, rows, parts, fmt, keys) {
+    var hi = 0, n = rows.length;
     rows.forEach(function (r) { var s = 0; parts.forEach(function (p) { s += Number(p(r).v) || 0; }); hi = Math.max(hi, s); });
-    var svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("class", "chart"); svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", title + ", last " + n + " days: " + rows.map(function (r) { return String(r.date).slice(5) + " " + fmt(r); }).join(", "));
-    rows.forEach(function (r, i) {
-      var y = H, base = document.createElementNS(NS, "rect");
-      // a hairline under every day, so a quiet day still reads as a day
-      base.setAttribute("x", (i * bw + 1).toFixed(1)); base.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
-      base.setAttribute("y", (H - 1).toFixed(1)); base.setAttribute("height", "1"); base.setAttribute("class", "b"); svg.appendChild(base);
-      parts.forEach(function (p) {
-        var part = p(r), v = Number(part.v) || 0; if (!v || !hi) return;
-        var h = Math.max(1, v / hi * (H - 2)), rect = document.createElementNS(NS, "rect");
-        y -= h; rect.setAttribute("x", (i * bw + 1).toFixed(1)); rect.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
-        rect.setAttribute("y", y.toFixed(1)); rect.setAttribute("height", h.toFixed(1)); rect.setAttribute("class", part.cls);
-        var tip = document.createElementNS(NS, "title"); tip.textContent = r.date + ": " + fmt(r); rect.appendChild(tip);
-        svg.appendChild(rect);
-      });
-    });
-    return el("div", null, el("div", { cls: "k", text: title }), svg);
+    var plot = el("div", { cls: "dplot", role: "list", "aria-label": title + ", last " + n + " days, oldest first" }, rows.map(function (r, i) {
+      var segs = parts.map(function (p) { return p(r); }).filter(function (x) { return Number(x.v) > 0; });
+      var sum = segs.reduce(function (a, x) { return a + Number(x.v); }, 0), tip = dayText(r.date) + ": " + fmt(r);
+      return el("div", { cls: "dday" + (i >= n / 2 ? " r" : ""), role: "listitem", tabindex: "0", "aria-label": tip, "data-tip": tip },
+        sum ? el("div", { cls: "dstack", style: "height:" + Math.max(3, Math.round(1000 * sum / hi) / 10) + "%" },
+          segs.map(function (x) { return el("i", { cls: "s-" + x.cls, style: "flex-grow:" + Number(x.v) }); })) : null);
+    }));
+    if (!hi) return el("div", { cls: "dchart" }, el("div", { cls: "k", text: title }), el("p", { cls: "empty", style: "margin:4px 0 0", text: "None in the last " + n + " days." }));
+    return el("div", { cls: "dchart" }, el("div", { cls: "k", text: title }), keys ? legend(keys) : null, plot,
+      n ? el("div", { cls: "daxis", "aria-hidden": "true" }, el("span", { text: dayText(rows[0].date) }), el("span", { text: dayText(rows[n - 1].date) })) : null);
   }
   function minutesAgo(iso) { var t = Date.parse(iso || ""); return isNaN(t) ? null : Math.max(0, Math.round((Date.now() - t) / 60000)); }
   function days(iso) {
@@ -988,8 +1000,9 @@ nav .strip a { flex: none; }
     return days.map(function (d) { var r = by[d.date]; r.pass_rate = r.graded ? r.passed / r.graded : null; return r; });
   }
   function passChart(rows) {
-    return dayChart("Graded runs (green: passed every check)", rows, [function (r) { return { v: r.passed, cls: "a" }; }, function (r) { return { v: (r.graded || 0) - (r.passed || 0), cls: "w" }; }],
-      function (r) { return r.graded ? r.passed + " of " + r.graded + " passed (" + Math.round(100 * r.passed / r.graded) + "%)" : "no graded runs"; });
+    return dayChart("Graded runs", rows, [function (r) { return { v: r.passed, cls: "a" }; }, function (r) { return { v: (r.graded || 0) - (r.passed || 0), cls: "w" }; }],
+      function (r) { return r.graded ? r.passed + " of " + r.graded + " passed every check (" + Math.round(100 * r.passed / r.graded) + "%)" : "no graded runs"; },
+      [["a", "passed every check"], ["w", "missed a check"]]);
   }
 
   // --- one agent's record: its runs, outcomes, time and spend this month ------------------------------------
@@ -1007,9 +1020,12 @@ nav .strip a { flex: none; }
     svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("class", "bars"); svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Spend per day in " + month + ": " + (Object.keys(per).map(function (k) { return k + ": " + usd(per[k]); }).join(", ") || "none") + (cap ? ". Budget pace " + usd(cap / days) + " a day" : ""));
     Object.keys(per).forEach(function (k) {
-      var r = document.createElementNS(NS, "rect"), h = Math.max(1, per[k] / hi * (H - 4));
-      r.setAttribute("x", ((k - 1) * bw + 1).toFixed(1)); r.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
-      r.setAttribute("y", (H - h).toFixed(1)); r.setAttribute("height", h.toFixed(1)); svg.appendChild(r);
+      // a column with a rounded data end and a square foot on the baseline, 2px apart, never wider than 24px
+      var w = Math.min(24, Math.max(1, bw - 2)), x = (k - 1) * bw + (bw - w) / 2, h = Math.max(1, per[k] / hi * (H - 4)), y = H - h, rr = Math.min(4, w / 2, h);
+      var path = document.createElementNS(NS, "path"), tip = document.createElementNS(NS, "title");
+      path.setAttribute("d", "M" + x.toFixed(1) + " " + H + "V" + (y + rr).toFixed(1) + "Q" + x.toFixed(1) + " " + y.toFixed(1) + " " + (x + rr).toFixed(1) + " " + y.toFixed(1)
+        + "H" + (x + w - rr).toFixed(1) + "Q" + (x + w).toFixed(1) + " " + y.toFixed(1) + " " + (x + w).toFixed(1) + " " + (y + rr).toFixed(1) + "V" + H + "Z");
+      tip.textContent = month + "-" + (k < 10 ? "0" : "") + k + ": " + usd(per[k]); path.appendChild(tip); svg.appendChild(path);
     });
     if (cap) {
       var y = (H - (cap / days) / hi * (H - 4)).toFixed(1), ln = document.createElementNS(NS, "line");
@@ -1057,7 +1073,7 @@ nav .strip a { flex: none; }
           tile("Cost per worked run", st.usd_per_worked === null || st.usd_per_worked === undefined ? "n/a" : usd(st.usd_per_worked))),
         el("div", { cls: "cols2" },
           panel("Spend per day", "Bars are each day's spend; the dashed line is the budget spread evenly over the month.", dailyBars(a.c.daily, cap, costs.month)),
-          panel("Checks passed per day", "Each graded run this month, by day: green passed every rubric check, red missed one or more.", st.graded ? passChart(passRows(role)) : el("p", { cls: "empty", text: "No graded runs yet: heartbeat end --checks records them." }))),
+          panel("Checks passed per day", "Each graded run this month, by day, against its rubric.", st.graded ? passChart(passRows(role)) : el("p", { cls: "empty", text: "No graded runs yet: heartbeat end --checks records them." }))),
         evalPanel(role),
         panel("Runs", "Every heartbeat run and session this month, newest first, from the cost log.", runTable(runs, false)),
         panel("Tickets", null, a.mine.length ? el("ul", { cls: "list" }, a.mine.map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : pill("ready", "todo"), reviewPill(t), t.goal ? " " + t.goal : ""); })) : el("p", { cls: "empty", text: "No open tickets." })),
@@ -1114,16 +1130,31 @@ nav .strip a { flex: none; }
             el("a", { href: "#agent/" + encodeURIComponent(x.role), text: "Open " + roleName(x.role) + "'s record" }));
         }))) : null];
   }
+  function runsChart(rows) {
+    return dayChart("Agent runs", rows, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }],
+      function (r) { return r.worked + r.other ? r.worked + " worked of " + (r.worked + r.other) + " runs" : "no runs"; }, [["a", "worked"], ["b", "other outcomes"]]);
+  }
+  // The numbers behind the trend charts, as a table: every value is readable without hovering.
+  function trendTable(rows) {
+    return el("details", { cls: "numbers" }, el("summary", { text: "Show the numbers" }), table([
+      { h: "Day", k: function (r) { return r.date; }, f: function (r) { return dayText(r.date); } },
+      { h: "Runs", num: true, k: function (r) { return r.worked + r.other; }, f: function (r) { return String(r.worked + r.other); } },
+      { h: "Worked", num: true, k: function (r) { return r.worked; }, f: function (r) { return String(r.worked); } },
+      { h: "Graded", num: true, k: function (r) { return r.graded || 0; }, f: function (r) { return String(r.graded || 0); } },
+      { h: "Passed", num: true, k: function (r) { return r.passed || 0; }, f: function (r) { return String(r.passed || 0); } },
+      { h: "Actions", num: true, k: function (r) { return r.actions; }, f: function (r) { return String(r.actions); } },
+      { h: "Merged", num: true, k: function (r) { return r.merged; }, f: function (r) { return String(r.merged); } }], rows.slice().reverse(), ""));
+  }
   function trendPanel() {
     var rows = (G.ok && G.trends && G.trends.days) || [];
     if (!rows.length) return null;
     var any = rows.some(function (r) { return r.worked || r.other || r.actions || r.merged; });
-    return panel("Last 14 days", any ? "One bar per day, oldest on the left. Hover or tap a bar for its numbers." : "No runs, agent actions or merges in the last 14 days.", any ? el("div", { cls: "charts" },
-      dayChart("Agent runs (green: worked)", rows, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }], function (r) { return r.worked + " worked of " + (r.worked + r.other); }),
-      dayChart("Runs that worked, of those with work", rows, [function (r) { return { v: r.success === null ? 0 : r.success, cls: "a" }; }], function (r) { return r.success === null ? "no runs with work" : Math.round(100 * r.success) + "%"; }),
+    return panel("Last 14 days", any ? "One column per day, oldest on the left. Hover, tap or tab to a day for its numbers, or open the table below." : "No runs, agent actions or merges in the last 14 days.", any ? el("div", { cls: "charts" },
+      runsChart(rows),
       rows.some(function (r) { return r.graded; }) ? passChart(rows) : null,
       dayChart("Agent actions", rows, [function (r) { return { v: r.actions, cls: "c" }; }], function (r) { return r.actions + " actions"; }),
-      dayChart("Pull requests merged", rows, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; })) : null);
+      dayChart("Pull requests merged", rows, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; })) : null,
+      any ? trendTable(rows) : null);
   }
 
   // --- tabs ---------------------------------------------------------------------------------------------
@@ -1491,7 +1522,7 @@ nav .strip a { flex: none; }
             el("dt", { text: "Agents working" }), el("dd", { text: G.ok ? working + " of " + crewAll.length + (blocked ? ", " + blocked + " blocked" : "") : "?" }))),
         days.length ? el("div", { cls: "charts c1" },
           dayChart("Pull requests merged", days, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; }),
-          days.some(function (r) { return r.worked || r.other; }) ? dayChart("Agent runs (green: worked)", days, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }], function (r) { return r.worked + " worked of " + (r.worked + r.other); })
+          days.some(function (r) { return r.worked || r.other; }) ? runsChart(days)
             : el("div", null, el("div", { cls: "k", text: "Agent runs" }), el("p", { cls: "empty", style: "margin:4px 0 0", text: "No agent runs in the last 14 days." })))
           : el("p", { cls: "empty", text: "Charts appear once GitHub data is available." })),
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
