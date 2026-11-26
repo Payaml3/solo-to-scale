@@ -503,7 +503,45 @@ details.source[open] summary { margin-bottom: 12px; }
 :root[data-density="compact"] .arow { padding-top: 6px; padding-bottom: 6px; }
 :root[data-density="compact"] .grid { gap: 8px; }
 @media (prefers-reduced-motion: reduce) { .veil, .palette { animation: none; } }
-@media print { .hbtns, .strip { display: none; } }
+@media print { .hbtns, nav .strip { display: none; } }
+
+/* v2.14: attached cards, the company system, evals, run notes and the tab bar's stats. */
+.chart rect.w { fill: var(--waiting); }
+.schemawrap { margin: 4px 0 16px; } .schemawrap .schema { margin: 0; }
+.attach { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 18px; }
+.schemawrap > .attach::before { content: ""; position: absolute; left: 50%; top: -18px; height: 18px; border-left: 1px dashed var(--line-strong); }
+.att { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px; font-size: .85rem; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.att .sh { font-weight: 600; font-size: .9rem; }
+.attl { margin: 2px 0 0; padding-left: 16px; } .attl li { margin: 2px 0; overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.tag { font: .75rem/1.6 var(--mono); padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--sunk); overflow-wrap: anywhere; }
+.list.evals li { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.list.evals small, .ev small { display: block; color: var(--muted); font-size: .75rem; }
+.ev { text-align: right; flex: none; }
+.rnote { display: inline-block; max-width: 32ch; overflow-wrap: anywhere; font-size: .85rem; }
+.goalline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: inherit; text-decoration: none; }
+.goalline .k { font: .75rem/1.4 var(--mono); color: var(--muted); } .goalline b { font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+@media (hover: hover) and (pointer: fine) { .goalline:hover { border-color: var(--line-strong); } }
+.schema.sys .fact { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+.schema.sys .fact:first-of-type { border-top: 0; }
+.schema.sys .fact b { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; } .schema.sys .fact .src { grid-column: 1 / -1; margin: 0; }
+@media (hover: hover) and (pointer: fine) { .schema.sys a.fact:hover span { text-decoration: underline; } }
+.schema.sys .frame { border-style: solid; outline: 1px dashed var(--line-strong); outline-offset: 4px; }
+.crew { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; } .crew a { border-radius: 30%; } .crew a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.attach.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; margin-top: 4px; }
+nav .strip { max-width: 1180px; margin: 0 auto; padding: 0 22px 8px; gap: 4px 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+nav .strip::-webkit-scrollbar { display: none; }
+nav .strip a { flex: none; }
+.led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--todo); margin-right: 6px; vertical-align: 1px; }
+.crew .avatar::before { display: none; }
+.led.on { background: var(--done); animation: ledpulse 2.4s ease-in-out infinite; } .led.capped { background: var(--progress); }
+@keyframes ledpulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .led.on { animation: none; } }
+@media (min-width: 1000px) {
+  nav { display: flex; flex-direction: column; }
+  nav .strip { flex-direction: column; flex-wrap: nowrap; margin: auto 0 0; padding: 14px 22px 22px; border-top: 1px solid var(--line); gap: 8px; overflow: visible; }
+  nav .strip a { justify-content: space-between; }
+}
 </style>
 </head>
 <body>
@@ -515,9 +553,8 @@ details.source[open] summary { margin-bottom: 12px; }
   <button class="theme" id="theme" type="button" aria-label="Switch between light and dark"><svg class="sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/></svg><svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z"/></svg><span>Theme</span></button></div></div>
   <p id="oneline"></p>
   <div class="meta" id="meta"></div>
-  <div class="strip" id="strip" hidden></div>
 </header>
-<nav aria-label="Dashboard tabs"><div class="tabs" role="tablist" id="tabs"></div></nav>
+<nav aria-label="Dashboard tabs"><div class="tabs" role="tablist" id="tabs"></div><div class="strip" id="strip" aria-label="Today"></div></nav>
 <main id="main"></main>
 <script type="application/json" id="s2s-data">__S2S_DATA__</script>
 <script>
@@ -916,6 +953,45 @@ details.source[open] summary { margin-bottom: 12px; }
     return el("div", { cls: "schema", role: "group", "aria-label": "How " + roleName(role) + " runs" }, trig, el("i", { cls: "joint", "aria-hidden": "true" }), mid, el("i", { cls: "joint", "aria-hidden": "true" }), out);
   }
 
+  // What the agent is made of, as cards attached under the agent node: from its agent file and the autopilot.
+  function attachCards(role) {
+    var p = (R.profiles || {})[role] || {};
+    function items(list, empty) { return list && list.length ? el("ul", { cls: "attl" }, list.map(function (x) { return el("li", { text: x }); })) : empty ? el("p", { cls: "empty", text: empty }) : null; }
+    function card(h, from, body) { return el("div", { cls: "att", role: "listitem" }, el("div", { cls: "sh", text: h }), src(from), body); }
+    return el("div", { cls: "attach", role: "list", "aria-label": "What " + roleName(role) + " is made of" },
+      card("Model", "autopilot · agent file", [el("b", { text: p.run_model || "the session's choice" }), items(p.model)]),
+      card("Access", "agent file · Tools", items(p.tools, "Not recorded.")),
+      card("Skills", "agent file · Skills", p.skills && p.skills.length ? el("div", { cls: "tags" }, p.skills.map(function (x) { return el("span", { cls: "tag", text: x }); })) : el("p", { cls: "empty", text: "Not recorded." })),
+      card("Never", "agent file · Never", items(p.never, "Not recorded.")),
+      card("Asks you first", "agent file · approvals", items(p.approval, "Nothing listed.")));
+  }
+  // Eval cases: past tickets with a known-good result, and each one's latest re-run.
+  function evalPanel(role) {
+    var cases = (R.evals || []).filter(function (c) { return c.role === role; }), res = (G.ok && G.eval_results) || {};
+    return panel(["Evals", cases.length + " case" + (cases.length === 1 ? "" : "s")], "Past tickets with a known-good result. Re-run them before you change this agent's model (evals/README.md).",
+      cases.length ? el("ul", { cls: "list evals" }, cases.map(function (c) {
+        var r = res[role + "/" + c.case];
+        return el("li", null, el("div", null, el("b", { text: c.title }), el("small", { text: c.path + (c.ticket ? " · from #" + c.ticket : "") })),
+          !G.ok ? el("span", { cls: "empty", text: "?" }) : r ? el("span", { cls: "ev" }, r.checks ? el("span", { cls: "chk" + (r.passed ? " ok" : ""), text: r.checks[0] + "/" + r.checks[1] }) : pill("not graded", "todo"),
+            el("small", { text: when(r.at) + (r.model ? " · " + r.model : "") })) : pill("not run yet", "todo"));
+      })) : el("p", { cls: "empty", text: "No eval cases yet. Add three to five past tickets as evals/" + role + "/<case>.md." }));
+  }
+  // Graded runs per day over the trend window, from the cost log; eval re-runs stay out.
+  function passRows(role) {
+    var days = (G.ok && G.trends && G.trends.days) || [];
+    if (!role) return days;
+    var by = {}; days.forEach(function (d) { by[d.date] = { date: d.date, graded: 0, passed: 0, pass_rate: null }; });
+    (costs.entries || []).forEach(function (e) {
+      var r = by[String(e.at).slice(0, 10)]; if (!r || e.role !== role || !e.checks || e.eval) return;
+      r.graded += 1; r.passed += e.checks[0] === e.checks[1] ? 1 : 0;
+    });
+    return days.map(function (d) { var r = by[d.date]; r.pass_rate = r.graded ? r.passed / r.graded : null; return r; });
+  }
+  function passChart(rows) {
+    return dayChart("Graded runs (green: passed every check)", rows, [function (r) { return { v: r.passed, cls: "a" }; }, function (r) { return { v: (r.graded || 0) - (r.passed || 0), cls: "w" }; }],
+      function (r) { return r.graded ? r.passed + " of " + r.graded + " passed (" + Math.round(100 * r.passed / r.graded) + "%)" : "no graded runs"; });
+  }
+
   // --- one agent's record: its runs, outcomes, time and spend this month ------------------------------------
   var OUTCOME_STATE = { worked: "done", "no-work": "todo", blocked: "blocked", approval: "waiting", failed: "stopped" };
   function outcomePill(o) { return o ? pill(o, OUTCOME_STATE[o] || "todo") : el("span", { cls: "empty", text: "not recorded" }); }
@@ -947,6 +1023,7 @@ details.source[open] summary { margin-bottom: 12px; }
       withRole ? { h: "Role", f: function (r) { return el("span", { cls: "who", text: r.role }); } } : null,
       { h: "Outcome", k: function (r) { return r.outcome; }, f: function (r) { return outcomePill(r.outcome); } },
       { h: "Checks", num: true, k: function (r) { return r.checks ? r.checks[0] / r.checks[1] : null; }, f: function (r) { return r.checks ? el("span", { cls: "chk" + (r.checks[0] === r.checks[1] ? " ok" : ""), text: r.checks[0] + "/" + r.checks[1] }) : ""; } },
+      { h: "Note", f: function (r) { return el("span", { cls: "rnote" }, r.eval ? pill("eval: " + r.eval, "proposed") : null, r.eval && r.note ? " " : null, r.note || ""); } },
       { h: "Ticket", num: true, k: function (r) { return r.ticket || null; }, f: function (r) { return r.ticket ? "#" + r.ticket : ""; } },
       { h: "Objective", f: function (r) { return r.objective || ""; } },
       { h: "Time", num: true, k: function (r) { return r.seconds; }, f: function (r) { return dur(r.seconds); } },
@@ -955,7 +1032,7 @@ details.source[open] summary { margin-bottom: 12px; }
       { h: "Model", f: function (r) { return r.model || ""; } },
       { h: "Session", f: function (r) { return safeHref(r.session) ? link("open", r.session) : ""; } }].filter(Boolean),
       runs, "No runs recorded this month.",
-      { filters: [withRole ? { label: "Roles", f: function (r) { return r.role; } } : null, { label: "Outcomes", f: function (r) { return r.outcome || "not recorded"; } }].filter(Boolean) });
+      { filters: [withRole ? { label: "Roles", f: function (r) { return r.role; } } : null, { label: "Outcomes", f: function (r) { return r.outcome || "not recorded"; } }].filter(Boolean), search: "Search notes, tickets and models" });
   }
   function agentPage(role) {
     var a = agents().filter(function (x) { return x.role === role; })[0];
@@ -969,7 +1046,7 @@ details.source[open] summary { margin-bottom: 12px; }
         el("div", null, el("h2", { text: roleName(role) + "'s record" }), el("span", { cls: "badge", text: "AI agent" }), " ", statePill(a.state),
           el("div", { cls: "note", text: (info ? info[2] + ". " : "") + "Heartbeat " + (a.b.enabled ? cronText(a.b.cron) : "off") + "." })),
         G.ok ? controls(a) : null, el("a", { cls: "close", href: "#team", text: "Close" })),
-      schemaPanel(a),
+      el("div", { cls: "schemawrap" }, schemaPanel(a), attachCards(role)),
       !G.ok ? ghMissing() : [
         el("div", { cls: "grid" },
           tile("Runs in " + (costs.month || "this month"), String(st.runs || 0), (oc.worked || 0) + " worked, " + (oc.failed || 0) + " failed, " + (oc["no-work"] || 0) + " with nothing to do"),
@@ -978,7 +1055,10 @@ details.source[open] summary { margin-bottom: 12px; }
           tile("Typical run", st.median_seconds === null || st.median_seconds === undefined ? "n/a" : dur(st.median_seconds), "median time"),
           tile("Spend", usd(used), cap ? "of " + usd(cap) + " (" + Math.round(100 * used / cap) + "%)" : "no budget set"),
           tile("Cost per worked run", st.usd_per_worked === null || st.usd_per_worked === undefined ? "n/a" : usd(st.usd_per_worked))),
-        panel("Spend per day", "Bars are each day's spend; the dashed line is the budget spread evenly over the month.", dailyBars(a.c.daily, cap, costs.month)),
+        el("div", { cls: "cols2" },
+          panel("Spend per day", "Bars are each day's spend; the dashed line is the budget spread evenly over the month.", dailyBars(a.c.daily, cap, costs.month)),
+          panel("Checks passed per day", "Each graded run this month, by day: green passed every rubric check, red missed one or more.", st.graded ? passChart(passRows(role)) : el("p", { cls: "empty", text: "No graded runs yet: heartbeat end --checks records them." }))),
+        evalPanel(role),
         panel("Runs", "Every heartbeat run and session this month, newest first, from the cost log.", runTable(runs, false)),
         panel("Tickets", null, a.mine.length ? el("ul", { cls: "list" }, a.mine.map(function (t) { return el("li", null, link("#" + t.number + " " + t.title, t.url), " ", t.blocked ? pill("blocked", "blocked") : t.claimed ? pill("claimed", "progress") : pill("ready", "todo"), reviewPill(t), t.goal ? " " + t.goal : ""); })) : el("p", { cls: "empty", text: "No open tickets." })),
         panel("Recent activity", null, mine.length ? el("ul", { cls: "list" }, mine.map(activityItem)) : el("p", { cls: "empty", text: "No activity yet." }))],
@@ -1041,6 +1121,7 @@ details.source[open] summary { margin-bottom: 12px; }
     return panel("Last 14 days", any ? "One bar per day, oldest on the left. Hover or tap a bar for its numbers." : "No runs, agent actions or merges in the last 14 days.", any ? el("div", { cls: "charts" },
       dayChart("Agent runs (green: worked)", rows, [function (r) { return { v: r.worked, cls: "a" }; }, function (r) { return { v: r.other, cls: "b" }; }], function (r) { return r.worked + " worked of " + (r.worked + r.other); }),
       dayChart("Runs that worked, of those with work", rows, [function (r) { return { v: r.success === null ? 0 : r.success, cls: "a" }; }], function (r) { return r.success === null ? "no runs with work" : Math.round(100 * r.success) + "%"; }),
+      rows.some(function (r) { return r.graded; }) ? passChart(rows) : null,
       dayChart("Agent actions", rows, [function (r) { return { v: r.actions, cls: "c" }; }], function (r) { return r.actions + " actions"; }),
       dayChart("Pull requests merged", rows, [function (r) { return { v: r.merged, cls: "c" }; }], function (r) { return r.merged + " merged"; })) : null);
   }
@@ -1421,7 +1502,8 @@ details.source[open] summary { margin-bottom: 12px; }
       + (AUTO.capped ? "Today's " + AUTO.cap + " autopilot runs are used: the agents start again at midnight UTC (autopilot.max_runs_per_day in founder/heartbeats.json). " : "") + "Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
       el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),
       el("p", { cls: "note", style: "margin:4px 0 0" }, el("a", { href: "#team", text: "Every agent's card in Team and board" }), " · ", el("a", { href: "#activity", text: "what they did, in Agent activity" }))) : null;
-    return [G.ok ? null : ghMissing(), setupPanel(), tiles,
+    return [G.ok ? null : ghMissing(), setupPanel(), goalLine(), tiles,
+      systemPanel(crewAll),
       teamPanel,
       el("div", { cls: "cols2" },
         panel("Needs you", "Oldest and most blocking first.", needs.length ? el("ul", { cls: "list" }, needs) : el("p", { cls: "empty", text: "Nothing waiting on you." }),
@@ -1429,6 +1511,40 @@ details.source[open] summary { margin-bottom: 12px; }
         cycle),
       delivery,
       journeyPanel()];
+  }
+
+  // The company's goal in one line, above the numbers.
+  function goalLine() {
+    var ns = GOALS.north_star, g = GOALS.goal || (ns && ns.metric);
+    return el("a", { cls: "goalline", href: "#goals" }, el("span", { cls: "k", text: "Company goal" }),
+      g ? el("b", { text: g }) : el("span", { cls: "empty", text: "Not set yet: okr-plan drafts it once the business model is approved." }),
+      ns && ns.target !== undefined ? el("span", { cls: "muted", text: num(ns.current, ns.unit) + " of " + num(ns.target, ns.unit) + (ns.by ? " by " + ns.by : "") }) : null);
+  }
+  // The whole company as one system: what starts work, the AI team inside the repo, and what comes out and how it is graded.
+  function systemPanel(crew) {
+    var days = ((G.ok && G.trends && G.trends.days) || []).slice(-7);
+    function sum(k) { return days.reduce(function (a, r) { return a + (r[k] || 0); }, 0); }
+    var merged = sum("merged"), graded = sum("graded"), passed = sum("passed");
+    var beating = crew.filter(function (a) { return a.b.enabled; }).length, skills = {};
+    Object.keys(R.profiles || {}).forEach(function (r) { (R.profiles[r].skills || []).forEach(function (x) { skills[x] = 1; }); });
+    var budget = (costs.roles || []).reduce(function (a, r) { return a + (r.cap || 0); }, 0);
+    var open = (R.decisions || []).filter(function (d) { return d.has_status && /open|proposed/i.test(d.status || ""); }).length;
+    function fact(k, v, from, href) { return el(href ? "a" : "div", { cls: "fact", href: href || null }, el("b", { text: v }), el("span", { text: k }), src(from)); }
+    var trig = el("div", { cls: "snode" }, el("div", { cls: "sh", text: "What starts work" }),
+      fact("autopilot", AUTO.enabled ? (AUTO.capped ? "Capped today" : "On") : "Off", "founder/heartbeats.json · autopilot", "#team"),
+      fact("agents on a schedule", beating + " of " + crew.length, "heartbeat cron", "#team"),
+      fact("waiting for your /approve", G.ok ? String(waiting.length) : "?", "approvals · GitHub", "#approvals"));
+    var team = el("div", { cls: "snode key frame" }, el("div", { cls: "sh", text: "Your AI team" }), src("in the repo · " + (G.repo || "GitHub")),
+      el("div", { cls: "crew" }, crew.map(function (a) { return el("a", { href: "#agent/" + encodeURIComponent(a.role), title: roleName(a.role) + ": " + STATE_WORDS[a.state], "aria-label": roleName(a.role) + ", " + STATE_WORDS[a.state] }, avatar(a.role, a.state)); })),
+      el("div", { cls: "attach mini" },
+        fact("skills", String(Object.keys(skills).length), "agent files"), fact("gates", String((R.gates || []).length), "founder/gates.json", "#approvals"),
+        fact("budgets a month", usd(budget), "heartbeats.json", "#costs"), fact("decisions on record", String((R.decisions || []).length), "registers", "#decisions")));
+    var out = el("div", { cls: "snode" }, el("div", { cls: "sh", text: "What comes out" }),
+      fact("pull requests merged, 7 days", G.ok ? String(merged) : "?", "GitHub", "#activity"),
+      fact("graded runs passed every check", G.ok ? (graded ? Math.round(100 * passed / graded) + "%" : "n/a") : "?", graded ? passed + " of " + graded + " · cost log" : "cost log · no graded runs", "#costs"),
+      fact("decisions open or proposed", String(open), "registers", "#decisions"));
+    return panel(["How the company runs", "live"], "Work starts on the left, the agents do it inside the repo, and the right is what shipped and how well. Each box links to its tab.",
+      el("div", { cls: "schema sys", role: "group", "aria-label": "How the company runs" }, trig, el("i", { cls: "joint", "aria-hidden": "true" }), team, el("i", { cls: "joint", "aria-hidden": "true" }), out));
   }
 
   // --- setup: what tools/doctor.py found, until everything is set up ---------------------------------------
@@ -1866,6 +1982,16 @@ details.source[open] summary { margin-bottom: 12px; }
         { h: "Runs", num: true, k: function (r) { return (r.stats || {}).runs || 0; }, f: function (r) { return String((r.stats || {}).runs || 0); } },
         { h: "Worked", num: true, k: function (r) { return (r.stats || {}).success; }, f: function (r) { return pctText2((r.stats || {}).success); } },
         { h: "State", f: function (r) { if (!r.cap) return ""; var p = r.used / r.cap; return p >= 1 ? pill("stopped", "stopped") : p >= 0.8 ? pill("over 80%", "waiting") : pill("ok", "done"); } }], roles, "No costs or budgets yet.")),
+      panel("Checks passed, by role", "The share of this month's graded runs that passed every rubric check. Eval re-runs are left out.", (function () {
+        var graded = (costs.roles || []).filter(function (r) { return (r.stats || {}).graded; });
+        return graded.length ? table([
+          { h: "Role", f: function (r) { return el("a", { href: "#agent/" + encodeURIComponent(r.role), text: roleName(r.role) }); } },
+          { h: "Graded", num: true, k: function (r) { return r.stats.graded; }, f: function (r) { return String(r.stats.graded); } },
+          { h: "Passed", num: true, k: function (r) { return r.stats.passed; }, f: function (r) { return String(r.stats.passed); } },
+          { h: "Rate", num: true, k: function (r) { return r.stats.pass_rate; }, f: function (r) { return el("span", { cls: "chk" + (r.stats.pass_rate >= 0.8 ? " ok" : ""), text: pctText2(r.stats.pass_rate) }); } },
+          { h: "", f: function (r) { return bar(r.stats.passed, r.stats.graded, r.stats.pass_rate >= 0.8 ? "" : "w"); } }], graded, "")
+          : el("p", { cls: "empty", text: "No graded runs this month: heartbeat end --checks records them." });
+      })()),
       panel("Where the money went", "This month's spend by objective (the ticket's goal label), by model and by outcome.", el("div", { cls: "cols" },
         groupTable("By objective", by.objective), groupTable("By model", by.model), groupTable("By outcome", by.outcome))),
       panel("Run log", "Each heartbeat run and each session handoff, with its outcome, time and a link to the session. Costs are measured from the transcript where possible.", runTable(entries.slice().reverse(), true))];
@@ -1932,17 +2058,18 @@ details.source[open] summary { margin-bottom: 12px; }
     select(next, true); buttons[next].focus(); e.preventDefault();
   });
   window.addEventListener("hashchange", function () { select(location.hash.slice(1), false); });
-  // The day's numbers in one line on every tab but the Overview, so they stay in view without its tiles.
+  // The day's numbers in the sticky tab bar, so they stay in view on every tab, led by the autopilot's light.
   var strip = document.getElementById("strip");
   (function () {
     var working = agents().filter(function (a) { return a.state === "working"; }).length;
+    var led = AUTO.capped ? "capped" : AUTO.enabled ? "on" : "off";
+    strip.appendChild(el("a", { href: "#team", cls: "auto", title: "Autopilot: " + (led === "on" ? "agents start themselves when a ticket is ready" : led === "capped" ? "today's run cap is used" : "off; agents run on their schedules") },
+      el("span", null, el("i", { cls: "led " + led, "aria-hidden": "true" }), "Autopilot"), el("b", { text: led === "on" ? "on" : led === "capped" ? "capped" : "off" })));
     [["needs", "Needs you", String(NEEDS.length), NEEDS.length ? "alert" : ""], ["approvals", "Approvals", String(waiting.length), ""],
      ["team", "Agents working", G.ok ? String(working) : "?", ""], ["costs", "AI spend", G.ok ? usd(costs.total) : "?", ""]].forEach(function (x) {
       strip.appendChild(el("a", { href: "#" + x[0], cls: x[3] }, el("span", { text: x[1] }), el("b", { text: x[2] })));
     });
   })();
-  var selectBase = select;
-  select = function (id, push) { selectBase(id, push); strip.hidden = buttons.overview.getAttribute("aria-selected") === "true"; };
 
   // ⌘K (or Ctrl+K, or /): jump to a tab, an agent, a ticket, a decision or something waiting on you.
   var pal = null;

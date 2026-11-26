@@ -595,3 +595,40 @@ def test_next_directions_rubrics_and_the_new_views_reach_the_page(root, fake):
                  'id="density"', 'id="strip"', '{ h: "Checks"', 'el("details", { cls: "panel source" }', '" ghost"'):
         assert part in html, part
     assert "nextPanel()," in html[html.index("  function roadmapTab() {"):], "the version rail sits on the Roadmap"
+
+
+def test_profiles_evals_and_daily_pass_rate_reach_the_page(root, fake):
+    (root / ".codex" / "agents").mkdir(parents=True, exist_ok=True)
+    (root / ".codex/agents/engineer.toml").write_text(
+        "name = \"engineer\"\ndeveloper_instructions = '''\n# Engineers\n\n## Owns\n- code and tests\n\n## Skills\n- claim\n- handoff\n\n"
+        "## Tools\nEdit, test and git in this repository only.\n\n## Never\n- push to the default branch\n\n"
+        "## Needs the founder's approval for\n- every merge\n'''\n", encoding="utf-8")
+    (root / "evals" / "engineer").mkdir(parents=True)
+    (root / "evals/engineer/invoice-export.md").write_text("# Export invoices as CSV\n\nTicket: #41\n", encoding="utf-8")
+    (root / "evals/engineer/Bad Name.md").write_text("# no\n", encoding="utf-8")
+    (root / "evals/stranger").mkdir()
+    (root / "evals/stranger/x.md").write_text("# no\n", encoding="utf-8")
+    repo = data_of(bd.page(bd.build(root, now=NOW)))["repo"]
+    eng = repo["profiles"]["engineer"]
+    assert eng["skills"] == ["claim", "handoff"] and eng["never"] == ["push to the default branch"]
+    assert eng["tools"] == ["Edit, test and git in this repository only."] and eng["approval"] == ["every merge"]
+    assert "run_model" in eng and repo["profiles"]["qa"]["skills"] == []
+    assert repo["evals"] == [{"role": "engineer", "case": "invoice-export", "title": "Export invoices as CSV",
+                              "path": "evals/engineer/invoice-export.md", "ticket": "41"}]
+    day = NOW.date().isoformat()
+    runs = [{"role": "qa", "at": day + "T10:00:00Z", "outcome": "worked", "checks": [3, 3], "model": "m"},
+            {"role": "qa", "at": day + "T11:00:00Z", "outcome": "worked", "checks": [1, 3], "model": "m"},
+            {"role": "qa", "at": day + "T12:00:00Z", "outcome": "worked", "checks": [3, 3], "eval": "smoke", "model": "m2"}]
+    row = bd.trends(runs, [], [], NOW)["days"][-1]
+    assert (row["graded"], row["passed"], row["pass_rate"]) == (2, 1, 0.5)
+    assert bd.eval_results(runs) == {"qa/smoke": {"at": day + "T12:00:00Z", "model": "m2", "checks": [3, 3], "passed": True}}
+
+
+def test_the_v2_14_views_are_on_the_page():
+    html = bd.PAGE.read_text(encoding="utf-8")
+    for part in ("function attachCards", "function evalPanel", "function passChart", "function systemPanel", "function goalLine",
+                 '{ h: "Note"', 'cls: "led "', "prefers-reduced-motion: reduce) { .led.on", 'panel("Checks passed, by role"'):
+        assert part in html, part
+    assert '<nav aria-label="Dashboard tabs"><div class="tabs" role="tablist" id="tabs"></div><div class="strip" id="strip"' in html, \
+        "the day's numbers sit in the sticky tab bar"
+    assert "goalLine(), tiles," in html and "systemPanel(crewAll)," in html, "the Overview opens with the goal and the system"

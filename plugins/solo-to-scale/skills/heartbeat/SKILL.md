@@ -36,6 +36,10 @@ A heartbeat is one short, unattended run of one role: one ticket, within its bud
 
 After two failures on the same step, drop one rung and say so in the ticket comment: (1) re-read the docs or the spec and retry once; (2) the plain manual route (the GitHub UI step, the simpler command); (3) the closest known-good example in the repo; (4) stop: `tickets.py block` with what failed and what you tried. Never loop on a step: the run's budget is the founder's money.
 
+## Before changing a role's model
+
+Re-run its evals first (`evals/README.md`): each case is a past ticket with a known-good result. Record each with `end <role> --eval <case> --checks <p>/<t> --model <new>`. Change the model only if it passes as many cases as the current one. Eval runs never merge and stay out of the pass rate.
+
 ## Autopilot (agents start themselves)
 
 - On when `founder/heartbeats.json` has `"autopilot": {"enabled": true}` and the repo has the `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret. The `agents` workflow then runs `python tools/autopilot.py due` on every ticket event and every three hours, and starts this skill for each role with work ready; a handoff starts the next role within minutes. Without the secret, cloud scheduled tasks still work as above.
