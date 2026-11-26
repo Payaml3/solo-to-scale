@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.15.0 (2026-11-26)
+
+- **Each startup's dashboard can wear its own brand.** An optional `theme` block in `founder/dashboard.json` (founder-owned, behind the deploy gate) sets the page's colour tokens for light and dark from the palette in `founder/brand.md`: ground, surfaces, ink, accent, links, and the chart's measure (`series`) and miss (`miss`). Tokens left out keep the plugin's values.
+- **A theme can't make the page unreadable.** `tools/theme.py` checks each mode before it applies: text contrast 4.5:1, chart marks 3:1, chart colours in the lightness band, and the measure and the miss told apart under protan, deutan and tritan colour blindness (ΔE ≥ 8, the same numbers as the dataviz validator). A mode that fails is left out, and the page header says why.
+
 ## v2.14.1 (2026-11-26)
 
 A review of the dashboard with the dataviz and design-engineering skills.
