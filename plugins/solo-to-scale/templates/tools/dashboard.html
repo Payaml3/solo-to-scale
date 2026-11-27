@@ -909,21 +909,24 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
       var why = pausedWhy(k);
       var ready = mine.filter(function (t) { return !t.claimed && !t.blocked; });
       var state = why ? "paused" : blocked.length ? "blocked" : claimed.length ? "working" :
-        !b.enabled ? "off" : ready.length && AUTO.enabled ? (AUTO.capped ? "capped" : "queued") : "idle";
+        !b.enabled ? "off" : (CTL.woken || {})[k] && AUTO.enabled ? "woken" : ready.length && AUTO.enabled ? (AUTO.capped ? "capped" : "queued") : "idle";
       return { role: k, paused: why, b: b, mine: mine, claimed: claimed, blocked: blocked, last: last, c: spend[k] || {}, state: state,
         stories: stories, storiesDone: stories.filter(function (t) { return t.status === "done"; }).length };
     });
   }
   var STATE_WORDS = { working: "working", blocked: "blocked", idle: "idle", off: "heartbeat off", paused: "paused by you",
-    queued: "queued for the next run", capped: "waiting: run cap" };
+    queued: "queued for the next run", capped: "waiting: run cap", woken: "starting: you woke it" };
   function statePill(state) { return pill(STATE_WORDS[state], state === "working" ? "done" : state === "blocked" || state === "paused" ? "blocked" : "todo"); }
   var CTL = (G.ok && G.control) || {};
   function pausedWhy(role) { return role === "board" ? null : ((CTL.roles || {})[role] || CTL.all || null); }
-  // Pause and resume: open the agent-controls issue and copy the command, as Approve does. You send it.
+  // Wake, pause and resume: open the agent-controls issue and copy the command, as Approve does. You send it, so
+  // the page holds no token and only your own comment counts. A wake starts a check at once (agents workflow).
   function controls(a) {
     var url = safeHref(CTL.url);
-    if (!url) return el("p", { cls: "note", style: "margin:0", text: "Pause and resume: run `python tools/control.py issue` once to create the agent-controls issue." });
-    return el("span", { cls: "acts" }, a.paused ? reply("Resume", "/resume " + a.role, url, "yes") : reply("Pause", "/pause " + a.role + " ", url, "no"));
+    if (!url) return el("p", { cls: "note", style: "margin:0", text: "Wake, pause and resume: run `python tools/control.py issue` once to create the agent-controls issue." });
+    var wake = !a.paused && a.b.enabled && a.state !== "working" && a.state !== "woken" ? reply("Wake now", "/wake " + a.role, url, "yes") : null;
+    if (wake) wake.title = "Opens the agent-controls issue on GitHub and copies /wake " + a.role + ". Post it and the run starts within a minute, inside its budget.";
+    return el("span", { cls: "acts" }, wake, a.paused ? reply("Resume", "/resume " + a.role, url, "yes") : reply("Pause", "/pause " + a.role + " ", url, "no"));
   }
   function reportsTo(role) { var b = (R.reports_to || {})[role]; return !b ? "?" : b === "founder" ? "you" : roleName(b); }
   function reviewPill(t) { return t.escalated_to ? [" ", pill("escalated to " + (t.escalated_to === "founder" ? "you" : t.escalated_to), "waiting")] : t.review ? [" ", pill("review: " + t.review, "proposed")] : null; }
@@ -1532,7 +1535,7 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
       el("p", { cls: "note", style: "margin:10px 0 0" }, el("a", { href: "#roadmap", text: "Slices and the timeline in Roadmap" })));
 
     var nWork = crewAll.filter(function (a) { return a.state === "working"; }).length, nBlock = crewAll.filter(function (a) { return a.state === "blocked" || a.state === "paused"; }).length;
-    var nWait = crewAll.filter(function (a) { return a.state === "queued" || a.state === "capped"; }).length;
+    var nWait = crewAll.filter(function (a) { return a.state === "queued" || a.state === "capped" || a.state === "woken"; }).length;
     var teamPanel = crewAll.length ? panel("Your AI team", G.ok ? nWork + " working, " + nBlock + " blocked or paused, " + (nWait ? nWait + " waiting for a run, " : "") + (crewAll.length - nWork - nBlock - nWait) + " idle or off. "
       + (AUTO.capped ? "Today's " + AUTO.cap + " autopilot runs are used: the agents start again at midnight UTC (autopilot.max_runs_per_day in founder/heartbeats.json). " : "") + "Every node is an AI agent. Moving dots: agents working with the AI coordinator; red: blocked and asking for help; curved lines: handoffs in the last 2 days." : "GitHub data missing: showing heartbeats only.",
       el("div", { cls: "teamgrid" }, teamHub(crewAll), teamNow(crewAll)),

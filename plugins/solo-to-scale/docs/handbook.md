@@ -247,6 +247,8 @@ An approval waiting 3 days is marked overdue on the dashboard. After 14 days wit
 
 **Pause and resume any agent, from your phone.** One issue labelled `agent-controls` (`python tools/control.py issue` creates it) takes `/pause <role> [reason]`, `/pause all`, `/resume <role>` and `/resume all`. A paused role's heartbeat stops at its next start, until you resume it. Pausing is never gated; resuming a role whose budget is spent still needs the budget approval. The dashboard's agent cards have **Pause** and **Resume** buttons that open that issue and copy the command for you.
 
+**Wake an agent now.** `/wake <role>` (or `/wake all`) on the same issue starts a check straight away instead of at the next 30-minute poll, outside the working day too, and runs that role even when the autopilot would make it wait (its last run found nothing, or its ticket stalled recently). It never lifts a pause, turns a heartbeat on, adds budget or passes the daily run cap, and the run it starts spends it; a wake nothing acted on is dropped after two hours. Each agent's page has a **Wake now** button that opens the issue and copies the command, so the dashboard holds no GitHub token and only your own comment counts. The agent shows "starting: you woke it" until the run ends.
+
 Only your own GitHub account's words count. A pull request that changes a gated file needs you to add the `founder-approved` label; the `founder-gates` check blocks it until you do. Anything unclear fails closed.
 
 **Recording a decision (`record-decision`):**

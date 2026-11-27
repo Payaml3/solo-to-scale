@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.17.0 (2026-11-27)
+
+- **Wake an agent from the dashboard.** Each agent's page has a **Wake now** button. It opens the agent-controls issue and copies `/wake <role>`; post it and the `agents` workflow starts a check within a minute instead of at the next 30-minute poll, outside the working day too. `/wake all` wakes every role.
+- **A wake skips the autopilot's own waits, never the founder's limits.** A woken role runs even with nothing ready, inside its one-hour idle wait or a stalled ticket's retry cooldown, and goes first under the daily run cap. It never lifts a pause, turns a heartbeat on, adds budget or passes the cap. The run it starts spends the wake, and a wake nothing acted on is dropped after two hours. Only the founder's own comment counts, so the page holds no GitHub token. The agent shows "starting: you woke it" until its run ends.
+
 ## v2.16.0 (2026-11-27)
 
 - **Each startup's dashboard can show its logo.** Optional `logo`, `logo_dark` and `icon` in `founder/dashboard.json` (behind the deploy gate) name an SVG, PNG or WebP in the repo, for example the files in the brand folder. The logo replaces the name at the top of the page, with the dark-ground version in dark mode, and `icon` becomes the browser-tab icon.
