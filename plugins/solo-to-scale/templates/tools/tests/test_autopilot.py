@@ -252,3 +252,36 @@ def test_finish_does_not_count_a_run_twice_when_the_agent_logged_a_wrong_link() 
     assert autopilot.logged_lately(runs, "qa", "https://github.com/o/r/actions/runs/9", NOW)
     assert not autopilot.logged_lately(runs, "engineer", "https://github.com/o/r/actions/runs/9", NOW)
     assert not autopilot.logged_lately([run("qa", "worked", 120, 30)], "qa", "https://github.com/o/r/actions/runs/9", NOW)
+
+
+def test_a_founder_wake_starts_the_role_now_inside_its_limits(root: Path, fake: Fake,
+                                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    import control
+    pol = json.loads((root / "founder/heartbeats.json").read_text())
+    issue = fake.make(control.TITLE, control.BODY, [control.LABEL])
+    asked = (NOW - dt.timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for body in ("/wake engineer", "/wake qa", "/wake growth"):
+        fake.comments[issue].append({"user": {"login": "acme"}, "body": body, "created_at": asked})
+    fake.comments[issue].append({"user": {"login": "mallory"}, "body": "/wake chief-of-staff", "created_at": asked})
+    monkeypatch.setattr(autopilot, "month_runs", lambda h, now: [run("engineer", "no-work", 20)])
+    roles, why = autopilot.due(hub(root), root, pol, NOW)
+    assert "engineer" in {r["role"] for r in roles}, why  # nothing ready and inside its idle wait, but woken
+    assert any(line.startswith("engineer: start (woken by you at 07:20 UTC, to look for work)") for line in why)
+    assert any(line.startswith("qa: no budget") for line in why), "a wake never adds budget"
+    assert any(line.startswith("growth: heartbeat off") for line in why), "or turns a heartbeat on"
+    monkeypatch.setattr(autopilot, "month_runs", lambda h, now: [run("engineer", "no-work", 5)])
+    roles, why = autopilot.due(hub(root), root, pol, NOW)
+    assert "engineer" not in {r["role"] for r in roles}, "the run it started spent the wake"
+
+
+def test_woken_roles_go_first_under_the_run_cap(root: Path, fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    import control
+    pol = json.loads((root / "founder/heartbeats.json").read_text())
+    pol["autopilot"]["max_runs_per_day"] = 1
+    issue = fake.make(control.TITLE, control.BODY, [control.LABEL])
+    asked = (NOW - dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fake.comments[issue].append({"user": {"login": "acme"}, "body": "/wake engineer", "created_at": asked})
+    monkeypatch.setattr(autopilot, "month_runs", lambda h, now: [])
+    roles, why = autopilot.due(hub(root), root, pol, NOW)  # chief of staff has its planning ticket ready
+    assert [r["role"] for r in roles] == ["engineer"], why
+    assert "chief-of-staff: over today’s run cap" in why

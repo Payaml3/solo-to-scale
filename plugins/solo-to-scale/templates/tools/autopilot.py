@@ -20,6 +20,9 @@ How the team works on its own:
    unblocked ticket therefore starts the next role straight away.
 3. Limits. Only roles whose heartbeat is on, with a budget that isn't spent, not paused, and with no run
    active. `autopilot.max_runs_per_day` caps all runs together; founder gates are untouched.
+4. Wake now. The founder's `/wake <role>` on the agent-controls issue (the dashboard's Wake now button) starts a
+   check straight away, outside the working-day poll too, and runs that role even with nothing ready or inside
+   its idle and retry waits. Every limit in 3 still applies; the run it starts spends the wake.
 
 Policy: `autopilot` in founder/heartbeats.json (founder-owned; the `budget` gate). Missing means off:
   {"enabled": false, "plan_every_hours": 24, "max_runs_per_day": 12, "max_parallel": 2,
@@ -297,6 +300,7 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
         return [], [f"stop: the company AI budget is spent (${cused:.2f} of ${ccap:.2f})"]
     ctl = control.read(hub, root)
     out, why = [], list(asked)
+    starts: list[tuple[bool, str, str]] = []
     for role in tickets.ROLES:
         rcfg = (pol.get("roles") or {}).get(role) or {}
         cap, used, _ = heartbeat.standing(hub, root, pol, role, month, totals)
@@ -306,16 +310,26 @@ def due(hub: tickets.Hub, root: Path, pol: dict[str, Any], now: dt.datetime) -> 
                   "no budget set" if cap is None else
                   f"budget spent (${used:.2f} of ${cap:.2f})" if used >= cap else
                   "a run is active" if held and now.timestamp() - held[1] < heartbeat.STALE_HOURS * 3600 else "")
-        if not reason and idle_recently(runs, role, now):
+        # A founder's /wake skips the waits the autopilot sets itself (idle, retry cooldown), never their limits.
+        wake = "" if reason else control.woken(ctl, role, runs, now)
+        if not reason and not wake and idle_recently(runs, role, now):
             reason = f"its last run found nothing to do (waits {IDLE_HOURS}h)"
-        work = "" if reason else has_work(hub, role, open_tickets, stalled(runs, role, now))
+        work = "" if reason else has_work(hub, role, open_tickets, set() if wake else stalled(runs, role, now))
+        if wake:
+            work = f"woken by you at {wake[11:16]} UTC" + (f", {work}" if work else ", to look for work")
         if not reason and not work:
             reason = "nothing ready"
-        if work and len(out) < left:
+        if work:
+            starts.append((bool(wake), role, work))
+        else:
+            why.append(f"{role}: {reason}")
+    # Woken roles go first, so a wake is never the one left over the day's run cap.
+    for i, (_, role, work) in enumerate(sorted(starts, key=lambda x: not x[0])):
+        if i < left:
             out.append({"role": role, "model": model_of(cfg, role), "prompt": heartbeat.task_prompt(role)})
             why.append(f"{role}: start ({work})")
         else:
-            why.append(f"{role}: {reason or 'over today’s run cap'}")
+            why.append(f"{role}: over today’s run cap")
     return out, why
 
 

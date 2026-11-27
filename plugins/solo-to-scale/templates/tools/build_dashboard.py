@@ -552,6 +552,8 @@ def github_data(root: Path, cfg_dash: dict[str, Any], month: str, now: dt.dateti
             ctl = control.read(hub, root)
         except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
             ctl = {"all": None, "roles": {}, "url": "", "unknown": True}
+        at = now or dt.datetime.now(dt.timezone.utc)  # a /wake the next run hasn't spent yet shows on its agent
+        ctl["woken"] = {r: w for r in tickets.ROLES if (w := control.woken(ctl, r, c["entries"], at))}
         return {"ok": True, "control": ctl, "repo": repo, "activity": activity[-limit:], "tickets": open_tickets,
                 "approvals": approvals(hub, root), "costs": c, "merged": merged,
                 "trends": trends(recent_runs + c["entries"], activity, merged, now),

@@ -117,3 +117,22 @@ def test_sub_tickets_wait_for_an_approved_plan_and_a_changed_plan_asks_again(roo
     assert run("claim", str(b), "--role", "engineer") == tickets.REFUSED, "the newest plan decides, and it waits"
     assert run("claim", str(parent), "--role", "product") == tickets.OK, "a ticket with no parent never waits"
     assert REPO
+
+
+def test_a_wake_comes_only_from_the_founder_and_never_touches_a_pause():
+    st = control.state([said("acme", "/pause qa"), said("acme", "/wake qa"), said("acme", "/wake all")], FOUNDER)
+    assert control.paused(st, "qa") == "paused", "a wake never lifts a pause"
+    got = control.wakes([said("acme", "/wake role:engineer"), said("mallory", "/wake qa")], FOUNDER)
+    assert got == {"engineer": "2026-11-23T12:00:00Z"}
+
+
+def test_a_wake_lasts_until_a_run_of_that_role_ends_or_it_goes_stale():
+    import datetime as dt
+    now = dt.datetime(2026, 11, 23, 12, 30, tzinfo=dt.timezone.utc)
+    st = {"wakes": {"engineer": "2026-11-23T12:00:00Z", "all": "2026-11-23T09:00:00Z"}}
+    assert control.woken(st, "engineer", [], now) == "2026-11-23T12:00:00Z"
+    assert control.woken(st, "engineer", [{"role": "qa", "at": "2026-11-23T12:20:00Z"}], now)
+    assert not control.woken(st, "engineer", [{"role": "engineer", "at": "2026-11-23T12:20:00Z"}], now), "spent"
+    assert control.woken(st, "engineer", [{"role": "engineer", "at": "2026-11-23T11:50:00Z"}], now), "an older run"
+    assert not control.woken(st, "qa", [], now), "/wake all three and a half hours ago is stale"
+    assert not control.woken({"wakes": {}}, "qa", [], now) and not control.woken({}, "qa", [], now)

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.16.0 (2026-11-27)
+
+- **Wake an agent from the dashboard.** Each agent's page has a **Wake now** button. It opens the agent-controls issue and copies `/wake <role>`; post it and the `agents` workflow starts a check within a minute instead of at the next 30-minute poll, outside the working day too. `/wake all` wakes every role.
+- **A wake skips the autopilot's own waits, never the founder's limits.** A woken role runs even with nothing ready, inside its one-hour idle wait or a stalled ticket's retry cooldown, and goes first under the daily run cap. It never lifts a pause, turns a heartbeat on, adds budget or passes the cap. The run it starts spends the wake, and a wake nothing acted on is dropped after two hours. Only the founder's own comment counts, so the page holds no GitHub token. The agent shows "starting: you woke it" until its run ends.
+
 ## v2.15.1 (2026-11-27)
 
 - **Fewer emails from the team.** Claiming a ticket no longer comments on it. The `claimed` label and the `refs/claims/<n>` lock carry the claim, so duplicate claims are still refused, and the claim is still written to the activity log. A heartbeat run now leaves one comment on its ticket, the done, hand-off or release note.
