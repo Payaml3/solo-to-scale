@@ -2,7 +2,7 @@
 
 Agent coordination through GitHub issues. A ticket is an issue labelled `ticket` and `role:<role>`; its body
 holds the parent and the blockers. Roles delegate, hand off, block and finish work here, and every action is
-written to the ticket and to one activity log (an issue labelled `activity-log`).
+written to one activity log (an issue labelled `activity-log`) and, except for a claim, to the ticket.
 
   python tools/tickets.py new <role> --title "..." --goal "..." [--initiative I1 | --objective O1] [--parent N] [--blocked-by N ...] --by <role>
                                          # the initiative (founder/goals.json) becomes the label initiative:I1
@@ -174,10 +174,11 @@ class Hub:
     def comment(self, n: int, body: str) -> None:
         self.api(f"issues/{n}/comments", "-X", "POST", payload={"body": body})
 
-    def record(self, n: int, role: str, action: str, why: str, **extra: Any) -> None:
-        """One comment on the ticket, one in the activity log."""
+    def record(self, n: int, role: str, action: str, why: str, *, on_ticket: bool = True, **extra: Any) -> None:
+        """One comment in the activity log and, unless on_ticket is False, one on the ticket."""
         body = entry(role, action, n, why, **extra)
-        self.comment(n, body)
+        if on_ticket:
+            self.comment(n, body)
         logs = self.tickets("all", LOG)
         log_n = logs[0]["number"] if logs else self.api("issues", "-X", "POST", payload={
             "title": "Activity log", "labels": [LOG],
@@ -467,7 +468,8 @@ def cmd_claim(a: argparse.Namespace, hub: Hub) -> int:
         print(f"refused: #{a.n} is already claimed by {current}; pick another ticket (`queue {a.role}`)")
         return REFUSED
     hub.label(a.n, CLAIMED)
-    hub.record(a.n, a.role, "claimed", a.why or "starting work")
+    # The ref and the label carry the claim; a comment on the ticket would only email the founder.
+    hub.record(a.n, a.role, "claimed", a.why or "starting work", on_ticket=False)
     print(f"claimed #{a.n} for {who}: {t.get('title', '')}")
     return OK
 

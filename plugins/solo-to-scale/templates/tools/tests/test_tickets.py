@@ -173,6 +173,7 @@ def test_claim_is_atomic_and_respects_role_blockers_and_state(root, fake, capsys
     n = ticket(fake, "engineer")
     assert run(root, "claim", str(n), "--role", "engineer") == tickets.OK
     assert "claimed" in fake.names(n) and f"refs/claims/{n}" in fake.refs
+    assert not fake.comments[n], "a claim is the label and the ref, not a comment that emails the founder"
     assert run(root, "claim", str(n), "--role", "engineer") == tickets.REFUSED, "a second claimant loses"
     assert "already claimed by role:engineer" in capsys.readouterr().out
     raced = ticket(fake, "engineer")  # another agent won the ref but hasn't labelled it yet

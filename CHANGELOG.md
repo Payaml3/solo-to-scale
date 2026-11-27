@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.15.1 (2026-11-27)
+
+- **Fewer emails from the team.** Claiming a ticket no longer comments on it. The `claimed` label and the `refs/claims/<n>` lock carry the claim, so duplicate claims are still refused, and the claim is still written to the activity log. A heartbeat run now leaves one comment on its ticket, the done, hand-off or release note.
+
 ## v2.15.0 (2026-11-26)
 
 - **Each startup's dashboard can wear its own brand.** An optional `theme` block in `founder/dashboard.json` (founder-owned, behind the deploy gate) sets the page's colour tokens for light and dark from the palette in `founder/brand.md`: ground, surfaces, ink, accent, links, and the chart's measure (`series`) and miss (`miss`). Tokens left out keep the plugin's values.
