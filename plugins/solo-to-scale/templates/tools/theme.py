@@ -11,9 +11,17 @@ Tokens a theme leaves out keep the plugin's values. A mode is applied only when 
 (ink and muted 4.5:1, links 4.5:1), chart marks 3:1 against the surface, and the chart's measure (`series`) and
 its miss (`miss`) told apart under red-green and blue-yellow colour blindness (the dataviz rules: OKLab ΔE ≥ 8,
 lightness in band). A mode that fails is left out and the reason is shown on the page.
+
+Its logo, too: `logo` (and `logo_dark` for dark grounds) is a repo path to an SVG, PNG or WebP of at most 64 KB,
+shown in place of the name at the top of the page; `icon` is the browser-tab icon. Each is embedded as a data:
+URI, the only images the page's security policy loads, and an SVG in an <img> never runs scripts.
+
+    "logo": "apps/site/public/brand/logo.svg", "logo_dark": "apps/site/public/brand/logo-reverse.svg",
+    "icon": "apps/site/public/brand/mark.svg"
 """
 from __future__ import annotations
 
+import base64
 import math
 import re
 from pathlib import Path
@@ -132,3 +140,56 @@ def css(theme: dict[str, Any]) -> str:
              f'@media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{ {dark} }} }}' if dark else "",
              f':root[data-theme="dark"] {{ {dark} }}' if dark else ""]
     return '<style id="s2s-theme">' + " ".join(p for p in parts if p) + "</style>\n"
+
+
+LOGO_KEYS = ("logo", "logo_dark", "icon")
+LOGO_LIMIT = 64 * 1024
+MIME = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}
+DATA_URI = re.compile(r"^data:image/(svg\+xml|png|webp);base64,[A-Za-z0-9+/]+=*$")
+
+
+def _image(root: Path, rel: Any) -> tuple[str, str]:
+    """(data URI, "") for a usable image in the repo, or ("", why not)."""
+    rel = str(rel or "").strip()
+    if not rel or rel.startswith(("/", "\\")) or ".." in Path(rel).parts or ":" in rel:
+        return "", f"{rel[:60] or 'empty path'} is not a path inside the repo"
+    path = root / rel
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return "", f"{rel[:60]} leads out of the repo"
+    mime = MIME.get(path.suffix.lower())
+    if not mime:
+        return "", f"{rel[:60]} is not .svg, .png or .webp"
+    if not path.is_file():
+        return "", f"{rel[:60]} was not found"
+    raw = path.read_bytes()
+    if len(raw) > LOGO_LIMIT:
+        return "", f"{rel[:60]} is {len(raw) // 1024} KB, over {LOGO_LIMIT // 1024} KB"
+    head = raw[:512].lstrip()
+    ok = {"image/svg+xml": head.startswith((b"<svg", b"<?xml")) and b"<svg" in raw,
+          "image/png": raw.startswith(b"\x89PNG\r\n\x1a\n"),
+          "image/webp": raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"}[mime]
+    if not ok:
+        return "", f"{rel[:60]} is not a valid {path.suffix.lower()[1:].upper()} file"
+    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii"), ""
+
+
+def logos(root: Path, cfg_dash: dict[str, Any]) -> dict[str, Any]:
+    """The startup's logo, dark-ground logo and tab icon as data: URIs, and why any was left out."""
+    out: dict[str, Any] = {"warnings": []}
+    for key in LOGO_KEYS:
+        if cfg_dash.get(key) in (None, ""):
+            continue
+        uri, why = _image(root, cfg_dash.get(key))
+        if uri:
+            out[key] = uri
+        else:
+            out["warnings"].append(f"{key}: {why}")
+    return out
+
+
+def icon_link(brand: dict[str, Any]) -> str:
+    """The <link rel="icon"> for the tab icon; empty when there is none."""
+    uri = str((brand or {}).get("icon") or "")
+    return f'<link rel="icon" href="{uri}">\n' if DATA_URI.match(uri) else ""
