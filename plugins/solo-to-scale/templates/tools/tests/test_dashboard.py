@@ -676,3 +676,41 @@ def test_a_theme_that_charts_cannot_read_is_not_applied():
 def test_the_page_honours_the_miss_token_and_shows_theme_warnings():
     html = bd.PAGE.read_text(encoding="utf-8")
     assert ".s-w { background: var(--miss, var(--waiting)); }" in html and '" Theme: " + w' in html
+
+
+SVG = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#FF4A1F"/></svg>'
+
+
+def test_a_startup_shows_its_logo_and_tab_icon(root, fake):
+    (root / "brand").mkdir()
+    (root / "brand/logo.svg").write_bytes(SVG)
+    (root / "brand/logo-reverse.svg").write_bytes(SVG.replace(b"#FF4A1F", b"#F3F3F1"))
+    cfg = json.loads((root / "founder/dashboard.json").read_text(encoding="utf-8")) if (root / "founder/dashboard.json").exists() else {}
+    cfg.update({"logo": "brand/logo.svg", "logo_dark": "brand/logo-reverse.svg", "icon": "brand/logo.svg"})
+    (root / "founder/dashboard.json").write_text(json.dumps(cfg), encoding="utf-8")
+    page = bd.page(bd.build(root, now=NOW))
+    brand = data_of(page)["brand"]
+    assert brand["logo"].startswith("data:image/svg+xml;base64,") and brand["logo_dark"] != brand["logo"]
+    assert brand["warnings"] == [] and "logo" not in bd.summary(data_of(page))["project"]
+    head = page.split("</head>")[0]
+    assert head.count('<link rel="icon" href="data:image/svg+xml;base64,') == 1
+
+
+def test_a_logo_outside_the_repo_or_not_an_image_is_left_out(root, tmp_path):
+    (root / "big.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * (70 * 1024))
+    (root / "fake.svg").write_text("<script>alert(1)</script>", encoding="utf-8")
+    (root / "notes.txt").write_text("hi", encoding="utf-8")
+    (tmp_path / "outside.svg").write_bytes(SVG)
+    out = theme.logos(root, {"logo": "../outside.svg", "logo_dark": "fake.svg", "icon": "big.png"})
+    assert set(out) == {"warnings"} and len(out["warnings"]) == 3
+    text = " ".join(out["warnings"])
+    assert "not a path inside the repo" in text and "not a valid SVG" in text and "over 64 KB" in text
+    assert theme.logos(root, {"logo": "/etc/passwd"})["warnings"] and theme.logos(root, {"logo": "notes.txt"})["warnings"]
+    assert theme.logos(root, {}) == {"warnings": []}
+    assert theme.icon_link({"icon": 'data:image/png;base64,AA"><script>'}) == "" and theme.icon_link({}) == ""
+
+
+def test_the_page_draws_the_logo_as_an_image_and_swaps_it_on_dark():
+    html = bd.PAGE.read_text(encoding="utf-8")
+    assert 'el("img", { cls: "logo"' in html and "alt: name" in html and '" Logo: " + w' in html
+    assert ':root[data-theme="dark"] header h1 .logo-d { display: inline-block; }' in html
