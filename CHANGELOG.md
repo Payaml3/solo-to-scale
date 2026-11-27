@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.16.0 (2026-11-27)
+
+- **Each startup's dashboard can show its logo.** Optional `logo`, `logo_dark` and `icon` in `founder/dashboard.json` (behind the deploy gate) name an SVG, PNG or WebP in the repo, for example the files in the brand folder. The logo replaces the name at the top of the page, with the dark-ground version in dark mode, and `icon` becomes the browser-tab icon.
+- **Safe by construction.** `tools/theme.py` embeds each file as a data: URI, the only images the page's security policy allows, and an SVG shown as an image never runs scripts. A path outside the repo, a file over 64 KB or a file that isn't the image its name says is left out, and the header says why. Logos stay out of the portfolio summary.
+
 ## v2.15.1 (2026-11-27)
 
 - **Fewer emails from the team.** Claiming a ticket no longer comments on it. The `claimed` label and the `refs/claims/<n>` lock carry the claim, so duplicate claims are still refused, and the claim is still written to the activity log. A heartbeat run now leaves one comment on its ticket, the done, hand-off or release note.

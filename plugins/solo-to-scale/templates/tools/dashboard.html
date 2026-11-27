@@ -45,6 +45,10 @@ a { color: var(--link); }
 header { padding: 20px 16px 0; max-width: 1180px; margin: 0 auto; }
 header .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 header h1 { font-size: 2rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.04em; margin: 0; }
+header h1 .logo { display: inline-block; height: 1em; width: auto; max-width: min(60vw, 360px); vertical-align: -0.1em; object-fit: contain; object-position: left; }
+header h1 .logo-d { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) header h1 .has-d { display: none; } :root:not([data-theme="light"]) header h1 .logo-d { display: inline-block; } }
+:root[data-theme="dark"] header h1 .has-d { display: none; } :root[data-theme="dark"] header h1 .logo-d { display: inline-block; }
 header p { margin: 4px 0 0; color: var(--muted); }
 header p.back { margin: 0 0 6px; font-size: .88rem; }
 .meta { font: .75rem/1.4 var(--mono); color: var(--muted); margin-top: 8px; }
@@ -2031,7 +2035,15 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
   // --- shell ----------------------------------------------------------------------------------------------
   var back = safeHref((D.links || {}).portfolio);
   if (back) { var bk = document.getElementById("back"); bk.appendChild(el("a", { href: back, text: "← " + (D.links.portfolio_name || "Portfolio") })); bk.hidden = false; }
-  document.getElementById("title").textContent = (D.project.name || "Startup") + " dashboard";
+  (function title() {
+    var h = document.getElementById("title"), B = D.brand || {}, name = D.project.name || "Startup";
+    var img = function (u) { return /^data:image\/(svg\+xml|png|webp);base64,/.test(u || "") ? u : ""; };
+    var lo = img(B.logo), dk = img(B.logo_dark);
+    if (!lo) { h.textContent = name + " dashboard"; return; }
+    h.appendChild(el("img", { cls: "logo" + (dk ? " has-d" : ""), src: lo, alt: name }));
+    if (dk) h.appendChild(el("img", { cls: "logo logo-d", src: dk, alt: name }));
+    h.appendChild(document.createTextNode(" dashboard"));
+  })();
   document.getElementById("oneline").textContent = D.project.one_line || "";
   (function freshness() {
     var meta = document.getElementById("meta"), m = minutesAgo(D.built);
@@ -2041,6 +2053,7 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
     meta.appendChild(document.createTextNode(" (" + when(D.built) + " UTC) from " + (D.commit ? "commit " : "the repo")));
     if (D.commit) meta.appendChild(repoOk ? el("a", { href: "https://github.com/" + G.repo + "/commit/" + D.commit, target: "_blank", rel: "noopener noreferrer", text: D.commit }) : document.createTextNode(D.commit));
     ((D.theme || {}).warnings || []).forEach(function (w) { meta.appendChild(el("span", { cls: "stale", text: " Theme: " + w + "." })); });
+    ((D.brand || {}).warnings || []).forEach(function (w) { meta.appendChild(el("span", { cls: "stale", text: " Logo: " + w + "." })); });
     meta.appendChild(document.createTextNode((G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every three hours."));
     var rb = safeHref(D.rebuild_url);
     if (rb) { meta.appendChild(document.createTextNode(" ")); meta.appendChild(el("a", { href: rb, target: "_blank", rel: "noopener noreferrer", text: "Rebuild now" })); }
