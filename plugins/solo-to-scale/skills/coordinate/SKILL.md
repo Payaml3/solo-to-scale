@@ -7,7 +7,7 @@ description: Use to delegate work between roles through GitHub issues - split a 
 
 **Read narrowly.** Never read a whole file over 150 lines. Use `grep -n`, then read only the line ranges you need.
 
-Roles work together only through tickets: GitHub issues labelled `ticket` and `role:<role>`. Every action goes through `python tools/tickets.py`, which comments on the ticket and appends to the activity log (the issue labelled `activity-log`). Always pass your own role (`--by` or `--role`).
+Roles work together only through tickets: GitHub issues labelled `ticket` and `role:<role>`. Every action goes through `python tools/tickets.py`, which appends to the activity log (the issue labelled `activity-log`) and comments on the ticket, except for a claim: the `claimed` label and the claim lock record that. Always pass your own role (`--by` or `--role`).
 
 ## Start: find and claim work
 
