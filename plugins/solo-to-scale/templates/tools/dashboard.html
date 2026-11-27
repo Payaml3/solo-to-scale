@@ -2051,13 +2051,13 @@ details.numbers { margin-top: 14px; } details.numbers summary { cursor: pointer;
   (function freshness() {
     var meta = document.getElementById("meta"), m = minutesAgo(D.built);
     var ageText = m === null ? "" : m < 1 ? "just now" : m < 120 ? m + " minutes ago" : Math.round(m / 60) + " hours ago";
-    meta.appendChild(el("span", { cls: m !== null && m > 240 ? "stale" : "", text: "Built " + (ageText || when(D.built) + " UTC") }));
+    meta.appendChild(el("span", { cls: m !== null && m > 420 ? "stale" : "", text: "Built " + (ageText || when(D.built) + " UTC") }));
     var repoOk = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(G.repo || "")) && /^[0-9a-f]{4,40}$/.test(String(D.commit || ""));
     meta.appendChild(document.createTextNode(" (" + when(D.built) + " UTC) from " + (D.commit ? "commit " : "the repo")));
     if (D.commit) meta.appendChild(repoOk ? el("a", { href: "https://github.com/" + G.repo + "/commit/" + D.commit, target: "_blank", rel: "noopener noreferrer", text: D.commit }) : document.createTextNode(D.commit));
     ((D.theme || {}).warnings || []).forEach(function (w) { meta.appendChild(el("span", { cls: "stale", text: " Theme: " + w + "." })); });
     ((D.brand || {}).warnings || []).forEach(function (w) { meta.appendChild(el("span", { cls: "stale", text: " Logo: " + w + "." })); });
-    meta.appendChild(document.createTextNode((G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on merges, approvals and comments, and every three hours."));
+    meta.appendChild(document.createTextNode((G.ok ? " and GitHub (" + G.repo + ")" : "; GitHub data missing") + ". Rebuilt on every merge to main and every six hours."));
     var rb = safeHref(D.rebuild_url);
     if (rb) { meta.appendChild(document.createTextNode(" ")); meta.appendChild(el("a", { href: rb, target: "_blank", rel: "noopener noreferrer", text: "Rebuild now" })); }
   })();

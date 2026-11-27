@@ -119,12 +119,11 @@ jobs:
     if: always() && needs.pick.outputs.run == 'yes'
     runs-on: ubuntu-latest
     steps:
-      # A run is when new work, approvals and escalations appear, so the dashboard and needs-you refresh now
-      # instead of on every ticket event.
-      - name: check again, so the next role starts straight away; refresh the dashboard and needs-you
+      # A run is when new work, approvals and escalations appear, so needs-you refreshes now instead of on every
+      # ticket event. The dashboard doesn't: each rebuild is a deploy, so it rebuilds on merges and every six hours.
+      - name: check again, so the next role starts straight away; refresh needs-you
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run agents.yml --repo "${{ github.repository }}"
-          gh workflow run dashboard.yml --repo "${{ github.repository }}" || true
           gh workflow run needs-you.yml --repo "${{ github.repository }}" || true

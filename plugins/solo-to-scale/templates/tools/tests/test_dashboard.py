@@ -303,20 +303,24 @@ def test_needs_you_is_one_list_oldest_and_most_blocking_first(root, fake):
     assert stale not in {x.get("number") for x in bd.build(root, now=NOW)["needs"]["stuck"]}
 
 
-def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_on_activity():
+def test_the_page_has_the_inbox_charts_and_freshness_and_rebuilds_only_on_merges_and_a_schedule():
     html = bd.PAGE.read_text(encoding="utf-8")
     assert '["needs", "Needs you", needsTab]' in html and "function dayChart" in html and "trendPanel()," in html
     assert "Rebuild now" in html and "safeHref(D.rebuild_url)" in html
     wf = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "dashboard.yml"
     if wf.exists():
         text = wf.read_text(encoding="utf-8")
-        assert "issue_comment:" in text and "sleep" not in text and "cancel-in-progress: false" in text
-        assert "github.event.sender.type != 'Bot'" in text, "agents' ticket events must not rebuild it"
+        # Each rebuild is a deploy, and hosts cap deploys a day: only merges, the schedule and a manual run.
+        on = text[text.index("\non:"):text.index("\npermissions:")]
+        assert "branches: [main]" in on and "workflow_dispatch:" in on and '"17 */6 * * *"' in on
+        assert "issues:" not in on and "issue_comment:" not in on and "pull_request" not in on
+        assert "sleep" not in text and "cancel-in-progress: false" in text
     agents = wf.parent / "agents.yml"
     if agents.exists():
         text = agents.read_text(encoding="utf-8")
         assert "11,41 8-19 * * *" in text and "startsWith(github.event.comment.body, '/approve')" in text
-        assert "gh workflow run dashboard.yml" in text and "gh workflow run needs-you.yml" in text
+        assert "gh workflow run dashboard.yml" not in text, "an agent run must not deploy the dashboard"
+        assert "gh workflow run needs-you.yml" in text
 
 
 def test_the_stage_ladder_shows_every_gate_with_its_evidence(root, fake):

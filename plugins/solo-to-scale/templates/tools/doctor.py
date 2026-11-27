@@ -38,7 +38,7 @@ GATED = {"founder/team.md": "hire", "founder/heartbeats.json": "budget", "founde
          "founder/portfolio.json": "deploy", "founder/goals.json": "decision",
          "founder/finance.json": "spend"}
 WORKFLOWS = ["governance.yml", "founder-gates.yml", "tickets.yml", "dashboard.yml", "portfolio.yml", "agents.yml",
-             "needs-you.yml"]
+             "needs-you.yml", "deploy-release.yml"]
 LABELS = {tickets.TICKET: "0e8a16", tickets.CLAIMED: "fbca04", tickets.BLOCKED: "b60205", tickets.LOG: "c5def5",
           approval.LABEL: "d93f0b", approval.PR_LABEL: "0e8a16", heartbeat.COST_LOG: "c5def5",
           "agent-controls": "5319e7", "needs-you": "d93f0b", "autopilot-plan": "5319e7",
