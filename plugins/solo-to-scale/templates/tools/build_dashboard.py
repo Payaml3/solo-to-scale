@@ -2,7 +2,7 @@
 
 The startup dashboard: one page with tabs (Overview, Needs you, Goals, Documents, Progress trace, Roadmap, Scope and
 journey, Team and board, Agent activity, Decisions, Approvals inbox, Costs), built from the repo and GitHub.
-The dashboard workflow rebuilds it on every merge to main and every three hours, and serves it at the host in
+The dashboard workflow rebuilds it on every merge to main and every six hours, and serves it at the host in
 founder/dashboard.json behind a login: Cloudflare Pages behind Cloudflare Access (the default), or a Vercel
 project behind Vercel Authentication on all deployments. The Claude page from publish-views is the backup.
 

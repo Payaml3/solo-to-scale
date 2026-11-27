@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.18.0 (2026-11-27)
+
+- **Far fewer deploys.** The dashboard now rebuilds, and so deploys, only on a merge to main, every six hours and from its Rebuild now link. Agent runs and ticket activity no longer rebuild it, because hosts cap deploys (Vercel's free plan allows 100 a day across all projects) and the agents' activity was using them up. The header turns red after seven hours instead of four.
+- **Batched production releases.** A new `release` workflow (`deploy-release.yml`, `tools/release.py`) moves a `production` branch forward to main, fast-forward only, tags the release and lists the pull requests it brings. Before launch it runs only when a founder starts it, so main keeps collecting merged work and everything goes to production together. After launch, the repository variable `S2S_AUTO_RELEASE=true` releases every merge straight away. Point each production host at `production` and turn off its other-branch builds; the handbook, "Production releases", has the steps for Vercel.
+
 ## v2.17.0 (2026-11-27)
 
 - **Wake an agent from the dashboard.** Each agent's page has a **Wake now** button. It opens the agent-controls issue and copies `/wake <role>`; post it and the `agents` workflow starts a check within a minute instead of at the next 30-minute poll, outside the working day too. `/wake all` wakes every role.
